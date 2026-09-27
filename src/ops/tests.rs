@@ -213,3 +213,33 @@ fn common_guesses_are_accepted_on_shapes() {
     let r = s.layers.iter().find(|l| l.id == "r").unwrap();
     assert!(r.look.fills.is_some() && r.look.shadows.is_some());
 }
+
+#[test]
+fn generic_shapes_and_sized_asset_ids_are_understood() {
+    let mut s = scene();
+    s.assets.insert(
+        "photo".into(),
+        serde_json::from_value(json!({"sha256": "x", "width": 10, "height": 10})).unwrap(),
+    );
+    add_layers(
+        &mut s,
+        Map::new(),
+        vec![
+            json!({"id": "a", "type": "shape", "color": "#000"}),
+            json!({"id": "b", "type": "shape", "shape": "heart"}),
+            json!({"id": "c", "type": "image", "asset": "photo 864×530"}),
+        ],
+    )
+    .unwrap();
+    let kind = |id: &str| s.layers.iter().find(|l| l.id == id).unwrap().kind.clone();
+    assert_eq!(kind("a").name(), "rect");
+    assert_eq!(kind("b").name(), "path");
+    assert!(matches!(kind("c"), Kind::Image { asset, .. } if asset == "photo"));
+    let e = add_layers(
+        &mut s,
+        Map::new(),
+        vec![json!({"type": "image", "asset": "logo"})],
+    )
+    .unwrap_err();
+    assert!(e.ends_with("unknown asset logo; assets: photo"), "{e}");
+}

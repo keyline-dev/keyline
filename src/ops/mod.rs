@@ -95,7 +95,8 @@ pub fn add_layers(
             Some(Value::String(p)) => Some(p),
             Some(_) => return Err(at("parent must be a frame id".into())),
         };
-        let layer = parse_layer(&v).map_err(at)?;
+        let mut layer = parse_layer(&v).map_err(at)?;
+        resolve_assets(&mut layer, &next.assets);
         reserve_ids(&layer, &mut taken);
         parsed.push((i, parent, layer));
     }
@@ -210,12 +211,56 @@ fn parse_layer(v: &Value) -> Result<Layer, String> {
     Ok(layer)
 }
 
+/// An asset reference written with its size, as `asset_add` replies
+/// (`photo 864×530`), means the asset whose id is its first word.
+fn resolve_assets(
+    layer: &mut Layer,
+    assets: &std::collections::BTreeMap<String, crate::scene::Asset>,
+) {
+    let fix = |id: &mut String| {
+        if !assets.contains_key(id.as_str())
+            && let Some(first) = id.split_whitespace().next()
+            && assets.contains_key(first)
+        {
+            *id = first.to_owned();
+        }
+    };
+    match &mut layer.kind {
+        crate::scene::Kind::Image { asset, .. } => fix(asset),
+        crate::scene::Kind::Text { fill: Some(f), .. } => fix(&mut f.asset),
+        _ => {}
+    }
+    if let Some(crate::scene::OneOrMany::One(crate::scene::Paint::Image(i))) = &mut layer.look.fills
+    {
+        fix(&mut i.image);
+    }
+    if let Some(crate::scene::OneOrMany::Many(fs)) = &mut layer.look.fills {
+        for f in fs {
+            if let crate::scene::Paint::Image(i) = f {
+                fix(&mut i.image);
+            }
+        }
+    }
+    for c in layer.kind.children_mut().into_iter().flatten() {
+        resolve_assets(c, assets);
+    }
+}
+
 /// Accepts the names agents reach for first: on shapes, `fill` and
 /// `shadow` mean `fills` and `shadows` (text keeps its own `fill`, an image
 /// in the letters, and `shadow`). A rejected guess costs the agent a
 /// resend of its whole batch, so these are cheaper to accept than to refuse.
 pub(crate) fn normalize(v: &mut Value) {
     let Some(o) = v.as_object_mut() else { return };
+    // A generic "shape" is a path when it names one, else a rect.
+    if o.get("type").and_then(Value::as_str) == Some("shape") {
+        let kind = if o.contains_key("d") || o.contains_key("shape") {
+            "path"
+        } else {
+            "rect"
+        };
+        o.insert("type".into(), kind.into());
+    }
     if o.get("type").and_then(Value::as_str) != Some("text") {
         for (short, full) in [("fill", "fills"), ("shadow", "shadows")] {
             if !o.contains_key(full)

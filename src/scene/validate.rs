@@ -125,7 +125,7 @@ impl Scene {
         super::check::shape(l)?;
         match &l.kind {
             Kind::Image { asset, .. } if !self.assets.contains_key(asset) => {
-                Err(format!("unknown asset {asset}"))
+                Err(format!("unknown asset {asset}; assets: {}", self.assets.keys().cloned().collect::<Vec<_>>().join(", ")))
             }
             Kind::Image { tile_scale, .. } if *tile_scale <= 0.0 => {
                 Err("tileScale must be > 0".into())
