@@ -35,7 +35,7 @@ pub(super) fn contrast(
     }
     const GRID: i32 = 16;
     let colors: Vec<Color> = std::iter::once(*color)
-        .chain(ranges.iter().map(|r| r.color))
+        .chain(ranges.iter().filter_map(|r| r.color))
         .collect();
     let (bw, bh) = (backdrop.width() - 1, backdrop.height() - 1);
     let mut bg = 0.0;

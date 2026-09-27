@@ -14,14 +14,15 @@ pub(super) fn ink(p: &Placed) -> Option<Rect> {
     // the line box, whose ascent and descent space would make tightly set
     // lines look like they collide.
     let text = Text::of(p.layer, p.k)?;
-    let mut para = text.repaint(fit, p.rect.w, &skia_safe::Paint::default(), false);
+    let mut para = text.repaint(fit, fit.wrap_width, &skia_safe::Paint::default(), false);
     let bounds = (0..para.line_number())
         .map(|line| *para.get_path_at(line).1.bounds())
         .filter(|b| !b.is_empty())
         .reduce(skia_safe::Rect::join2)?;
+    let (x, y) = p.text_origin();
     Some(Rect {
-        x: p.rect.x + bounds.left,
-        y: p.text_top() + bounds.top,
+        x: x + bounds.left,
+        y: y + bounds.top,
         w: bounds.width(),
         h: bounds.height(),
     })

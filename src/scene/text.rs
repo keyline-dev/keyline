@@ -15,6 +15,8 @@ pub enum TextCase {
     Upper,
     /// All lower case.
     Lower,
+    /// The first letter of every word in upper case.
+    Capitalize,
 }
 
 /// How a text box and its font size relate, after iOS `UILabel`: `fit` is
@@ -63,19 +65,54 @@ pub enum Align {
     Center,
     /// Flush right.
     Right,
+    /// Both edges flush (the last line flush left).
+    Justify,
 }
 
-/// A colored span of text. `start` and `end` count Unicode characters
-/// (code points), end exclusive.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+/// A styled span of text. `start` and `end` count Unicode characters
+/// (code points) of the text as displayed (markup tags removed), end
+/// exclusive. Every field but the bounds is optional.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Range {
     /// First character, counted in Unicode code points.
     pub start: usize,
     /// One past the last character.
     pub end: usize,
     /// Color of the span.
-    pub color: Color,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<Color>,
+    /// Weight, 100–900.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<u16>,
+    /// Italic.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub italic: Option<bool>,
+    /// Font size, px.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_size: Option<f32>,
+    /// Font family.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_family: Option<String>,
+    /// Underline or strike.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decoration: Option<super::Decoration>,
+    /// A box behind the span.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub highlight: Option<super::Highlight>,
+    /// Raised (superscript) or lowered (subscript), smaller.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shift: Option<Shift>,
+}
+
+/// A span raised or lowered from the baseline.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Shift {
+    /// Superscript (™, prices' cents).
+    Sup,
+    /// Subscript.
+    Sub,
 }
 
 #[cfg(test)]

@@ -5,24 +5,26 @@
 
 mod fit;
 mod lines;
+pub mod markup;
 mod paragraph;
 mod registry;
+mod runs;
 #[cfg(test)]
 mod tests;
 
-use crate::scene::{Align, Color, Kind, Layer, Range, Resize, TextCase};
+use crate::scene::{Align, Color, Direction, Highlight, Kind, Layer, Resize, TextWrap};
 
-pub use registry::{add_fonts, families, load_fonts};
+pub use registry::{add_fonts, families, load_fonts, typeface};
+pub use runs::Run;
 
 /// A text layer's content and style at a given scale factor.
 pub struct Text<'a> {
-    /// The text as drawn: with `textCase` applied.
+    /// The text as drawn: markup removed, `textCase` applied.
     display: String,
-    /// Byte ranges of `display` and their colors.
-    runs: Vec<(std::ops::Range<usize>, Color)>,
+    /// Byte ranges of `display` and their styles.
+    runs: Vec<(std::ops::Range<usize>, Run)>,
     font_size: f32,
     family: &'a str,
-    weight: u16,
     align: Align,
     resize: Resize,
     max_lines: Option<usize>,
@@ -32,6 +34,11 @@ pub struct Text<'a> {
     letter_spacing: f32,
     line_height: Option<f32>,
     shadow: Option<(Color, f32, f32, f32)>,
+    wrap: TextWrap,
+    rtl: bool,
+    features: Vec<(String, u32)>,
+    /// A box behind every line.
+    highlight: Option<Highlight>,
 }
 
 /// How a laid-out paragraph fits its box.
@@ -51,6 +58,8 @@ pub struct Fit {
     pub one_line_width: f32,
     /// Line limit applied (fit at its minimum, or truncate), for repaints.
     pub line_limit: Option<usize>,
+    /// Width the lines wrap at: the box's, or narrower for `balance`/`pretty`.
+    pub wrap_width: f32,
 }
 
 impl<'a> Text<'a> {
@@ -71,30 +80,33 @@ impl<'a> Text<'a> {
             line_height,
             text_case,
             shadow,
+            more,
             ..
         } = &layer.kind
         else {
             return None;
         };
-        // Case is applied per color run, so ranges keep counting characters
-        // of the text as written even when casing changes its length (ß → SS).
-        let mut display = String::new();
-        let mut runs = Vec::new();
-        for (run, c) in color_runs(text, ranges, *color) {
-            let start = display.len();
-            match text_case {
-                TextCase::None => display.push_str(run),
-                TextCase::Upper => display.push_str(&run.to_uppercase()),
-                TextCase::Lower => display.push_str(&run.to_lowercase()),
-            }
-            runs.push((start..display.len(), c));
-        }
+        let base = Run {
+            color: *color,
+            weight: *weight,
+            italic: more.italic,
+            size: None,
+            family: None,
+            decoration: more.decoration,
+            highlight: None,
+            shift: None,
+        };
+        let (display, runs) = runs::build(text, ranges, &base, *text_case, k);
+        let rtl = match more.direction {
+            Direction::Rtl => true,
+            Direction::Ltr => false,
+            Direction::Auto => first_strong_is_rtl(&display),
+        };
         Some(Text {
             display,
             runs,
             font_size: font_size * k,
             family: font_family,
-            weight: *weight,
             align: *align,
             resize: layer.text_resize()?,
             max_lines: *max_lines,
@@ -105,6 +117,10 @@ impl<'a> Text<'a> {
             shadow: shadow
                 .as_ref()
                 .map(|s| (s.color, s.x * k, s.y * k, s.blur * k)),
+            wrap: more.text_wrap,
+            rtl,
+            features: more.features.iter().map(|(k, v)| (k.clone(), *v)).collect(),
+            highlight: more.highlight.clone(),
         })
     }
 
@@ -117,35 +133,58 @@ impl<'a> Text<'a> {
     pub fn resize(&self) -> Resize {
         self.resize
     }
+
+    /// The text as drawn.
+    pub fn display(&self) -> &str {
+        &self.display
+    }
+
+    /// Horizontal alignment.
+    pub fn align(&self) -> Align {
+        self.align
+    }
+
+    /// Highlight boxes to draw: `(UTF-16 range in the display text, highlight)`,
+    /// the layer's own over the whole text first.
+    pub fn highlights(&self) -> Vec<(std::ops::Range<usize>, &Highlight)> {
+        let utf16 = |byte: usize| self.display[..byte].encode_utf16().count();
+        let mut out = Vec::new();
+        if let Some(h) = &self.highlight {
+            out.push((0..utf16(self.display.len()), h));
+        }
+        for (range, run) in &self.runs {
+            if let Some(h) = &run.highlight {
+                out.push((utf16(range.start)..utf16(range.end), h));
+            }
+        }
+        out
+    }
+
+    /// The first run's style: what leaders and curved text draw with.
+    pub fn base_run(&self) -> Option<&Run> {
+        self.runs.first().map(|(_, r)| r)
+    }
+
+    /// The font family.
+    pub fn family(&self) -> &str {
+        self.family
+    }
 }
 
-/// Splits `text` into maximal runs of one color. Ranges count characters;
-/// a later range wins where ranges overlap.
-fn color_runs<'t>(text: &'t str, ranges: &[Range], base: Color) -> Vec<(&'t str, Color)> {
-    let color_at = |i: usize| {
-        ranges
-            .iter()
-            .rev()
-            .find(|r| (r.start..r.end).contains(&i))
-            .map_or(base, |r| r.color)
-    };
-    let mut runs = Vec::new();
-    let mut start = 0;
-    let mut current = None;
-    for (i, (byte, _)) in text.char_indices().enumerate() {
-        let c = color_at(i);
-        match current {
-            Some(prev) if prev != c => {
-                runs.push((&text[start..byte], prev));
-                start = byte;
-                current = Some(c);
-            }
-            None => current = Some(c),
-            _ => {}
-        }
+/// True when the first letter with a strong direction is Hebrew or Arabic.
+fn first_strong_is_rtl(s: &str) -> bool {
+    s.chars().find(|c| c.is_alphabetic()).is_some_and(
+        |c| matches!(u32::from(c), 0x0590..=0x08FF | 0xFB1D..=0xFDFF | 0xFE70..=0xFEFF),
+    )
+}
+
+#[cfg(test)]
+mod direction_tests {
+    #[test]
+    fn direction_follows_the_first_strong_letter() {
+        assert!(super::first_strong_is_rtl("2026 שלום world"));
+        assert!(!super::first_strong_is_rtl("hello שלום"));
+        assert!(super::first_strong_is_rtl("مرحبا"));
+        assert!(!super::first_strong_is_rtl("123"));
     }
-    if let Some(c) = current {
-        runs.push((&text[start..], c));
-    }
-    runs
 }

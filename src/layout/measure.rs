@@ -147,18 +147,55 @@ fn content(scene: &Scene, layer: &Layer, k: f32, parent: (f32, f32), known: Forc
 }
 
 /// Text: auto-width measures one line; a known width wraps at it; a fixed
-/// box (fit, fixed, truncate) is whatever its sides are.
+/// box (fit, fixed, truncate) is whatever its sides are. Padding adds to
+/// the box; `trim: "cap"` takes the space above caps and below the baseline.
 fn text_content(layer: &Layer, k: f32, (w, h): Forced) -> (f32, f32) {
     let Some(t) = Text::of(layer, k) else {
         return (0.0, 0.0);
+    };
+    let [pt, pr, pb, pl] = text_padding(layer, k);
+    let trimmed = |width: f32, height: f32| {
+        if !text_trims(layer) {
+            return height;
+        }
+        let mut p = t.paragraph_at(width);
+        p.layout(width);
+        let (top, bottom) = t.cap_trim(&p, t.font_size());
+        height - top - bottom
     };
     match (t.resize(), w) {
         (Resize::Fit | Resize::Fixed | Resize::Truncate, _) => {
             (w.unwrap_or(DEFAULT_BOX * k), h.unwrap_or(DEFAULT_BOX * k))
         }
-        (_, Some(w)) => (w, t.height_at(w)),
-        (_, None) => t.natural_size(0.0, 0.0),
+        (_, Some(w)) => {
+            let inner = (w - pl - pr).max(0.0);
+            (w, trimmed(inner, t.height_at(inner)) + pt + pb)
+        }
+        (_, None) => {
+            let (tw, th) = t.natural_size(0.0, 0.0);
+            // Curved text also takes the arc's rise.
+            let curve = match &layer.kind {
+                Kind::Text { more, .. } => more
+                    .curve
+                    .map_or(0.0, |r| crate::render::curve_sagitta(tw, r * k)),
+                _ => 0.0,
+            };
+            (tw + pl + pr, trimmed(tw, th) + curve + pt + pb)
+        }
     }
+}
+
+/// A text layer's padding, scaled: `[top, right, bottom, left]`.
+pub(super) fn text_padding(layer: &Layer, k: f32) -> [f32; 4] {
+    match &layer.kind {
+        Kind::Text { more, .. } => more.padding.sides().map(|p| p * k),
+        _ => [0.0; 4],
+    }
+}
+
+/// Whether a text layer trims to cap height.
+pub(super) fn text_trims(layer: &Layer) -> bool {
+    matches!(&layer.kind, Kind::Text { more, .. } if more.trim.is_some())
 }
 
 /// The box around a free frame's children, from its top-left corner.

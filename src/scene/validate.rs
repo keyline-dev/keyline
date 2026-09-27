@@ -199,7 +199,11 @@ impl Scene {
                 {
                     return Err("fit, fixed and truncate text need width and height".into());
                 }
-                let n = text.chars().count();
+                // Ranges count characters of the text as displayed: markup removed.
+                let n = crate::text::markup::parse(text).0.chars().count();
+                if let Some(r) = ranges.iter().find(|r| r.weight.is_some_and(|w| !(100..=900).contains(&w) || w % 100 != 0)) {
+                    return Err(format!("range {}..{}: weight must be 100, 200, … 900", r.start, r.end));
+                }
                 match ranges.iter().find(|r| r.start >= r.end || r.end > n) {
                     Some(r) => Err(format!(
                         "range {}..{} out of bounds for {n} characters",

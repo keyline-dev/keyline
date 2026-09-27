@@ -84,11 +84,15 @@ opacity, rotation (degrees), blendMode (multiply, screen, …), mask, \
 at {sizeId or landscape|square|portrait|wide|tall: {fields}}: changes for those sizes only}. \
 image: asset, fit fill|fit|tile (fill = cover; tileScale sizes tiles), focus [x,y] 0–1 kept in view (center), \
 crop {x, y, width, height} 0–1. \
-text: text, style (name from styles), fontSize (16; the maximum when fitting), weight 100-900, color, align left|center|right, \
-maxLines, ranges [{start, end, color}] in characters. Sizing follows the box: width+height → font shrinks to fit \
+text: text (markup: <b> <i> <u> <s> <sup> <sub> <br>, <span color=… weight=… highlight=…>, style names as tags \
+<accent>…</accent>), style (name from styles), fontSize (16; the maximum when fitting), weight 100-900, color, \
+align left|center|right|justify, maxLines, ranges [{start, end, color, weight, italic, fontSize, highlight}]. Sizing follows the box: width+height → font shrinks to fit \
 (down to minFontScale 0.5), then ellipsis; width only → wraps, grows down; neither → one line. resize fixed|truncate \
 keeps the font size; ellipsis false cuts without …. Also fontFamily (Inter or any Google Fonts family), \
-letterSpacing px, lineHeight (× fontSize), textCase upper|lower, shadow {x, y, blur, color}, outline {width, color}, \
+letterSpacing px, lineHeight (× fontSize), textCase upper|lower|capitalize, italic, decoration underline|strike, \
+textWrap balance|pretty, verticalAlign top|center|bottom, trim \"cap\", highlight (color or {color, padding, radius, style \
+box|brush}), padding, direction, features {tnum: 1}, curve (arc radius), leader (\".\": text before \\t left, after it \
+right), knockout (cuts the parent frame), shadow {x, y, blur, color}, outline {width, color}, \
 fill {asset, fit, tileScale} or gradient paints the letters. \
 styles {name: {text fields}}: shared text fields; a layer's own fields win. \
 icon: name, set lucide (outline; mail, map-pin, landmark…)|solid|regular|brands (Font Awesome), color, strokeWidth; \

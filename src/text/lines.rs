@@ -26,7 +26,7 @@ impl Text<'_> {
 }
 
 /// Skia's line indices count UTF-16 units; this maps one to a byte offset.
-fn byte_index(text: &str, utf16: usize) -> usize {
+pub(super) fn byte_index(text: &str, utf16: usize) -> usize {
     let mut units = 0;
     for (byte, c) in text.char_indices() {
         if units >= utf16 {

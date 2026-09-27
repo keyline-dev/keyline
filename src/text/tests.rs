@@ -8,17 +8,21 @@ fn text_layer(v: serde_json::Value) -> Layer {
 }
 
 #[test]
-fn color_runs_split_on_character_ranges() {
+fn color_ranges_split_runs_on_characters() {
     let red = Color(0xFFFF_0000);
     let black = Color(0xFF00_0000);
-    let ranges = [Range {
-        start: 1,
-        end: 3,
-        color: red,
-    }];
-    let runs = color_runs("héllo", &ranges, black);
+    let layer = text_layer(
+        json!({"type": "text", "text": "héllo", "ranges": [{"start": 1, "end": 3, "color": "#FF0000"}]}),
+    );
+    let t = Text::of(&layer, 1.0).unwrap();
+    let runs: Vec<(&str, Color)> = t
+        .runs
+        .iter()
+        .map(|(r, run)| (&t.display[r.clone()], run.color))
+        .collect();
     assert_eq!(runs, vec![("h", black), ("él", red), ("lo", black)]);
-    assert_eq!(color_runs("", &ranges, black), vec![]);
+    let empty = text_layer(json!({"type": "text", "text": ""}));
+    assert!(Text::of(&empty, 1.0).unwrap().runs.is_empty());
 }
 
 #[test]

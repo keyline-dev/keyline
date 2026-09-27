@@ -14,7 +14,8 @@ mod tests;
 use skia_safe::textlayout::Paragraph;
 
 use crate::scene::{
-    Dirs, Inset, Kind, Layer, Length, Pin, Place, Position, Resize, Scene, Size, Spot,
+    Align, Dirs, Inset, Kind, Layer, Length, Pin, Place, Position, Resize, Scene, Size, Spot,
+    VAlign,
 };
 use crate::text::{Fit, Text};
 
@@ -62,17 +63,59 @@ pub struct Placed<'a> {
 }
 
 impl Placed<'_> {
-    /// Top of the drawn text. Like `UILabel`, text in a box of its own size
-    /// (fit, fixed, truncate) is centered vertically in it, even when taller.
+    /// Top of the drawn text; see [`Placed::text_origin`].
     pub fn text_top(&self) -> f32 {
+        self.text_origin().1
+    }
+
+    /// Where the paragraph is drawn: inside the padding, placed by
+    /// `verticalAlign` (like `UILabel`, text in a box of its own size — fit,
+    /// fixed, truncate — is centered, even when taller), shifted up by a cap
+    /// trim, and across by alignment when balanced lines wrap narrower.
+    pub fn text_origin(&self) -> (f32, f32) {
+        let [pt, pr, pb, pl] = measure::text_padding(self.layer, self.k);
+        let (x, y, w, h) = (
+            self.rect.x + pl,
+            self.rect.y + pt,
+            self.rect.w - pl - pr,
+            self.rect.h - pt - pb,
+        );
+        let Some((para, fit)) = &self.text else {
+            return (x, y);
+        };
+        let (top, bottom) = if measure::text_trims(self.layer) {
+            Text::of(self.layer, self.k).map_or((0.0, 0.0), |t| t.cap_trim(para, fit.font_size))
+        } else {
+            (0.0, 0.0)
+        };
+        let visible = para.height() - top - bottom;
         let fixed_box = matches!(
             self.layer.text_resize(),
             Some(Resize::Fit | Resize::Fixed | Resize::Truncate)
         );
-        match &self.text {
-            Some((para, _)) if fixed_box => self.rect.y + (self.rect.h - para.height()) / 2.0,
-            _ => self.rect.y,
-        }
+        let valign = match &self.layer.kind {
+            Kind::Text { more, .. } => more.vertical_align,
+            _ => None,
+        };
+        let y0 = match valign.unwrap_or(if fixed_box {
+            VAlign::Center
+        } else {
+            VAlign::Top
+        }) {
+            VAlign::Top => y,
+            VAlign::Center => y + (h - visible) / 2.0,
+            VAlign::Bottom => y + h - visible,
+        };
+        let spare = (w - fit.wrap_width).max(0.0);
+        let dx = match self.layer.kind {
+            Kind::Text { align, .. } => match align {
+                Align::Center => spare / 2.0,
+                Align::Right => spare,
+                Align::Left | Align::Justify => 0.0,
+            },
+            _ => 0.0,
+        };
+        (x + dx, y0 - top)
     }
 }
 
@@ -186,6 +229,7 @@ fn finish<'a>(
     sized: bool,
 ) -> Placed<'a> {
     let (w, h) = natural;
+    let [pt, pr, pb, pl] = measure::text_padding(layer, k);
     let text = Text::of(layer, k).map(|t| {
         if !sized {
             match t.resize() {
@@ -200,11 +244,21 @@ fn finish<'a>(
                     rect.h = h;
                 }
                 // Auto-height text rewraps at its new width and grows down.
-                Resize::AutoHeight => rect.h = t.height_at(rect.w),
+                Resize::AutoHeight => {
+                    rect.h = measure::measure(
+                        scene,
+                        layer,
+                        k,
+                        (rect.w, rect.h),
+                        (Some(rect.w), None),
+                        true,
+                    )
+                    .1;
+                }
                 Resize::Fit | Resize::Fixed | Resize::Truncate => {}
             }
         }
-        t.layout(rect.w, rect.h)
+        t.layout((rect.w - pl - pr).max(0.0), (rect.h - pt - pb).max(0.0))
     });
     let (children, chosen) = match &layer.kind {
         Kind::Frame {

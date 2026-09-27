@@ -8,7 +8,7 @@ use super::defaults::{
 };
 use super::{
     Adjust, Align, Color, Crop, Fit, Gradient, ImageFill, Layer, Outline, Range, Resize, Shadow,
-    Stack, Stroke, TextCase,
+    Stack, Stroke, TextCase, TextMore,
 };
 
 // ponytail: serde can't combine `deny_unknown_fields` with `flatten`, so
@@ -99,6 +99,10 @@ pub enum Kind {
         /// A named style from `Scene::styles`, under this layer's own fields.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         style: Option<String>,
+        /// Italic, decoration, wrapping, vertical alignment, trim,
+        /// highlight, direction, features, padding, curve, leader, knockout.
+        #[serde(flatten)]
+        more: TextMore,
     },
     /// A filled, optionally rounded rectangle.
     #[serde(rename_all = "camelCase")]

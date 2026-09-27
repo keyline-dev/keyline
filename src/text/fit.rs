@@ -4,7 +4,7 @@
 use skia_safe::textlayout::Paragraph;
 
 use super::{Fit, Text};
-use crate::scene::Resize;
+use crate::scene::{Resize, TextWrap};
 
 impl Text<'_> {
     /// Box size the text wants before constraints. `width`/`height` are the
@@ -27,11 +27,29 @@ impl Text<'_> {
         }
     }
 
+    /// An unlaid paragraph at the text's font size (lay it out at `width`).
+    pub fn paragraph_at(&self, _width: f32) -> Paragraph {
+        self.paragraph(self.font_size, None)
+    }
+
     /// Height of the text wrapped at `width`, at its font size.
     pub fn height_at(&self, width: f32) -> f32 {
         let mut p = self.paragraph(self.font_size, None);
         p.layout(width);
         p.height().ceil()
+    }
+
+    /// For `trim: "cap"`: the space above the first line's cap height and
+    /// below the last line's baseline, in paragraph `p` at `size` px.
+    pub fn cap_trim(&self, p: &Paragraph, size: f32) -> (f32, f32) {
+        let metrics = p.get_line_metrics();
+        let (Some(first), Some(last)) = (metrics.first(), metrics.last()) else {
+            return (0.0, 0.0);
+        };
+        let cap = super::registry::cap_height(self.family, size).unwrap_or(size * 0.72);
+        let top = (first.baseline as f32 - cap).max(0.0);
+        let bottom = (p.height() - last.baseline as f32).max(0.0);
+        (top, bottom)
     }
 
     /// Narrowest width the text can wrap to without breaking a word.
@@ -71,6 +89,10 @@ impl Text<'_> {
         };
         let mut p = self.paragraph(size, max_lines);
         p.layout(width);
+        let wrap_width = self.wrap_width(&p, size, max_lines, width);
+        if wrap_width < width {
+            p.layout(wrap_width);
+        }
         let fit = Fit {
             font_size: size,
             overflow: matches!(self.resize, Resize::Fit | Resize::Fixed | Resize::Truncate)
@@ -80,8 +102,67 @@ impl Text<'_> {
             need_height: p.height().ceil(),
             one_line_width: p.max_intrinsic_width().ceil(),
             line_limit: max_lines,
+            wrap_width,
         };
         (p, fit)
+    }
+
+    /// The width to wrap at: the box's, or for `balance` the narrowest that
+    /// keeps the same number of lines (even lengths), and for `pretty` the
+    /// widest below the box's whose last line has two or more words.
+    fn wrap_width(&self, p: &Paragraph, size: f32, max_lines: Option<usize>, width: f32) -> f32 {
+        let lines = p.line_number();
+        if self.wrap == TextWrap::Wrap || lines < 2 || !width.is_finite() {
+            return width;
+        }
+        let at = |w: f32| {
+            let mut q = self.paragraph(size, max_lines);
+            q.layout(w);
+            q
+        };
+        match self.wrap {
+            TextWrap::Balance => {
+                // Bisect down to the narrowest width with the same line count.
+                let (mut lo, mut hi) = (p.min_intrinsic_width().ceil().min(width), width);
+                while hi - lo > 1.0 {
+                    let mid = (lo + hi) / 2.0;
+                    if at(mid).line_number() == lines {
+                        hi = mid;
+                    } else {
+                        lo = mid;
+                    }
+                }
+                hi.ceil().min(width)
+            }
+            TextWrap::Pretty => {
+                let last_words = |q: &Paragraph| {
+                    let m = q.get_line_metrics();
+                    let Some(last) = m.last() else { return 0 };
+                    let start = super::lines::byte_index(&self.display, last.start_index);
+                    let end = super::lines::byte_index(&self.display, last.end_index);
+                    self.display
+                        .get(start..end)
+                        .map_or(0, |t| t.split_whitespace().count())
+                };
+                if last_words(p) >= 2 {
+                    return width;
+                }
+                // Narrow the lines a step at a time, never adding one.
+                let mut w = width;
+                while w > width * 0.75 {
+                    w -= (width * 0.02).max(1.0);
+                    let q = at(w);
+                    if q.line_number() > lines {
+                        break;
+                    }
+                    if last_words(&q) >= 2 {
+                        return w;
+                    }
+                }
+                width
+            }
+            TextWrap::Wrap => width,
+        }
     }
 
     /// Largest size between `fontSize × minFontScale` and `fontSize` at

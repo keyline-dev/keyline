@@ -138,3 +138,44 @@ fn collection() -> FontCollection {
     fc.disable_font_fallback();
     fc
 }
+
+/// The cap height of `family` at `size` px, when the family is registered.
+pub(super) fn cap_height(family: &str, size: f32) -> Option<f32> {
+    with_fonts(|fc| {
+        let mut fc = fc.clone();
+        let tf = fc
+            .find_typefaces(&[family], skia_safe::FontStyle::normal())
+            .into_iter()
+            .next()?;
+        let font = skia_safe::Font::from_typeface(tf, size);
+        let (_, m) = font.metrics();
+        (m.cap_height > 0.0).then_some(m.cap_height)
+    })
+}
+
+/// The registered typeface for `family` at `weight` (on a variable font's
+/// `wght` axis) and slant, for drawing glyphs outside a paragraph.
+pub fn typeface(family: &str, weight: u16, italic: bool) -> Option<skia_safe::Typeface> {
+    use skia_safe::font_arguments::{VariationPosition, variation_position::Coordinate};
+    with_fonts(|fc| {
+        let mut fc = fc.clone();
+        let slant = if italic {
+            skia_safe::font_style::Slant::Italic
+        } else {
+            skia_safe::font_style::Slant::Upright
+        };
+        let style = skia_safe::FontStyle::new(
+            skia_safe::font_style::Weight::from(i32::from(weight)),
+            skia_safe::font_style::Width::NORMAL,
+            slant,
+        );
+        let tf = fc.find_typefaces(&[family], style).into_iter().next()?;
+        let wght = [Coordinate {
+            axis: ('w', 'g', 'h', 't').into(),
+            value: f32::from(weight),
+        }];
+        let args = skia_safe::FontArguments::new()
+            .set_variation_design_position(VariationPosition { coordinates: &wght });
+        Some(tf.clone_with_arguments(&args).unwrap_or(tf))
+    })
+}

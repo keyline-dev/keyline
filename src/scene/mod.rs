@@ -20,6 +20,7 @@ mod resolve;
 mod stack;
 mod stroke;
 mod text;
+mod text_more;
 mod validate;
 
 use std::collections::BTreeMap;
@@ -42,7 +43,10 @@ pub use presets::{PRESETS, SizeSpec};
 pub use resolve::{ASPECT_CLASSES, aspect_classes};
 pub use stack::{Dir, Dirs, Gap, Justify, Padding, Stack, StackAlign};
 pub use stroke::{Cap, Join, Marker, Shadow, Stroke, StrokeAlign, StrokeWidth};
-pub use text::{Align, Range, Resize, TextCase};
+pub use text::{Align, Range, Resize, Shift, TextCase};
+pub use text_more::{
+    Decoration, Direction, Highlight, HighlightStyle, TextMore, TextWrap, Trim, VAlign,
+};
 
 use defaults::{is_false, is_one, one, white};
 

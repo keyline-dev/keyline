@@ -126,3 +126,65 @@ fn a_style_can_set_a_text_box() {
         (0.0, 0.0, 250.0, 90.0),
     );
 }
+
+#[test]
+fn padding_adds_to_a_text_box_and_insets_the_text() {
+    let plain = scene(json!([text("t", json!({}))]));
+    let padded = scene(json!([text("t", json!({"padding": [10, 20]}))]));
+    let a = boxes(&plain, &size("s", 1000.0, 500.0, 1.0))["t"];
+    let b = boxes(&padded, &size("s", 1000.0, 500.0, 1.0))["t"];
+    assert!(
+        (b.w - (a.w + 40.0)).abs() < 0.01 && (b.h - (a.h + 20.0)).abs() < 0.01,
+        "{a:?} {b:?}"
+    );
+}
+
+#[test]
+fn trim_cap_takes_the_space_above_caps_and_below_the_baseline() {
+    let plain = scene(json!([text("t", json!({"text": "HELLO"}))]));
+    let trimmed = scene(json!([text("t", json!({"text": "HELLO", "trim": "cap"}))]));
+    let a = boxes(&plain, &size("s", 1000.0, 500.0, 1.0))["t"];
+    let b = boxes(&trimmed, &size("s", 1000.0, 500.0, 1.0))["t"];
+    assert_eq!(a.w, b.w);
+    // Inter's caps are about 0.73 of the font size (40 px here).
+    assert!(b.h > 26.0 && b.h < 32.0, "{b:?}");
+    assert!(a.h > b.h + 10.0, "{a:?} {b:?}");
+}
+
+#[test]
+fn balanced_text_keeps_its_box_and_line_count() {
+    let words = "A headline long enough to wrap onto a second short line";
+    let plain = scene(json!([text("t", json!({"width": 700, "text": words}))]));
+    let balanced = scene(json!([text(
+        "t",
+        json!({"width": 700, "text": words, "textWrap": "balance"})
+    )]));
+    let a = boxes(&plain, &size("s", 1000.0, 500.0, 1.0))["t"];
+    let b = boxes(&balanced, &size("s", 1000.0, 500.0, 1.0))["t"];
+    assert_eq!((a.w, a.h), (b.w, b.h), "same box, same number of lines");
+}
+
+#[test]
+fn curved_text_is_taller_by_the_arc() {
+    let flat = scene(json!([text("t", json!({"text": "CURVED BADGE TEXT"}))]));
+    let curved = scene(json!([text(
+        "t",
+        json!({"text": "CURVED BADGE TEXT", "curve": 200})
+    )]));
+    let a = boxes(&flat, &size("s", 1000.0, 500.0, 1.0))["t"];
+    let b = boxes(&curved, &size("s", 1000.0, 500.0, 1.0))["t"];
+    assert_eq!(a.w, b.w);
+    assert!(b.h > a.h + 20.0, "{a:?} {b:?}");
+}
+
+#[test]
+fn markup_does_not_change_the_measured_text() {
+    let plain = scene(json!([text("t", json!({"text": "Proven RESULTS"}))]));
+    let marked = scene(json!([text(
+        "t",
+        json!({"text": "Proven <span color=\"#D0202E\">RESULTS</span>"})
+    )]));
+    let a = boxes(&plain, &size("s", 1000.0, 500.0, 1.0))["t"];
+    let b = boxes(&marked, &size("s", 1000.0, 500.0, 1.0))["t"];
+    assert_eq!((a.w, a.h), (b.w, b.h));
+}

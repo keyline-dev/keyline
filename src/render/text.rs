@@ -34,13 +34,45 @@ impl Ctx<'_> {
         let (Some((para, fit)), Some(t)) = (&p.text, Text::of(l, p.k)) else {
             return Ok(());
         };
-        let origin = (p.rect.x, p.text_top());
+        let origin = p.text_origin();
+        let width = fit.wrap_width;
+        let Kind::Text { more, .. } = &l.kind else {
+            return Ok(());
+        };
+        super::text_extras::highlights(canvas, &t, para, origin, p.k, l);
+        // Knockout letters erase their parent frame instead of painting.
+        let knock = |mut paint: Paint| {
+            if more.knockout {
+                paint.set_blend_mode(skia_safe::BlendMode::DstOut);
+            }
+            paint
+        };
+        if let Some(radius) = more.curve {
+            let base = t.base_run().map_or(Color(0xFF00_0000), |r| r.color);
+            let paint = match l.look.fills.as_ref().and_then(|f| f.as_slice().first()) {
+                Some(f) => self.fill(f, p.rect, p.k)?.unwrap_or_default(),
+                None => {
+                    let mut paint = Paint::default();
+                    paint.set_anti_alias(true);
+                    paint.set_color(sk_color(base));
+                    paint
+                }
+            };
+            super::text_extras::curved(canvas, &t, radius * p.k, r, &knock(paint));
+            return Ok(());
+        }
+        if let Some(leader) = &more.leader
+            && super::text_extras::leaders(canvas, &t, fit, leader, origin.0, origin.1, width)
+        {
+            return Ok(());
+        }
         match &l.look.fills {
             // Each paint fills the letters in turn; `[]` leaves them empty.
             Some(fs) => {
                 for f in fs.as_slice() {
                     if let Some(paint) = self.fill(f, p.rect, p.k)? {
-                        t.repaint(fit, p.rect.w, &paint, true).paint(canvas, origin);
+                        t.repaint(fit, width, &knock(paint), true)
+                            .paint(canvas, origin);
                     }
                 }
             }
@@ -61,10 +93,13 @@ impl Ctx<'_> {
                         paint.set_shader(sh);
                         paint
                     }),
+                    (None, None) if more.knockout => Some(Paint::default()),
                     (None, None) => None,
                 };
                 match custom {
-                    Some(paint) => t.repaint(fit, p.rect.w, &paint, true).paint(canvas, origin),
+                    Some(paint) => t
+                        .repaint(fit, width, &knock(paint), true)
+                        .paint(canvas, origin),
                     None => para.paint(canvas, origin),
                 }
             }
@@ -73,14 +108,14 @@ impl Ctx<'_> {
             Some(ss) => {
                 for s in ss.as_slice() {
                     let paint = glyph_stroke(s.width.max() * p.k * t.shrink(fit), s, r);
-                    outline_glyphs(canvas, &t, fit, p.rect.w, origin, &paint);
+                    outline_glyphs(canvas, &t, fit, width, origin, &paint);
                 }
             }
             None => {
                 if let Some(o) = outline {
                     let s = Stroke::solid(o.width, o.color);
                     let paint = glyph_stroke(o.width * p.k * t.shrink(fit), &s, r);
-                    outline_glyphs(canvas, &t, fit, p.rect.w, origin, &paint);
+                    outline_glyphs(canvas, &t, fit, width, origin, &paint);
                 }
             }
         }

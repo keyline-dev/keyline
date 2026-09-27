@@ -22,6 +22,18 @@ pub(super) const STYLE_KEYS: &[&str] = &[
     "fill",
     "gradient",
     "outline",
+    "italic",
+    "decoration",
+    "textWrap",
+    "verticalAlign",
+    "trim",
+    "highlight",
+    "direction",
+    "features",
+    "padding",
+    "fills",
+    "strokes",
+    "shadows",
 ];
 
 /// `l` with its text style applied under its own fields, or `None` when it
@@ -147,6 +159,12 @@ impl Scene {
                 }
                 if let Ok(Some(s)) = styled(l, &scene.styles) {
                     *l = s;
+                }
+                // Style-name tags in markup become spans with the style's fields.
+                if let Kind::Text { text, .. } = &mut l.kind
+                    && text.contains('<')
+                {
+                    *text = crate::text::markup::expand_styles(text, &scene.styles);
                 }
             }
         }

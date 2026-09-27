@@ -13,6 +13,9 @@ mod stroke;
 #[cfg(test)]
 mod tests;
 mod text;
+mod text_extras;
+#[cfg(test)]
+mod text_tests;
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
@@ -33,6 +36,7 @@ use paint::{sk_blend, sk_color, sk_rect};
 
 pub use image::{image_crop, image_scale, raster_size, svg_size};
 pub use output::contact_sheet;
+pub use text_extras::curve_sagitta;
 
 /// Largest side, in pixels, an SVG is rasterized at.
 const MAX_SVG_PX: f32 = 8192.0;
@@ -149,7 +153,18 @@ impl Ctx<'_> {
             return Ok(());
         }
         let blur = l.look.blur * p.k;
-        if l.opacity < 1.0 || l.blend_mode != BlendMode::Normal || l.mask.is_some() || blur > 0.0 {
+        // A frame whose text knocks out must be its own group, so only the
+        // frame is erased, not what's behind it.
+        let knocked = p
+            .children
+            .iter()
+            .any(|c| matches!(&c.layer.kind, Kind::Text { more, .. } if more.knockout));
+        if l.opacity < 1.0
+            || l.blend_mode != BlendMode::Normal
+            || l.mask.is_some()
+            || blur > 0.0
+            || knocked
+        {
             // Composite the whole layer (children included) as one.
             let mut layer = Paint::default();
             layer.set_alpha_f(l.opacity);
