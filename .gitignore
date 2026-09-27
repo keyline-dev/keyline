@@ -4,3 +4,6 @@
 # Recreate-benchmark designs are often real people's material; kept local.
 bench/recreate/local/
 /target-wt
+
+# Competitive research stays local.
+/docs/competitive-analysis.md
