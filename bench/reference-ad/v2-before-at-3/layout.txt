@@ -1,0 +1,84 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×900
+portrait 1080×1350
+ headline text 60,40 960×180 68px 2L
+ photo image 0,240 1080×360 fill crop 41%h
+ candidates frame 0,620 1080×140
+  c1 frame 114,650 173×81
+   c1n text 114,650 173×44 36px
+   c1r text 147,700 106×31 26px
+  c2 frame 401,650 244×81
+   c2n text 401,650 244×44 36px
+   c2r text 456,700 134×31 26px
+  c3 frame 758,650 208×81
+   c3n text 758,650 208×44 36px
+   c3r text 795,700 134×31 26px
+ cta frame 0,780 1080×110
+  mailicon image 287,813 56×44 fit
+  ctatext text 367,803 427×65 54px
+ steps frame 190,920 700×320
+  s1 frame 190,984 654×44
+   s1i image 190,986 40×40 fit
+   s1t text 250,984 594×44 36px
+  s2 frame 190,1058 356×44
+   s2i image 190,1060 40×40 fit
+   s2t text 250,1058 296×44 36px
+  s3 frame 190,1132 532×44
+   s3i image 190,1134 40×40 fit
+   s3t text 250,1132 472×44 36px
+ footer text 40,1270 1000×40 22px
+wide 1200×1000
+ headline text 51,34 1098×153 58px 2L
+ photo image 0,204 1200×159 fill crop 77%h
+ candidates frame 0,380 1200×119
+  c1 frame 167,404 147×69
+   c1n text 167,404 147×37 31px
+   c1r text 196,447 90×27 22px
+  c2 frame 482,404 207×69
+   c2n text 482,404 207×37 31px
+   c2r text 528,447 114×27 22px
+  c3 frame 856,404 177×69
+   c3n text 856,404 177×37 31px
+   c3r text 887,447 114×27 22px
+ cta frame 0,516 1200×94
+  mailicon image 385,544 48×37 fit
+  ctatext text 453,534 363×56 46px
+ steps frame 303,635 595×272
+  s1 frame 303,690 556×37
+   s1i image 303,691 34×34 fit
+   s1t text 354,690 505×37 31px
+  s2 frame 303,752 303×37
+   s2i image 303,754 34×34 fit
+   s2t text 354,752 252×37 31px
+  s3 frame 303,815 453×37
+   s3i image 303,816 34×34 fit
+   s3t text 354,815 402×37 31px
+ footer text 34,932 1132×34 19px
+sky 300×600
+ headline text 17,11 266×50 19px 2L
+ photo image 0,67 300×323 fill crop 48%w
+ candidates frame 0,396 300×39
+  c1 frame 31,404 49×23
+   c1n text 31,404 49×12 10px
+   c1r text 40,418 30×9 7px
+  c2 frame 111,404 69×23
+   c2n text 111,404 69×12 10px
+   c2r text 126,418 38×9 7px
+  c3 frame 210,404 59×23
+   c3n text 210,404 59×12 10px
+   c3r text 221,418 38×9 7px
+ cta frame 0,440 300×31
+  mailicon image 79,450 16×12 fit
+  ctatext text 101,447 120×18 15px
+ steps frame 52,480 196×90
+  s1 frame 52,498 184×12
+   s1i image 52,498 11×11 fit
+   s1t text 69,498 167×12 10px
+  s2 frame 52,518 100×12
+   s2i image 52,519 11×11 fit
+   s2t text 69,518 83×12 10px
+  s3 frame 52,539 150×12
+   s3i image 52,539 11×11 fit
+   s3t text 69,539 133×12 10px
+ footer text 11,578 278×11 6px

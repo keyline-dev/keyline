@@ -1,0 +1,84 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×900
+portrait 1080×1350
+ headline text 60,40 960×170 72px 2L
+ photo image 0,230 1080×400 fill crop 34%h
+ col1 frame 0,655 360×140
+  n1 text 10,675 340×55 40px
+  r1 text 10,735 340×40 30px
+ col2 frame 360,655 360×140
+  n2 text 370,675 340×55 40px
+  r2 text 370,735 340×40 30px
+ col3 frame 720,655 360×140
+  n3 text 730,675 340×55 40px
+  r3 text 730,735 340×40 30px
+ ctaBar rect 0,815 1080×110
+ cta frame 190,815 700×110
+  mailIcon image 265,848 56×44 fit
+  ctaText text 345,834 471×73 60px
+ steps frame 190,955 700×270
+  s1 frame 190,1002 654×44
+   c1 image 190,1004 40×40 fit
+   t1 text 250,1002 594×44 36px
+  s2 frame 190,1068 356×44
+   c2 image 190,1070 40×40 fit
+   t2 text 250,1068 296×44 36px
+  s3 frame 190,1134 532×44
+   c3 image 190,1136 40×40 fit
+   t3 text 250,1134 472×44 36px
+ footer text 40,1270 1000×45 28px
+wide 1200×1000
+ headline text 51,34 1098×145 61px 2L
+ photo image 0,196 1200×193 fill crop 71%h
+ col1 frame 0,409 400×119
+  n1 text 9,426 383×47 34px
+  r1 text 9,477 383×34 26px
+ col2 frame 400,409 400×119
+  n2 text 409,426 383×47 34px
+  r2 text 409,477 383×34 26px
+ col3 frame 800,409 400×119
+  n3 text 809,426 383×47 34px
+  r3 text 809,477 383×34 26px
+ ctaBar rect 0,545 1200×94
+ cta frame 303,545 595×94
+  mailIcon image 366,573 48×37 fit
+  ctaText text 434,561 400×62 51px
+ steps frame 303,664 595×230
+  s1 frame 303,705 556×37
+   c1 image 303,706 34×34 fit
+   t1 text 354,705 505×37 31px
+  s2 frame 303,761 303×37
+   c2 image 303,762 34×34 fit
+   t2 text 354,761 252×37 31px
+  s3 frame 303,816 453×37
+   c3 image 303,818 34×34 fit
+   t3 text 354,816 402×37 31px
+ footer text 34,932 1132×38 24px
+sky 300×600
+ headline text 17,11 266×48 20px 2L
+ photo image 0,64 300×334 fill crop 49%w
+ col1 frame 0,405 100×39
+  n1 text 3,411 94×15 11px
+  r1 text 3,428 94×11 8px
+ col2 frame 100,405 100×39
+  n2 text 103,411 94×15 11px
+  r2 text 103,428 94×11 8px
+ col3 frame 200,405 100×39
+  n3 text 203,411 94×15 11px
+  r3 text 203,428 94×11 8px
+ ctaBar rect 0,450 300×31
+ cta frame 52,450 196×31
+  mailIcon image 73,459 16×12 fit
+  ctaText text 95,456 132×20 17px
+ steps frame 52,489 196×76
+  s1 frame 52,503 184×12
+   c1 image 52,503 11×11 fit
+   t1 text 69,503 167×12 10px
+  s2 frame 52,521 100×12
+   c2 image 52,522 11×11 fit
+   t2 text 69,521 83×12 10px
+  s3 frame 52,539 150×12
+   c3 image 52,540 11×11 fit
+   t3 text 69,539 133×12 10px
+ footer text 11,578 278×13 8px

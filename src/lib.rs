@@ -1,0 +1,14 @@
+//! keyline-mcp: a server-side image composition engine driven over MCP.
+
+pub mod describe;
+pub mod fetch;
+pub mod fonts;
+pub mod gpu;
+pub mod icons;
+pub mod layout;
+pub mod ops;
+pub mod render;
+pub mod scene;
+pub mod server;
+pub mod store;
+pub mod text;

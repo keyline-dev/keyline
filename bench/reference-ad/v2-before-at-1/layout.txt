@@ -1,0 +1,81 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×900
+portrait 1080×1350
+ headline text 60,40 960×200 76px 2L
+ photo image 0,260 1080×400 fill crop 34%h
+ c1 frame 20,690 320×130
+  n1 text 89,714 183×46 38px
+  r1 text 128,766 105×31 26px
+ c2 frame 380,690 320×130
+  n2 text 411,714 258×46 38px
+  r2 text 474,766 133×31 26px
+ c3 frame 740,690 320×130
+  n3 text 790,714 220×46 38px
+  r3 text 834,766 133×31 26px
+ cta frame 0,850 1080×130
+  mailicon image 265,893 56×44 fit
+  ctatext text 345,879 471×73 60px
+ steps frame 140,1010 800×240
+  s1 frame 140,1051 621×41
+   k1 image 140,1051 40×40 fill
+   t1 text 200,1051 561×41 34px
+  s2 frame 140,1110 340×41
+   k2 image 140,1110 40×40 fill
+   t2 text 200,1110 280×41 34px
+  s3 frame 140,1169 506×41
+   k3 image 140,1169 40×40 fill
+   t3 text 200,1169 446×41 34px
+ footer text 40,1280 1000×40 22px
+wide 1200×1000
+ headline text 51,30 1098×148 65px 2L
+ photo image 0,193 1200×296 fill crop 56%h
+ c1 frame 22,511 356×96
+  n1 text 122,524 156×39 32px
+  r1 text 156,568 89×27 22px
+ c2 frame 422,511 356×96
+  n2 text 491,524 219×39 32px
+  r2 text 544,568 113×27 22px
+ c3 frame 822,511 356×96
+  n3 text 907,524 187×39 32px
+  r3 text 944,568 113×27 22px
+ cta frame 0,630 1200×96
+  mailicon image 366,659 48×37 fit
+  ctatext text 434,647 400×62 51px
+ steps frame 260,748 680×178
+  s1 frame 260,769 528×35
+   k1 image 260,770 34×34 fill
+   t1 text 311,769 477×35 29px
+  s2 frame 260,820 289×35
+   k2 image 260,820 34×34 fill
+   t2 text 311,820 238×35 29px
+  s3 frame 260,870 430×35
+   k3 image 260,870 34×34 fill
+   t3 text 311,870 379×35 29px
+ footer text 34,948 1132×30 19px
+sky 300×600
+ headline text 17,18 266×89 21px 2L
+ photo image 0,116 300×178 fill crop 5%w
+ c1 frame 6,307 89×58
+  n1 text 24,324 52×13 11px
+  r1 text 35,338 30×9 7px
+ c2 frame 106,307 89×58
+  n2 text 114,324 72×13 11px
+  r2 text 131,338 38×9 7px
+ c3 frame 206,307 89×58
+  n3 text 219,324 62×13 11px
+  r3 text 231,338 38×9 7px
+ cta frame 0,378 300×58
+  mailicon image 73,401 16×12 fit
+  ctatext text 95,397 132×20 17px
+ steps frame 38,449 224×107
+  s1 frame 38,479 175×12
+   k1 image 38,480 11×11 fill
+   t1 text 55,479 158×12 10px
+  s2 frame 38,496 96×12
+   k2 image 38,497 11×11 fill
+   t2 text 55,496 79×12 10px
+  s3 frame 38,513 142×12
+   k3 image 38,514 11×11 fill
+   t3 text 55,513 125×12 10px
+ footer text 11,569 278×18 6px

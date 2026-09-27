@@ -1,0 +1,74 @@
+[package]
+name = "keyline-mcp"
+version = "0.1.0"
+edition = "2024"
+license = "PolyForm-Shield-1.0.0"
+description = "Image composition engine driven by an AI agent over MCP: one JSON scene, PNGs at every size"
+
+# `cargo deb` (a build tool, run in the release workflow) packages the binary.
+[package.metadata.deb]
+maintainer = "Yuval Tal"
+copyright = "2026 Yuval Tal"
+section = "graphics"
+depends = "$auto"
+# Loaded at runtime for GPU renders; without it, renders use the CPU.
+recommends = "libvulkan1"
+assets = [
+    ["target/release/keyline-mcp", "usr/bin/", "755"],
+    ["LICENSE", "usr/share/doc/keyline-mcp/", "644"],
+    ["README.md", "usr/share/doc/keyline-mcp/", "644"],
+    ["fonts/OFL.txt", "usr/share/doc/keyline-mcp/LICENSE-inter.txt", "644"],
+    ["icons/LICENSE-lucide.txt", "usr/share/doc/keyline-mcp/", "644"],
+    ["icons/LICENSE-fontawesome.txt", "usr/share/doc/keyline-mcp/", "644"],
+]
+
+[dependencies]
+anyhow = "1.0.104"
+base64 = "0.23.1"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "http2", "json"] }
+resvg = { version = "0.48.1", default-features = false }
+rmcp = { version = "3.4.1", features = ["server", "transport-io", "macros"] }
+schemars = "1.2.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+skia-safe = { version = "0.153.3", features = ["textlayout"] }
+tokio = { version = "1.53.1", features = ["full"] }
+
+[dev-dependencies]
+rmcp = { version = "3.4.1", features = ["client", "transport-child-process"] }
+
+# Enforces the rust-skills lint rules (.claude/skills/rust-skills, `lint-*`)
+# and the CLAUDE.md rules a machine can check. CI runs clippy with -D warnings.
+[lints.rust]
+# Denied everywhere; only src/gpu.rs (opening Metal/Vulkan) allows it.
+unsafe_code = "deny"
+missing_docs = "warn"
+unexpected_cfgs = "warn"
+
+[lints.clippy]
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+# No unwrap/expect outside tests (err-no-unwrap-prod, err-expect-bugs-only).
+unwrap_used = "warn"
+expect_used = "warn"
+# Selected pedantic lints (lint-pedantic-selective).
+needless_pass_by_value = "warn"
+redundant_closure_for_method_calls = "warn"
+uninlined_format_args = "warn"
+manual_let_else = "warn"
+semicolon_if_nothing_returned = "warn"
+explicit_iter_loop = "warn"
+cloned_instead_of_copied = "warn"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6.4"
+objc2-metal = { version = "0.3.2", default-features = false, features = ["std", "MTLDevice", "MTLCommandQueue"] }
+skia-safe = { version = "0.153.3", features = ["ganesh", "metal"] }
+
+[target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
+ash = "0.38.0"
+skia-safe = { version = "0.153.3", features = ["ganesh", "vulkan"] }

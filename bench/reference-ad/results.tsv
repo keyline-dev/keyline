@@ -1,0 +1,10 @@
+label	commit	model	cost	turns	secs	calls	tool_chars	images	output	thinking	cache_write	cache_read	smallest_text	defects
+baseline-1	b477a87	claude-opus-5-5	0.155	3	37	2	4346	1	3914	1532	9161	12658	portrait 28, wide 24, sky 8	0
+baseline-2	b477a87	claude-opus-5-5	0.116	3	32	2	4238	1	3312	1119	5604	15304	portrait 28, wide 24, sky 8	0
+baseline-3	b477a87	claude-opus-5-5	0.109	3	29	2	4312	1	3093	867	5319	14979	portrait 24, wide 20, sky 7	0
+v2-before-at-1	50a531b	claude-opus-5-5	0.105	3	27	2	3976	1	2874	807	5440	15397	portrait 22, wide 19, sky 6	0
+v2-before-at-2	50a531b	claude-opus-5-5	0.129	3	35	2	4110	1	3683	1539	6296	16210	portrait 24, wide 20, sky 7	0
+v2-before-at-3	50a531b	claude-opus-5-5	0.124	5	32	4	4656	1	3363	1078	6330	24302	portrait 22, wide 19, sky 6	0
+v2-at-1	29081db	claude-opus-5-5	0.254	10	66	9	10422	2	7215	2275	11807	71522	portrait 24, wide 20, sky 11	0
+v2-at-2	29081db	claude-opus-5-5	0.148	5	38	4	5775	1	4313	1184	6699	31842	portrait 22, wide 19, sky 10	0
+v2-at-3	29081db	claude-opus-5-5	0.146	5	37	4	6082	1	4114	1275	6970	32249	portrait 22, wide 19, sky 9	0

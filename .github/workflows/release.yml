@@ -1,0 +1,60 @@
+name: Release
+
+# Push a tag like v0.1.0 to build Linux packages and attach them to a
+# GitHub release: a .deb (install with `sudo apt install ./keyline-mcp_*.deb`)
+# and a plain tarball of the binary, for x86_64 and arm64.
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.arch }}
+    strategy:
+      matrix:
+        include:
+          # 22.04's older glibc keeps the binary working on newer distros too.
+          - { arch: amd64, runner: ubuntu-22.04 }
+          - { arch: arm64, runner: ubuntu-22.04-arm }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev libfreetype6-dev
+      - name: Build the .deb (and the release binary)
+        run: |
+          cargo install cargo-deb --locked
+          cargo deb
+      - name: Tarball
+        run: |
+          name=keyline-mcp-${GITHUB_REF_NAME}-linux-${{ matrix.arch }}
+          mkdir "$name"
+          cp target/release/keyline-mcp LICENSE README.md "$name"/
+          tar czf "$name.tar.gz" "$name"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.arch }}
+          path: |
+            target/debian/*.deb
+            *.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" --generate-notes \
+            $(find . -name '*.deb' -o -name '*.tar.gz')

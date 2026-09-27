@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Linux packages Skia needs (fonts) and the Vulkan loader
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev libfreetype6-dev libvulkan1
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      # Unit tests everywhere. The GPU test skips itself on runners without
+      # a GPU; renders then use the CPU fallback.
+      - run: cargo test --lib
+      # End-to-end tests compare against reference PNGs, which are per OS
+      # (glyph rasterization differs by platform) and allow for anti-aliasing
+      # that differs between versions of it. They exist for macOS;
+      # create them on another OS with UPDATE_GOLDEN=1 before enabling it here.
+      - name: End-to-end tests
+        if: runner.os == 'macOS'
+        run: cargo test --test e2e
+      - name: Upload renders that missed their golden
+        if: failure() && runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-actual-${{ matrix.os }}
+          path: target/tmp/golden-actual/

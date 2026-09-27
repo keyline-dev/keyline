@@ -1,0 +1,6 @@
+/target
+/fonts/local/
+
+# Recreate-benchmark designs are often real people's material; kept local.
+bench/recreate/local/
+/target-wt

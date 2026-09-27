@@ -1,0 +1,63 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×900
+portrait 1080×1350
+ headline text 60,40 960×170 66px 2L
+ photo image 0,230 1080×400 fill crop 34%h
+ n1 text 20,650 320×50 38px
+ r1 text 20,702 320×36 26px
+ n2 text 380,650 320×50 38px
+ r2 text 380,702 320×36 26px
+ n3 text 740,650 320×50 38px
+ r3 text 740,702 320×36 26px
+ cta rect 0,770 1080×130
+ mailicon image 284,813 56×44 fit
+ ctatext text 356,795 440×80 56px
+ c1 image 200,945 40×40 fit
+ s1 text 260,940 680×50 34px
+ c2 image 200,1035 40×40 fit
+ s2 text 260,1030 680×50 34px
+ c3 image 200,1125 40×40 fit
+ s3 text 260,1120 680×50 34px
+ rule line 60,1220 960×0
+ footer text 40,1250 1000×60 24px
+wide 1200×1000
+ headline text 51,30 1098×126 56px 2L
+ photo image 0,170 1200×296 fill crop 56%h
+ n1 text 22,481 356×37 31px (max 32)
+ r1 text 22,520 356×27 22px
+ n2 text 422,481 356×37 31px (max 32)
+ r2 text 422,520 356×27 22px
+ n3 text 822,481 356×37 31px (max 32)
+ r3 text 822,520 356×27 22px
+ cta rect 0,570 1200×96
+ mailicon image 382,602 48×33 fit
+ ctatext text 444,589 374×59 48px
+ c1 image 311,700 34×30 fit
+ s1 text 362,696 578×37 29px
+ c2 image 311,767 34×30 fit
+ s2 text 362,763 578×37 29px
+ c3 image 311,833 34×30 fit
+ s3 text 362,830 578×37 29px
+ rule line 51,904 1098×0
+ footer text 34,926 1132×44 20px
+sky 300×600
+ headline text 17,18 266×76 18px 2L
+ photo image 0,102 300×178 fill crop 5%w
+ n1 text 6,289 89×22 11px
+ r1 text 6,312 89×16 7px
+ n2 text 106,289 89×22 11px
+ r2 text 106,312 89×16 7px
+ n3 text 206,289 89×22 11px
+ r3 text 206,312 89×16 7px
+ cta rect 0,342 300×58
+ mailicon image 78,361 16×20 fit
+ ctatext text 98,353 123×36 16px
+ c1 image 55,420 11×18 fit
+ s1 text 72,418 190×22 10px
+ c2 image 55,460 11×18 fit
+ s2 text 72,458 190×22 10px
+ c3 image 55,500 11×18 fit
+ s3 text 72,498 190×22 10px
+ rule line 17,542 266×0
+ footer text 11,556 278×27 7px
