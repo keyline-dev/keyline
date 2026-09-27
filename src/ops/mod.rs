@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
-use crate::scene::{Kind, Layer, Scene, check_keys};
+use crate::scene::{Layer, Scene, check_keys};
 
 /// `{ id }` or `{ role }`. A role may match several layers.
 #[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
@@ -185,7 +185,7 @@ fn apply(layers: &mut Vec<Layer>, op: &Op, changed: &mut Vec<String>) -> Result<
                 layers[i] = parse_layer(&v).map_err(|e| format!("{}: {e}", layers[i].id))?;
             }
         }
-        if let Kind::Frame { children, .. } = &mut layers[i].kind {
+        if let Some(children) = layers[i].kind.children_mut() {
             apply(children, op, changed)?;
         }
         i += 1;
@@ -197,9 +197,10 @@ fn apply(layers: &mut Vec<Layer>, op: &Op, changed: &mut Vec<String>) -> Result<
 fn parse_layer(v: &Value) -> Result<Layer, String> {
     let layer: Layer = serde_json::from_value(v.clone()).map_err(|e| e.to_string())?;
     check_keys(v, &layer)?;
-    if let (Kind::Frame { .. }, Some(children)) =
-        (&layer.kind, v.get("children").and_then(Value::as_array))
-    {
+    if let (Some(_), Some(children)) = (
+        layer.kind.children(),
+        v.get("children").and_then(Value::as_array),
+    ) {
         for c in children {
             parse_layer(c)?;
         }
@@ -212,10 +213,8 @@ fn reserve_ids(layer: &Layer, taken: &mut HashSet<String>) {
     if !layer.id.is_empty() {
         taken.insert(layer.id.clone());
     }
-    if let Kind::Frame { children, .. } = &layer.kind {
-        for c in children {
-            reserve_ids(c, taken);
-        }
+    for c in layer.kind.children().into_iter().flatten() {
+        reserve_ids(c, taken);
     }
 }
 
@@ -229,17 +228,15 @@ fn assign_ids(layer: &mut Layer, taken: &mut HashSet<String>) {
         layer.id = format!("{kind}{n}");
     }
     taken.insert(layer.id.clone());
-    if let Kind::Frame { children, .. } = &mut layer.kind {
-        for c in children {
-            assign_ids(c, taken);
-        }
+    for c in layer.kind.children_mut().into_iter().flatten() {
+        assign_ids(c, taken);
     }
 }
 
 fn find_frame<'a>(layers: &'a mut [Layer], id: &str) -> Option<&'a mut Vec<Layer>> {
     for l in layers {
         let is_it = l.id == id;
-        if let Kind::Frame { children, .. } = &mut l.kind {
+        if let Some(children) = l.kind.children_mut() {
             if is_it {
                 return Some(children);
             }

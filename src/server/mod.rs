@@ -73,10 +73,12 @@ impl Server {
     }
 
     #[tool(
-        description = "Add layers, drawn bottom to top. Layer: {type, id?, role?, parent? (frame id), x, y, width, \
-height (px, relative to parent), constraints {h: left|right|center|stretch|scale, v: top|bottom|center|stretch|scale} \
-(default left, top), opacity, rotation (degrees), blendMode (multiply, screen, …), mask (gradient; its alpha fades the layer), \
-at {sizeId: {fields}}: changes for one size only (bigger text, a column stack, a shorter photo)}. \
+        description = "Add layers, drawn bottom to top. Layer: {type, id?, role?, parent? (frame id), x, y (px or \"25%\" \
+of the parent), width, height (px, \"hug\" content, \"fill\" = rest of the parent or a stack's free space, \"40%\"), \
+minWidth…maxHeight, aspectRatio, place top-left|top|…|center|…|bottom-right + inset (pinned at every size), \
+constraints {h: left|right|center|stretch|scale, v: top|bottom|center|stretch|scale} (default left, top), hidden, \
+opacity, rotation (degrees), blendMode (multiply, screen, …), mask (gradient; its alpha fades the layer), \
+at {sizeId or landscape|square|portrait|wide|tall: {fields}}: changes for those sizes only}. \
 image: asset, fit fill|fit|tile (fill = cover; tileScale sizes tiles), focus [x,y] 0–1 kept in view (center), \
 crop {x, y, width, height} 0–1. \
 text: text, style (name from styles), fontSize (16; the maximum when fitting), weight 100-900, color, align left|center|right, \
@@ -88,8 +90,12 @@ fill {asset, fit, tileScale} or gradient paints the letters. \
 styles {name: {text fields}}: shared text fields; a layer's own fields win. \
 icon: name, set lucide (outline; mail, map-pin, landmark…)|solid|regular|brands (Font Awesome), color, strokeWidth; \
 24px tall unless sized. rect: color, cornerRadius. ellipse: color. line: from x,y by width,height; color, strokeWidth (1). \
-frame: children[], clip (true), color, cornerRadius, stack {dir row|column, gap, padding, align start|center|end, \
-justify start|center|end|between|evenly} places children in order ignoring their x, y; unsized, it hugs them. \
+frame: children[], clip (true), color, cornerRadius, stack {dir row|column|row-reverse|column-reverse or a list \
+tried in order (first that fits: [\"row\", \"column\"]), gap (or [row, column]), padding (or [v, h] or [t, r, b, l]), \
+align start|center|end|stretch|baseline, justify start|center|end|between|around|evenly, wrap} places children in \
+order ignoring their x, y; unsized, it hugs them. Stack children: alignSelf, grow (fill share), priority (lower \
+gives way first when tight), position absolute (out of the flow). spacer: free space in a stack. firstFit: \
+children[], draws only the first that fits its box (e.g. a long, then a short headline). \
 rect, ellipse, frame: gradient {from: [x,y], to: [x,y] 0–1 of the box, stops: [{at, color}]}, \
 stroke {width, color or gradient, align inside|center|outside}. Colors #RRGGBB[AA]."
     )]

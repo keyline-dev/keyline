@@ -100,7 +100,7 @@ fn draw_scene(
         hide_text,
         rasters: HashMap::new(),
     };
-    let scene = &*scene.for_size(&size.id);
+    let scene = &*scene.for_size(size);
     for p in &layout(scene, size) {
         ctx.draw(canvas, p)?;
     }
@@ -221,6 +221,12 @@ impl Ctx<'_> {
                     draw_stroke(canvas, s, r, radius, p.k);
                 }
             }
+            Kind::FirstFit { .. } => {
+                for child in &p.children {
+                    self.draw(canvas, child)?;
+                }
+            }
+            Kind::Spacer { .. } => {}
             Kind::Text { .. } if self.hide_text => {}
             Kind::Text {
                 fill,

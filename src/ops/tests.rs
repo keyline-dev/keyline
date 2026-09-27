@@ -1,6 +1,7 @@
 //! Tests of batched adds and updates: ids, targets, styles and atomicity.
 
 use super::*;
+use crate::scene::Kind;
 use serde_json::json;
 
 fn scene() -> Scene {

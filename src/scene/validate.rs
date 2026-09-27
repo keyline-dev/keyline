@@ -1,7 +1,7 @@
 //! Scene invariants serde can't express, checked after every mutation.
 
-use super::resolve::{STYLE_KEYS, sized, styled};
-use super::{Kind, Layer, Resize, Scene};
+use super::resolve::{ASPECT_CLASSES, STYLE_KEYS, patched, styled};
+use super::{Kind, Layer, Length, Resize, Scene};
 
 impl Scene {
     /// Checks invariants serde can't express. Called after every mutation.
@@ -29,10 +29,15 @@ impl Scene {
                 if result.is_err() {
                     return;
                 }
-                result = if self.sizes.iter().any(|s| s.id == *size) {
-                    sized(l, size).map(drop)
+                result = if self.sizes.iter().any(|s| s.id == *size)
+                    || ASPECT_CLASSES.contains(&size.as_str())
+                {
+                    patched(l, size).map(drop)
                 } else {
-                    Err(format!("no size {size}"))
+                    Err(format!(
+                        "no size or aspect class {size}; classes: {}",
+                        ASPECT_CLASSES.join(", ")
+                    ))
                 }
                 .map_err(|e| format!("{}: {e}", l.id));
             }
@@ -41,7 +46,7 @@ impl Scene {
         let resolved = self.resolved();
         resolved.validate_resolved()?;
         for size in &self.sizes {
-            resolved.for_size(&size.id).validate_resolved()?;
+            resolved.for_size(size).validate_resolved()?;
         }
         Ok(())
     }
@@ -103,18 +108,19 @@ impl Scene {
                 return Err("stroke width must be > 0".into());
             }
         }
-        if let Kind::Frame { stack: Some(s), .. } = &l.kind
-            && (s.gap < 0.0 || s.padding < 0.0)
-        {
-            return Err("stack gap and padding must be >= 0".into());
+        if let Kind::Frame { stack: Some(s), .. } = &l.kind {
+            if s.gap.is_negative() || s.padding.sides().iter().any(|p| *p < 0.0) {
+                return Err("stack gap and padding must be >= 0".into());
+            }
+            if s.dir.options().is_empty() {
+                return Err("stack dir list needs at least one direction".into());
+            }
         }
+        check_lengths(l)?;
         if let Some(m) = &l.mask
             && (m.stops.len() < 2 || m.stops.iter().any(|s| !(0.0..=1.0).contains(&s.at)))
         {
             return Err("mask needs at least 2 stops, each at 0–1".into());
-        }
-        if l.width.is_some_and(|w| w < 0.0) || l.height.is_some_and(|h| h < 0.0) {
-            return Err("width and height must be >= 0".into());
         }
         match &l.kind {
             Kind::Image { asset, .. } if !self.assets.contains_key(asset) => {
@@ -183,11 +189,12 @@ impl Scene {
                     return Err("minFontScale must be > 0 and <= 1".into());
                 }
                 let resize = l.text_resize();
-                if resize == Some(Resize::AutoHeight) && l.width.is_none() {
+                let set = |len: Option<Length>| len.is_some_and(|v| v != Length::Hug);
+                if resize == Some(Resize::AutoHeight) && !set(l.width) {
                     return Err("auto-height text needs a width".into());
                 }
                 if matches!(resize, Some(Resize::Fit | Resize::Fixed | Resize::Truncate))
-                    && (l.width.is_none() || l.height.is_none())
+                    && (!set(l.width) || !set(l.height))
                 {
                     return Err("fit, fixed and truncate text need width and height".into());
                 }
@@ -203,6 +210,52 @@ impl Scene {
             _ => Ok(()),
         }
     }
+}
+
+/// Checks positions, sizes and the stack-child fields.
+fn check_lengths(l: &Layer) -> Result<(), String> {
+    for (name, pos) in [("x", l.x), ("y", l.y)] {
+        if matches!(pos, Length::Hug | Length::Fill) {
+            return Err(format!("{name} must be px or a percentage"));
+        }
+    }
+    for len in [l.width, l.height].into_iter().flatten() {
+        match len {
+            Length::Px(v) | Length::Pct(v) if v < 0.0 => {
+                return Err("width and height must be >= 0".into());
+            }
+            _ => {}
+        }
+    }
+    let clamps = [l.min_width, l.max_width, l.min_height, l.max_height];
+    if clamps.iter().flatten().any(|v| *v < 0.0) {
+        return Err("minWidth, maxWidth, minHeight and maxHeight must be >= 0".into());
+    }
+    if let (Some(lo), Some(hi)) = (l.min_width, l.max_width)
+        && lo > hi
+    {
+        return Err("minWidth must be <= maxWidth".into());
+    }
+    if let (Some(lo), Some(hi)) = (l.min_height, l.max_height)
+        && lo > hi
+    {
+        return Err("minHeight must be <= maxHeight".into());
+    }
+    if l.aspect_ratio.is_some_and(|r| r <= 0.0) {
+        return Err("aspectRatio must be > 0".into());
+    }
+    if l.grow < 0.0 {
+        return Err("grow must be >= 0".into());
+    }
+    if l.inset.is_some() && l.place.is_none() {
+        return Err("inset needs place".into());
+    }
+    if let Kind::Spacer { min_length } = l.kind
+        && min_length < 0.0
+    {
+        return Err("minLength must be >= 0".into());
+    }
+    Ok(())
 }
 
 #[cfg(test)]

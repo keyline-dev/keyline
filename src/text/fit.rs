@@ -27,6 +27,30 @@ impl Text<'_> {
         }
     }
 
+    /// Height of the text wrapped at `width`, at its font size.
+    pub fn height_at(&self, width: f32) -> f32 {
+        let mut p = self.paragraph(self.font_size, None);
+        p.layout(width);
+        p.height().ceil()
+    }
+
+    /// Narrowest width the text can wrap to without breaking a word.
+    pub fn min_width(&self) -> f32 {
+        let mut p = self.paragraph(self.font_size, None);
+        p.layout(f32::MAX);
+        p.min_intrinsic_width().ceil()
+    }
+
+    /// Distance from the top of the box to the first line's baseline, with
+    /// the text wrapped at `width`.
+    pub fn first_baseline(&self, width: f32) -> f32 {
+        let mut p = self.paragraph(self.font_size, None);
+        p.layout(width);
+        p.get_line_metrics()
+            .first()
+            .map_or_else(|| p.alphabetic_baseline(), |m| m.baseline as f32)
+    }
+
     /// Lays the text out in its final box.
     pub fn layout(&self, width: f32, height: f32) -> (Paragraph, Fit) {
         let (size, max_lines) = match self.resize {

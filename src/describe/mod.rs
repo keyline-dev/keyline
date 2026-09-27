@@ -67,7 +67,7 @@ pub fn describe(
         let _ = writeln!(out, "assets {}", list.join(", "));
     }
     for size in sizes {
-        let scene = &*scene.for_size(&size.id);
+        let scene = &*scene.for_size(size);
         let placed = layout(scene, size);
         // A backdrop that fails to render (e.g. an asset missing from the
         // store) only skips the contrast check; `render` reports the error.
@@ -164,6 +164,10 @@ fn line(
     // designs use, wrong for large angles.
     if l.rotation != 0.0 {
         let _ = write!(out, " rot {}°", n(l.rotation));
+    }
+    // What an adaptive layout picked here: a stack's direction, a firstFit's child.
+    if let Some(c) = &p.chosen {
+        let _ = write!(out, " → {c}");
     }
     match &l.kind {
         Kind::Text { font_size, .. } => {

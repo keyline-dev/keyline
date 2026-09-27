@@ -4,13 +4,14 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use super::defaults::is_false;
 use super::defaults::{
     black, center, half, inter, is_black, is_center, is_default, is_half, is_inter, is_one,
     is_sixteen, is_true, is_w400, is_zero, one, sixteen, w400, yes,
 };
 use super::{
-    Align, BlendMode, Color, Constraints, Crop, Fit, Gradient, ImageFill, Outline, Range, Resize,
-    Shadow, Stack, Stroke, TextCase,
+    Align, BlendMode, Color, Constraints, Crop, Fit, Gradient, ImageFill, Inset, Length, Outline,
+    Place, Position, Range, Resize, Shadow, Stack, StackAlign, Stroke, TextCase,
 };
 
 /// A layer: the fields every type shares, plus its type's own in `kind`.
@@ -23,18 +24,61 @@ pub struct Layer {
     /// Semantic name; edits can target every layer with a role.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub role: Option<String>,
-    /// Left edge, px, relative to the parent frame.
-    #[serde(default, skip_serializing_if = "is_zero")]
-    pub x: f32,
-    /// Top edge, px, relative to the parent frame.
-    #[serde(default, skip_serializing_if = "is_zero")]
-    pub y: f32,
-    /// Width, px; images and text size themselves when omitted.
+    /// Left edge relative to the parent frame: px, or `"25%"` of the
+    /// parent's width at every size.
+    #[serde(default, skip_serializing_if = "Length::is_zero")]
+    pub x: Length,
+    /// Top edge relative to the parent frame: px, or a share of its height.
+    #[serde(default, skip_serializing_if = "Length::is_zero")]
+    pub y: Length,
+    /// Width: px, `"hug"` (fit the content), `"fill"` (the free space in a
+    /// stack; the rest of the parent from `x` in free layout) or `"40%"` of
+    /// the parent. Images and text size themselves when omitted; other
+    /// layers are 100 wide, and stacked frames hug.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub width: Option<f32>,
-    /// Height, px; images and text size themselves when omitted.
+    pub width: Option<Length>,
+    /// Height, as `width`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub height: Option<f32>,
+    pub height: Option<Length>,
+    /// Smallest width, px, after every other sizing rule.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_width: Option<f32>,
+    /// Largest width, px.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_width: Option<f32>,
+    /// Smallest height, px.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_height: Option<f32>,
+    /// Largest height, px.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_height: Option<f32>,
+    /// Width ÷ height kept when only one side is set; the other follows.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub aspect_ratio: Option<f32>,
+    /// Pins the layer to one of nine spots of its parent, e.g.
+    /// `"bottom-right"`, at `inset` from the edges; wins over `x`, `y` and
+    /// `constraints`, and holds at every size.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub place: Option<Place>,
+    /// Distance from the parent's edges for `place`, px or `[x, y]` (0).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inset: Option<Inset>,
+    /// Not drawn and takes no space (default false); handy per size via `at`.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub hidden: bool,
+    /// In a stack: this child's cross-axis placement, over the stack's `align`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align_self: Option<StackAlign>,
+    /// In a stack: this child's share of the free space when it `fill`s (1).
+    #[serde(default = "one", skip_serializing_if = "is_one")]
+    pub grow: f32,
+    /// In a stack that's too small: lower priorities give way first, like
+    /// SwiftUI's `layoutPriority` (0).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub priority: f32,
+    /// In a stack: `absolute` takes the child out of the flow (default `auto`).
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub position: Position,
     /// How the layer follows its parent when the parent resizes.
     #[serde(default, skip_serializing_if = "Constraints::is_default")]
     pub constraints: Constraints,
@@ -225,6 +269,22 @@ pub enum Kind {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         stack: Option<Stack>,
     },
+    /// Flexible empty space in a stack: it takes the free space, like
+    /// SwiftUI's `Spacer`. Outside a stack it's an empty box.
+    #[serde(rename_all = "camelCase")]
+    Spacer {
+        /// Smallest length along the stack, px (0).
+        #[serde(default, skip_serializing_if = "is_zero")]
+        min_length: f32,
+    },
+    /// Draws the first child that fits its box, like SwiftUI's
+    /// `ViewThatFits`; e.g. a long headline, then a short one.
+    #[serde(rename_all = "camelCase")]
+    FirstFit {
+        /// The alternatives, in order of preference.
+        #[serde(default)]
+        children: Vec<Layer>,
+    },
 }
 
 /// A built-in icon set.
@@ -254,6 +314,22 @@ impl std::fmt::Display for IconSet {
 }
 
 impl Kind {
+    /// Child layers, for types that hold them (frames and `firstFit`).
+    pub fn children(&self) -> Option<&Vec<Layer>> {
+        match self {
+            Kind::Frame { children, .. } | Kind::FirstFit { children } => Some(children),
+            _ => None,
+        }
+    }
+
+    /// Child layers, mutably.
+    pub fn children_mut(&mut self) -> Option<&mut Vec<Layer>> {
+        match self {
+            Kind::Frame { children, .. } | Kind::FirstFit { children } => Some(children),
+            _ => None,
+        }
+    }
+
     /// The type's name, as in `type`.
     pub fn name(&self) -> &'static str {
         match self {
@@ -264,6 +340,8 @@ impl Kind {
             Kind::Line { .. } => "line",
             Kind::Icon { .. } => "icon",
             Kind::Frame { .. } => "frame",
+            Kind::Spacer { .. } => "spacer",
+            Kind::FirstFit { .. } => "firstFit",
         }
     }
 }

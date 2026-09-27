@@ -41,6 +41,8 @@ impl Kind {
                 "cornerRadius",
                 "stack",
             ],
+            Kind::Spacer { .. } => &["minLength"],
+            Kind::FirstFit { .. } => &["children"],
         }
     }
 }
@@ -59,6 +61,18 @@ const COMMON_KEYS: &[&str] = &[
     "blendMode",
     "mask",
     "at",
+    "minWidth",
+    "maxWidth",
+    "minHeight",
+    "maxHeight",
+    "aspectRatio",
+    "place",
+    "inset",
+    "hidden",
+    "alignSelf",
+    "grow",
+    "priority",
+    "position",
 ];
 
 /// Rejects keys that don't belong to the layer's type, so a typo like

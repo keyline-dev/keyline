@@ -2,38 +2,172 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::defaults::{is_default, is_zero};
+use super::defaults::{is_default, is_false};
 
 /// A frame that places its children one after another, like CSS flexbox or
 /// a design tool's Auto Layout. Children's `x`, `y` and `constraints` are
-/// ignored. Without a `width` or `height`, the frame hugs its children.
+/// ignored unless they're `position: absolute`. Without a `width` or
+/// `height`, the frame hugs its children on that axis.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Stack {
-    /// Main axis.
-    pub dir: Dir,
-    /// Space between children, px (default 0).
-    #[serde(default, skip_serializing_if = "is_zero")]
-    pub gap: f32,
-    /// Space inside the frame's edges, px (default 0).
-    #[serde(default, skip_serializing_if = "is_zero")]
-    pub padding: f32,
+    /// Main axis; a list is tried in order and the first that fits is used,
+    /// e.g. `["row", "column"]`: a row where it fits, else a column.
+    pub dir: Dirs,
+    /// Space between children, px; `[rowGap, columnGap]` for wrapped stacks
+    /// (default 0).
+    #[serde(default, skip_serializing_if = "Gap::is_zero")]
+    pub gap: Gap,
+    /// Space inside the frame's edges, px: one value, `[vertical,
+    /// horizontal]`, or `[top, right, bottom, left]` (default 0).
+    #[serde(default, skip_serializing_if = "Padding::is_zero")]
+    pub padding: Padding,
     /// Where children sit across the main axis (default start).
     #[serde(default, skip_serializing_if = "is_default")]
     pub align: StackAlign,
     /// How children share leftover space along the main axis (default start).
     #[serde(default, skip_serializing_if = "is_default")]
     pub justify: Justify,
+    /// Wrap children onto more lines when they don't fit (default false).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub wrap: bool,
+}
+
+/// One main axis, or several tried in order.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Dirs {
+    /// Always this axis.
+    One(Dir),
+    /// The first axis whose layout fits; the last one otherwise.
+    FirstFit(Vec<Dir>),
+}
+
+impl Dirs {
+    /// The axes to try, in order.
+    pub fn options(&self) -> &[Dir] {
+        match self {
+            Dirs::One(d) => std::slice::from_ref(d),
+            Dirs::FirstFit(ds) => ds,
+        }
+    }
+}
+
+impl From<Dir> for Dirs {
+    fn from(d: Dir) -> Self {
+        Dirs::One(d)
+    }
 }
 
 /// A stack's main axis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "kebab-case")]
 pub enum Dir {
     /// Left to right.
     Row,
     /// Top to bottom.
     Column,
+    /// Right to left.
+    RowReverse,
+    /// Bottom to top.
+    ColumnReverse,
+}
+
+impl Dir {
+    /// True for rows, reversed or not.
+    pub fn is_row(self) -> bool {
+        matches!(self, Dir::Row | Dir::RowReverse)
+    }
+
+    /// True for the reversed directions.
+    pub fn is_reverse(self) -> bool {
+        matches!(self, Dir::RowReverse | Dir::ColumnReverse)
+    }
+
+    /// The name as written in JSON.
+    pub fn name(self) -> &'static str {
+        match self {
+            Dir::Row => "row",
+            Dir::Column => "column",
+            Dir::RowReverse => "row-reverse",
+            Dir::ColumnReverse => "column-reverse",
+        }
+    }
+}
+
+/// Space between children.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Gap {
+    /// The same gap between children and between wrapped lines, px.
+    Both(f32),
+    /// `[rowGap, columnGap]`, px, as in CSS: the space between rows, and
+    /// between columns.
+    Axes([f32; 2]),
+}
+
+impl Default for Gap {
+    fn default() -> Self {
+        Gap::Both(0.0)
+    }
+}
+
+impl Gap {
+    /// `(between children, between lines)` for a stack in `dir`.
+    pub fn main_cross(self, dir: Dir) -> (f32, f32) {
+        let (row_gap, column_gap) = match self {
+            Gap::Both(g) => (g, g),
+            Gap::Axes([r, c]) => (r, c),
+        };
+        if dir.is_row() {
+            (column_gap, row_gap)
+        } else {
+            (row_gap, column_gap)
+        }
+    }
+
+    fn is_zero(&self) -> bool {
+        *self == Gap::Both(0.0)
+    }
+
+    /// True when any gap is negative.
+    pub fn is_negative(self) -> bool {
+        let (a, b) = self.main_cross(Dir::Row);
+        a < 0.0 || b < 0.0
+    }
+}
+
+/// Space inside a frame's edges, like CSS `padding`.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Padding {
+    /// The same on every side, px.
+    All(f32),
+    /// `[vertical, horizontal]`, px.
+    Axes([f32; 2]),
+    /// `[top, right, bottom, left]`, px.
+    Sides([f32; 4]),
+}
+
+impl Default for Padding {
+    fn default() -> Self {
+        Padding::All(0.0)
+    }
+}
+
+impl Padding {
+    /// `[top, right, bottom, left]`, px.
+    pub fn sides(self) -> [f32; 4] {
+        match self {
+            Padding::All(p) => [p; 4],
+            Padding::Axes([v, h]) => [v, h, v, h],
+            Padding::Sides(s) => s,
+        }
+    }
+
+    fn is_zero(&self) -> bool {
+        self.sides() == [0.0; 4]
+    }
 }
 
 /// Cross-axis placement of a stack's children.
@@ -47,6 +181,12 @@ pub enum StackAlign {
     Center,
     /// Bottom of a row, right of a column.
     End,
+    /// As wide (column) or tall (row) as the stack's inside, unless the child
+    /// has a fixed size on that axis.
+    Stretch,
+    /// Rows only: children's first text baselines line up; other children
+    /// sit on the baseline by their bottom edge.
+    Baseline,
 }
 
 /// Main-axis distribution of a stack's children.
@@ -62,6 +202,38 @@ pub enum Justify {
     End,
     /// First and last at the edges, the rest spread evenly between.
     Between,
+    /// Equal space on both sides of every child (half a gap at the edges).
+    Around,
     /// Equal space around every child, edges included.
     Evenly,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Dir, Dirs, Gap, Padding, Stack};
+    use serde_json::json;
+
+    #[test]
+    fn stacks_read_shorthands() {
+        let s: Stack = serde_json::from_value(
+            json!({"dir": ["row", "column"], "gap": [4, 8], "padding": [10, 20]}),
+        )
+        .unwrap();
+        assert_eq!(s.dir, Dirs::FirstFit(vec![Dir::Row, Dir::Column]));
+        assert_eq!(s.gap.main_cross(Dir::Row), (8.0, 4.0));
+        assert_eq!(s.gap.main_cross(Dir::Column), (4.0, 8.0));
+        assert_eq!(s.padding.sides(), [10.0, 20.0, 10.0, 20.0]);
+        assert_eq!(
+            Padding::Sides([1.0, 2.0, 3.0, 4.0]).sides(),
+            [1.0, 2.0, 3.0, 4.0]
+        );
+        assert_eq!(Gap::Both(5.0).main_cross(Dir::ColumnReverse), (5.0, 5.0));
+    }
+
+    #[test]
+    fn mvp_stacks_round_trip_unchanged() {
+        let v = json!({"dir": "row", "gap": 10.0, "padding": 20.0, "justify": "evenly"});
+        let s: Stack = serde_json::from_value(v.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&s).unwrap(), v);
+    }
 }

@@ -1,21 +1,24 @@
 //! Resolves every layer's box for one target size, following the usual
-//! design-tool rules: the Scale tool first (geometry and font sizes × `scale`), then a frame resize
-//! from the scaled master to the target, applying each layer's constraints
-//! against its parent, recursively.
+//! design-tool rules: the Scale tool first (geometry and font sizes ×
+//! `scale`), then a frame resize from the scaled master to the target,
+//! applying each layer's constraints against its parent, recursively.
+//! Stacks lay out their children like CSS flexbox; `firstFit` picks one.
 
+mod first_fit;
+mod flex;
+mod measure;
 mod stack;
 #[cfg(test)]
 mod tests;
 
 use skia_safe::textlayout::Paragraph;
 
-use crate::scene::{Kind, Layer, Pin, Resize, Scene, Size};
+use crate::scene::{
+    Dirs, Inset, Kind, Layer, Length, Pin, Place, Position, Resize, Scene, Size, Spot,
+};
 use crate::text::{Fit, Text};
 
-use stack::{hug, place_stack};
-
-/// Frames and rects without a size default to 100 × 100.
-const DEFAULT_BOX: f32 = 100.0;
+use measure::{clamp, measure, offset};
 
 /// An axis-aligned box in canvas pixels.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -51,8 +54,11 @@ pub struct Placed<'a> {
     pub k: f32,
     /// The laid-out paragraph and how it fits, for text layers.
     pub text: Option<(Paragraph, Fit)>,
-    /// Placed children, for frames.
+    /// Placed children, for frames (and the chosen child of a `firstFit`).
     pub children: Vec<Placed<'a>>,
+    /// What an adaptive layout chose at this size: a stack's direction
+    /// when it had several, or the id of a `firstFit`'s child.
+    pub chosen: Option<String>,
 }
 
 impl Placed<'_> {
@@ -75,10 +81,12 @@ pub fn layout<'a>(scene: &'a Scene, size: &Size) -> Vec<Placed<'a>> {
     let k = size.scale;
     let old = (scene.width * k, scene.height * k);
     let new = (size.width, size.height);
-    place(scene, &scene.layers, old, new, (0.0, 0.0), k)
+    place_free(scene, &scene.layers, old, new, (0.0, 0.0), k)
 }
 
-fn place<'a>(
+/// Places children by their own position, size and constraints, as the
+/// parent goes from `old` (scaled master) to `new`.
+fn place_free<'a>(
     scene: &'a Scene,
     layers: &'a [Layer],
     old: (f32, f32),
@@ -88,76 +96,194 @@ fn place<'a>(
 ) -> Vec<Placed<'a>> {
     layers
         .iter()
+        .filter(|l| !l.hidden)
         .map(|layer| {
-            let text = Text::of(layer, k);
-            let natural = natural_size(scene, layer, k, text.as_ref());
-            let (x, w) = axis(
-                layer.constraints.h.into(),
-                layer.x * k,
+            let natural = measure(scene, layer, k, old, (None, None), false);
+            let (hs, vs) = layer.place.map(Place::spots).unzip();
+            let inset = layer.inset.map_or((0.0, 0.0), Inset::xy);
+            let (x, w) = free_axis(
+                FreeAxis {
+                    pos: layer.x,
+                    len: layer.width,
+                    pin: layer.constraints.h.into(),
+                    spot: hs,
+                    inset: inset.0 * k,
+                },
                 natural.0,
                 old.0,
                 new.0,
+                k,
             );
-            let (y, h) = axis(
-                layer.constraints.v.into(),
-                layer.y * k,
+            let (y, h) = free_axis(
+                FreeAxis {
+                    pos: layer.y,
+                    len: layer.height,
+                    pin: layer.constraints.v.into(),
+                    spot: vs,
+                    inset: inset.1 * k,
+                },
                 natural.1,
                 old.1,
                 new.1,
+                k,
             );
+            let (w, h) = clamp(layer, k, (w, h));
             let rect = Rect {
                 x: origin.0 + x,
                 y: origin.1 + y,
                 w,
                 h,
             };
-            finish(scene, layer, text, natural, rect, k)
+            finish(scene, layer, natural, rect, k, false)
         })
         .collect()
 }
 
+/// One axis of a free child: its position and size fields and how it's pinned.
+#[derive(Clone, Copy)]
+struct FreeAxis {
+    pos: Length,
+    len: Option<Length>,
+    pin: Pin,
+    spot: Option<Spot>,
+    inset: f32,
+}
+
+/// Position and length on one axis when the parent goes from `old` to
+/// `new`: constraints for px values, a share of the parent for `%`, the
+/// rest of the parent for `fill`, and `place` wins over all of them.
+fn free_axis(a: FreeAxis, natural: f32, old: f32, new: f32, k: f32) -> (f32, f32) {
+    let pin = if matches!(a.pos, Length::Pct(_)) {
+        Pin::Scale
+    } else {
+        a.pin
+    };
+    let (mut pos, mut len) = axis(pin, offset(a.pos, k, old), natural, old, new);
+    match a.len {
+        Some(Length::Pct(p)) => len = p * new,
+        Some(Length::Fill) => len = (new - pos).max(0.0),
+        _ => {}
+    }
+    if let Some(spot) = a.spot {
+        pos = match spot {
+            Spot::Start => a.inset,
+            Spot::Middle => (new - len) / 2.0,
+            Spot::End => new - len - a.inset,
+        };
+    }
+    (pos, len)
+}
+
 /// Lays out a layer's text and children once its box is known. `natural`
 /// is its box before any resize, which its children's constraints follow.
+/// `sized` means a stack already set the box, text included.
 fn finish<'a>(
     scene: &'a Scene,
     layer: &'a Layer,
-    text: Option<Text<'_>>,
     natural: (f32, f32),
     mut rect: Rect,
     k: f32,
+    sized: bool,
 ) -> Placed<'a> {
     let (w, h) = natural;
-    let text = text.map(|t| {
-        match t.resize() {
-            // Auto-width text keeps its measured width wherever it's pinned.
-            Resize::AutoWidth => {
-                if matches!(Pin::from(layer.constraints.h), Pin::Stretch | Pin::Scale) {
-                    rect.x += (rect.w - w) / 2.0;
+    let text = Text::of(layer, k).map(|t| {
+        if !sized {
+            match t.resize() {
+                // Auto-width text keeps its measured width wherever it's pinned.
+                Resize::AutoWidth => {
+                    if matches!(Pin::from(layer.constraints.h), Pin::Stretch | Pin::Scale)
+                        && layer.place.is_none()
+                    {
+                        rect.x += (rect.w - w) / 2.0;
+                    }
+                    rect.w = w;
+                    rect.h = h;
                 }
-                rect.w = w;
-                rect.h = h;
+                // Auto-height text rewraps at its new width and grows down.
+                Resize::AutoHeight => rect.h = t.height_at(rect.w),
+                Resize::Fit | Resize::Fixed | Resize::Truncate => {}
             }
-            // Auto-height text rewraps at its new width and grows down.
-            Resize::AutoHeight => rect.h = t.natural_size(rect.w, 0.0).1,
-            Resize::Fit | Resize::Fixed | Resize::Truncate => {}
         }
         t.layout(rect.w, rect.h)
     });
-    let children = match &layer.kind {
+    let (children, chosen) = match &layer.kind {
         Kind::Frame {
             children,
-            stack: Some(stack),
+            stack: Some(s),
             ..
-        } => place_stack(scene, children, stack, rect, k),
-        Kind::Frame { children, .. } => place(
-            scene,
-            children,
-            (w, h),
-            (rect.w, rect.h),
-            (rect.x, rect.y),
-            k,
+        } => {
+            let [t, r, b, l] = s.padding.sides().map(|p| p * k);
+            let inner = (rect.w - l - r, rect.h - t - b);
+            let a = stack::choose(scene, children, s, k, (Some(inner.0), Some(inner.1)));
+            let mut placed: Vec<Placed> = a
+                .items
+                .iter()
+                .map(|it| {
+                    let r = Rect {
+                        x: rect.x + l + it.pos.0,
+                        y: rect.y + t + it.pos.1,
+                        w: it.size.0,
+                        h: it.size.1,
+                    };
+                    let own = measure(scene, it.layer, k, inner, (None, None), true);
+                    finish(scene, it.layer, own, r, k, true)
+                })
+                .collect();
+            // Absolute children sit on the frame like free children.
+            placed.extend(
+                children
+                    .iter()
+                    .filter(|c| c.position == Position::Absolute)
+                    .flat_map(|c| {
+                        place_free(
+                            scene,
+                            std::slice::from_ref(c),
+                            (w, h),
+                            (rect.w, rect.h),
+                            (rect.x, rect.y),
+                            k,
+                        )
+                    }),
+            );
+            let chosen = matches!(s.dir, Dirs::FirstFit(_)).then(|| a.dir.name().to_owned());
+            (placed, chosen)
+        }
+        Kind::Frame { children, .. } => (
+            place_free(
+                scene,
+                children,
+                (w, h),
+                (rect.w, rect.h),
+                (rect.x, rect.y),
+                k,
+            ),
+            None,
         ),
-        _ => Vec::new(),
+        Kind::FirstFit { children } => {
+            let (_, i) = first_fit::content(
+                scene,
+                children,
+                k,
+                (rect.w, rect.h),
+                (Some(rect.w), Some(rect.h)),
+            );
+            let chosen = children.get(i).map(|c| c.id.clone());
+            let placed = children
+                .get(i)
+                .map(|c| {
+                    place_free(
+                        scene,
+                        std::slice::from_ref(c),
+                        (rect.w, rect.h),
+                        (rect.w, rect.h),
+                        (rect.x, rect.y),
+                        k,
+                    )
+                })
+                .unwrap_or_default();
+            (placed, chosen)
+        }
+        _ => (Vec::new(), None),
     };
     Placed {
         layer,
@@ -165,54 +291,7 @@ fn finish<'a>(
         k,
         text,
         children,
-    }
-}
-
-/// The layer's box at the scaled master size, before constraints.
-fn natural_size(scene: &Scene, layer: &Layer, k: f32, text: Option<&Text>) -> (f32, f32) {
-    if let Kind::Frame {
-        children,
-        stack: Some(stack),
-        ..
-    } = &layer.kind
-        && (layer.width.is_none() || layer.height.is_none())
-    {
-        let (hw, hh) = hug(scene, children, stack, k);
-        return (
-            layer.width.map_or(hw, |w| w * k),
-            layer.height.map_or(hh, |h| h * k),
-        );
-    }
-    let (w, h) = match (&layer.kind, layer.width, layer.height) {
-        (_, Some(w), Some(h)) => (w, h),
-        (Kind::Image { asset, .. }, w, h) => {
-            let (iw, ih) = scene
-                .assets
-                .get(asset)
-                .map_or((DEFAULT_BOX, DEFAULT_BOX), |a| (a.width, a.height));
-            match (w, h) {
-                // One side given: keep the image's aspect ratio.
-                (Some(w), None) => (w, w * ih / iw),
-                (None, Some(h)) => (h * iw / ih, h),
-                _ => (iw, ih),
-            }
-        }
-        (Kind::Icon { name, set, .. }, w, h) => {
-            let a = crate::icons::aspect(*set, name).unwrap_or(1.0);
-            let d = crate::icons::DEFAULT_SIZE;
-            match (w, h) {
-                (Some(w), None) => (w, w / a),
-                (None, Some(h)) => (h * a, h),
-                _ => (d * a, d),
-            }
-        }
-        // A line's box is its run: a missing side is 0, not a default box.
-        (Kind::Line { .. }, w, h) => (w.unwrap_or(0.0), h.unwrap_or(0.0)),
-        (_, w, h) => (w.unwrap_or(DEFAULT_BOX), h.unwrap_or(DEFAULT_BOX)),
-    };
-    match text {
-        Some(t) => t.natural_size(w * k, h * k),
-        None => (w * k, h * k),
+        chosen,
     }
 }
 

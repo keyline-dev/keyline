@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{Color, Kind, Layer};
+use super::{Color, Kind, Layer, Length};
 
 /// Case transform for drawn text.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
@@ -37,14 +37,16 @@ pub enum Resize {
 
 impl Layer {
     /// A text layer's resize mode; when omitted it follows from the box:
-    /// width and height → `fit`, width only → `auto-height`, else `auto-width`.
+    /// width and height → `fit`, width only → `auto-height`, else
+    /// `auto-width`. A `"hug"` side counts as unset.
     pub fn text_resize(&self) -> Option<Resize> {
         let Kind::Text { resize, .. } = &self.kind else {
             return None;
         };
-        Some(resize.unwrap_or(match (self.width, self.height) {
-            (Some(_), Some(_)) => Resize::Fit,
-            (Some(_), None) => Resize::AutoHeight,
+        let set = |l: Option<Length>| l.is_some_and(|l| l != Length::Hug);
+        Some(resize.unwrap_or(match (set(self.width), set(self.height)) {
+            (true, true) => Resize::Fit,
+            (true, false) => Resize::AutoHeight,
             _ => Resize::AutoWidth,
         }))
     }
@@ -91,6 +93,14 @@ mod tests {
         assert_eq!(
             mode(json!({"type": "text", "text": "a", "width": 9})),
             Some(Resize::AutoHeight)
+        );
+        assert_eq!(
+            mode(json!({"type": "text", "text": "a", "width": "fill"})),
+            Some(Resize::AutoHeight)
+        );
+        assert_eq!(
+            mode(json!({"type": "text", "text": "a", "width": "hug", "height": 9})),
+            Some(Resize::AutoWidth)
         );
         assert_eq!(
             mode(json!({"type": "text", "text": "a", "width": 9, "height": 9})),

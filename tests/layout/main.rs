@@ -6,11 +6,14 @@
 // Test support: a panic is how a test reports failure.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+mod adaptive;
 mod at;
 mod constraints;
+mod flex;
 mod frames;
 mod intrinsic;
 mod scale;
+mod sizing;
 mod stacks;
 mod text;
 
@@ -54,7 +57,7 @@ pub(crate) fn boxes(scene: &Scene, size: &Size) -> BTreeMap<String, Rect> {
         }
     }
     let resolved = scene.resolved();
-    let sized = resolved.for_size(&size.id);
+    let sized = resolved.for_size(size);
     let mut out = BTreeMap::new();
     flat(&layout(&sized, size), &mut out);
     out
@@ -80,4 +83,21 @@ pub(crate) fn pinned(h: &str, v: &str) -> Scene {
         json!([{"id": "r", "type": "rect", "x": 100, "y": 50, "width": 200, "height": 100,
                   "constraints": {"h": h, "v": v}}]),
     )
+}
+
+/// What an adaptive layer chose at a size (a stack's direction, a
+/// `firstFit`'s child id), by layer id.
+pub(crate) fn chosen(scene: &Scene, size: &Size, id: &str) -> Option<String> {
+    fn find(placed: &[Placed], id: &str) -> Option<Option<String>> {
+        placed.iter().find_map(|p| {
+            if p.layer.id == id {
+                Some(p.chosen.clone())
+            } else {
+                find(&p.children, id)
+            }
+        })
+    }
+    let resolved = scene.resolved();
+    let sized = resolved.for_size(size);
+    find(&layout(&sized, size), id).flatten()
 }

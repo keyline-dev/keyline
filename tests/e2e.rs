@@ -14,8 +14,8 @@ use common::{CHECK_SVG, LEOPARD_SVG, Mcp, b64, build_reference_ad, flag_svg, pho
 use serde_json::json;
 
 /// Tool definitions are sent to the model on every turn, so they have a
-/// budget (~1.75k tokens). Raise it only on purpose, for features worth it.
-const TOOLS_LIST_MAX_CHARS: usize = 7000;
+/// budget (~2.25k tokens). Raise it only on purpose, for features worth it.
+const TOOLS_LIST_MAX_CHARS: usize = 9000;
 
 // ponytail: Skia rasterizes glyphs through the OS font stack, so goldens are
 // per OS and compared with a tolerance across its versions; embed FreeType
@@ -639,6 +639,6 @@ async fn at_adapts_one_size_without_touching_the_others() {
         )
         .await
         .unwrap_err();
-    assert!(err.contains("no size tiny"), "{err}");
+    assert!(err.contains("no size or aspect class tiny"), "{err}");
     mcp.stop().await;
 }

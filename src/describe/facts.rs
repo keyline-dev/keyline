@@ -23,7 +23,7 @@ pub fn facts(scene: &Scene) -> String {
     let mut smallest = Vec::new();
     let mut upscaled = Vec::new();
     for size in &scene.sizes {
-        let sized = scene.for_size(&size.id);
+        let sized = scene.for_size(size);
         let placed = layout(&sized, size);
         let mut min: Option<(f32, &str)> = None;
         walk(&placed, &mut |p| match (&p.text, &p.layer.kind) {
@@ -113,6 +113,6 @@ pub fn text_report(scene: &Scene, size: &Size) -> String {
         }
     }
     let mut out = String::new();
-    go(&mut out, &layout(&scene.for_size(&size.id), size));
+    go(&mut out, &layout(&scene.for_size(size), size));
     out
 }

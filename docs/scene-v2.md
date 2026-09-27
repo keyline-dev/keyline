@@ -54,7 +54,7 @@ Rules every field follows:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 0,
   "width": 1080, "height": 1350,
   "sizes": ["instagram-portrait", {"id": "wide", "width": 1200, "height": 1000, "scale": 0.85}, "300x600"],
   "background": "#FFFFFF",
@@ -68,7 +68,7 @@ Rules every field follows:
 
 | Field | Meaning | Default |
 |---|---|---|
-| `schemaVersion` | Format version. Stays 1: v2 only adds fields and the MVP has no outside users, so there is nothing to tell apart. The first breaking change after release bumps it | 1 |
+| `schemaVersion` | Format version. Stays at the MVP's value (0): v2 only adds fields and the MVP has no outside users, so there is nothing to tell apart. The first breaking change after release bumps it | 0 |
 | `width`, `height` | Master size, px; layers are authored at this size | required |
 | `sizes` | Output sizes: `{id, width, height, scale, safe}`, a preset slug, or `"WxH"` (id = the string) | required |
 | `background` | Any paint (color, gradient, image) | `#FFFFFF` |
@@ -174,7 +174,7 @@ Children in a stack may set `alignSelf`, `grow`, `priority` and `position: "abso
 
 ### Per size
 
-`at` keys are a size id or an aspect class, applied broadest first: `landscape` (w/h > 1.25), `square` (0.8–1.25), `portrait` (< 0.8), then `wide` (> 2) and `tall` (< 0.5), then the size id. One `"tall": {…}` entry covers every skyscraper a template is ever rendered at, including sizes added later.
+`at` keys are a size id or an aspect class, applied broadest first: `landscape` (w/h > 1.1), `square` (0.9–1.1), `portrait` (< 0.9), then `wide` (2:1 or wider) and `tall` (1:2 or taller), then the size id. A 4:5 post is portrait; a 300 × 600 half-page is tall. One `"tall": {…}` entry covers every skyscraper a template is ever rendered at, including sizes added later.
 
 ## Paint
 
@@ -546,7 +546,7 @@ This example gives text layers `padding`, which the tables above don't define ye
 2. **Markup always on,** or only when a `markup: true` flag is set? Always-on costs nothing, but a literal `<b>` in copy would need escaping.
 3. **`padding` on any layer** (text, images), as CSS allows, or only on frames? The example uses it; it saves a wrapper frame per padded text.
 4. **Components live-linked** (proposed) or expanded into plain layers on add? Linked keeps one-edit changes; expanded is simpler to build.
-5. **Aspect-class thresholds** (0.8, 1.25, 0.5, 2) and names.
+5. **Aspect-class thresholds:** decided while building: square is 0.9–1.1 (so a 4:5 post is portrait), and tall and wide include 1:2 and 2:1 (a 300 × 600 half-page is tall).
 6. **Tool-definition budget:** raise the test's cap from 7,000 to 9,000 characters, and ship the full reference as a skill and an MCP prompt?
 7. **QR codes** stay an SVG asset in v2. A built-in `qr` type (`{"type": "qr", "data": "{url}"}`) waits for the templates milestone, where `render_batch` needs a different code per row; it will need the `qrcode` crate (MIT/Apache), which needs owner approval.
 8. Carried from graphic-layer.md: `path` scaling (`contain` proposed), per-side strokes on rounded corners, `diamond` gradients (dropped here: rare, and Skia has no native shader).

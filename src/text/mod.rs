@@ -108,6 +108,11 @@ impl<'a> Text<'a> {
         })
     }
 
+    /// Font size, scaled px, before any fitting.
+    pub fn font_size(&self) -> f32 {
+        self.font_size
+    }
+
     /// The sizing mode in effect.
     pub fn resize(&self) -> Resize {
         self.resize

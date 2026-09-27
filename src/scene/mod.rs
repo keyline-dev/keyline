@@ -7,6 +7,7 @@ mod constraints;
 mod defaults;
 mod keys;
 mod layer;
+mod length;
 mod paint;
 mod resolve;
 mod stack;
@@ -20,10 +21,12 @@ use serde::{Deserialize, Serialize};
 pub use constraints::{Constraints, HConstraint, Pin, VConstraint};
 pub use keys::check_keys;
 pub use layer::{IconSet, Kind, Layer};
+pub use length::{Inset, Length, Place, Position, Spot};
 pub use paint::{
     BlendMode, Color, Crop, Fit, Gradient, ImageFill, Outline, Shadow, Stop, Stroke, StrokeAlign,
 };
-pub use stack::{Dir, Justify, Stack, StackAlign};
+pub use resolve::{ASPECT_CLASSES, aspect_classes};
+pub use stack::{Dir, Dirs, Gap, Justify, Padding, Stack, StackAlign};
 pub use text::{Align, Range, Resize, TextCase};
 
 use defaults::{is_false, is_one, one, white};
@@ -98,7 +101,7 @@ impl Scene {
         fn go<'a>(layers: &'a [Layer], f: &mut impl FnMut(&'a Layer)) {
             for l in layers {
                 f(l);
-                if let Kind::Frame { children, .. } = &l.kind {
+                if let Some(children) = l.kind.children() {
                     go(children, f);
                 }
             }
