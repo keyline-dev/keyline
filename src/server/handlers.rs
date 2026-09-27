@@ -34,6 +34,8 @@ impl Server {
             sizes,
             assets: Default::default(),
             styles: Default::default(),
+            tokens: Default::default(),
+            components: Default::default(),
             layers: Vec::new(),
             version: 0,
         };

@@ -2,6 +2,8 @@
 //! is committed only if the whole batch validates, so batches are atomic.
 
 #[cfg(test)]
+mod reuse_tests;
+#[cfg(test)]
 mod tests;
 
 use std::collections::HashSet;
@@ -15,6 +17,17 @@ use crate::scene::{Layer, Scene, check_keys};
 #[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum Target {
+    // Before `Role`: untagged variants are tried in order, and a
+    // `{component, role}` target must not read as a bare `{role}`.
+    /// A component's template, or with `role` a layer inside it; `set`
+    /// changes every instance, `delete` removes it.
+    Component {
+        /// Component name.
+        component: String,
+        /// A layer inside the template, by role.
+        #[serde(default)]
+        role: Option<String>,
+    },
     /// The layer with this id.
     Id {
         /// Layer id.
@@ -25,7 +38,7 @@ pub enum Target {
         /// Layer role.
         role: String,
     },
-    /// A named text style; `set` creates or changes it, `delete` removes it.
+    /// A named style; `set` creates or changes it, `delete` removes it.
     Style {
         /// Style name.
         style: String,
@@ -37,7 +50,7 @@ impl Target {
         match self {
             Target::Id { id } => l.id == *id,
             Target::Role { role } => l.role.as_deref() == Some(role),
-            Target::Style { .. } => false,
+            Target::Style { .. } | Target::Component { .. } => false,
         }
     }
 }
@@ -48,6 +61,14 @@ impl std::fmt::Display for Target {
             Target::Id { id } => write!(f, "id {id}"),
             Target::Role { role } => write!(f, "role {role}"),
             Target::Style { style } => write!(f, "style {style}"),
+            Target::Component {
+                component,
+                role: None,
+            } => write!(f, "component {component}"),
+            Target::Component {
+                component,
+                role: Some(r),
+            } => write!(f, "role {r} in component {component}"),
         }
     }
 }
@@ -65,6 +86,48 @@ pub struct Op {
     /// Remove the layer (and its children).
     #[serde(default)]
     pub delete: bool,
+    /// Turn a `use` layer into plain layers that no longer follow its component.
+    #[serde(default)]
+    pub detach: bool,
+}
+
+/// What an edit may also carry besides layers: shared styles, tokens and
+/// components, added or replaced by name.
+#[derive(Debug, Clone, Default)]
+pub struct Shared {
+    /// Styles by name.
+    pub styles: Map<String, Value>,
+    /// Tokens by name.
+    pub tokens: Map<String, Value>,
+    /// Components by name.
+    pub components: Map<String, Value>,
+}
+
+/// Adds or replaces shared styles, tokens and components; tokens that
+/// changed are re-applied to every layer bound to them.
+fn share(next: &mut Scene, shared: Shared) -> Result<(), String> {
+    for (name, style) in shared.styles {
+        let Value::Object(style) = style else {
+            return Err(format!("style {name} must be an object of layer fields"));
+        };
+        next.styles.insert(name, style);
+    }
+    for (name, c) in shared.components {
+        if !c.is_object() {
+            return Err(format!("component {name} must be a layer object"));
+        }
+        next.components.insert(name, c);
+    }
+    let mut changed = Vec::new();
+    for (name, v) in shared.tokens {
+        if crate::reuse::tokens::reference(&format!("${name}")).is_none() {
+            return Err(format!("bad token name {name}: letters, digits, _ . -"));
+        }
+        if next.tokens.insert(name.clone(), v).is_some() {
+            changed.push(name);
+        }
+    }
+    crate::reuse::tokens::rebind(next, &changed)
 }
 
 /// Adds or replaces text `styles`, then appends layers, each on top of its
@@ -72,16 +135,11 @@ pub struct Op {
 /// ids of the added top-level layers.
 pub fn add_layers(
     scene: &mut Scene,
-    styles: Map<String, Value>,
+    shared: Shared,
     layers: Vec<Value>,
 ) -> Result<Vec<String>, String> {
     let mut next = scene.clone();
-    for (name, style) in styles {
-        let Value::Object(style) = style else {
-            return Err(format!("style {name} must be an object of text fields"));
-        };
-        next.styles.insert(name, style);
-    }
+    share(&mut next, shared)?;
     let mut taken: HashSet<String> = HashSet::new();
     next.walk(&mut |l| {
         taken.insert(l.id.clone());
@@ -95,6 +153,7 @@ pub fn add_layers(
             Some(Value::String(p)) => Some(p),
             Some(_) => return Err(at("parent must be a frame id".into())),
         };
+        crate::reuse::tokens::bind(&mut v, &next.tokens).map_err(at)?;
         let mut layer = parse_layer(&v).map_err(at)?;
         resolve_assets(&mut layer, &next.assets);
         reserve_ids(&layer, &mut taken);
@@ -120,13 +179,27 @@ pub fn add_layers(
 }
 
 /// Applies `ops` in order. Returns ids of every layer changed or deleted.
-pub fn update_layers(scene: &mut Scene, ops: &[Op]) -> Result<Vec<String>, String> {
+pub fn update_layers(scene: &mut Scene, shared: Shared, ops: &[Op]) -> Result<Vec<String>, String> {
     let mut next = scene.clone();
+    share(&mut next, shared)?;
     let mut changed = Vec::new();
     for (i, op) in ops.iter().enumerate() {
         let at = |e: String| format!("ops[{i}]: {e}");
-        if op.delete == op.set.is_some() {
-            return Err(at("give exactly one of set or delete".into()));
+        if usize::from(op.delete) + usize::from(op.set.is_some()) + usize::from(op.detach) != 1 {
+            return Err(at("give exactly one of set, delete or detach".into()));
+        }
+        if op.detach {
+            let Target::Id { id } = &op.target else {
+                return Err(at("detach needs {id} of a use layer".into()));
+            };
+            crate::reuse::components::detach(&mut next, id).map_err(at)?;
+            changed.push(id.clone());
+            continue;
+        }
+        if let Target::Component { component, role } = &op.target {
+            recompose(&mut next, component, role.as_deref(), op).map_err(at)?;
+            changed.push(component.clone());
+            continue;
         }
         if let Some(set) = &op.set
             && let Some(k) = ["id", "type", "children"]
@@ -141,7 +214,8 @@ pub fn update_layers(scene: &mut Scene, ops: &[Op]) -> Result<Vec<String>, Strin
             continue;
         }
         let before = changed.len();
-        apply(&mut next.layers, op, &mut changed).map_err(at)?;
+        let tokens = next.tokens.clone();
+        apply(&mut next.layers, op, &tokens, &mut changed).map_err(at)?;
         if changed.len() == before {
             return Err(at(format!("no layer with {}", op.target)));
         }
@@ -150,6 +224,61 @@ pub fn update_layers(scene: &mut Scene, ops: &[Op]) -> Result<Vec<String>, Strin
     next.version += 1;
     *scene = next;
     Ok(changed)
+}
+
+/// Changes (merge patch) or deletes component `name`, or with `role` the
+/// layer inside it that has that role.
+fn recompose(scene: &mut Scene, name: &str, role: Option<&str>, op: &Op) -> Result<(), String> {
+    let known = scene
+        .components
+        .keys()
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(", ");
+    if op.delete && role.is_none() {
+        return scene
+            .components
+            .remove(name)
+            .map(drop)
+            .ok_or_else(|| format!("no component {name}; components: {known}"));
+    }
+    let root = scene
+        .components
+        .get_mut(name)
+        .ok_or_else(|| format!("no component {name}; components: {known}"))?;
+    fn find<'v>(v: &'v mut Value, role: &str) -> Option<&'v mut Value> {
+        if v.get("role").and_then(Value::as_str) == Some(role) {
+            return Some(v);
+        }
+        v.get_mut("children")?
+            .as_array_mut()?
+            .iter_mut()
+            .find_map(|c| find(c, role))
+    }
+    let slot = match role {
+        None => root,
+        Some(r) => find(root, r).ok_or_else(|| format!("no role {r} in component {name}"))?,
+    };
+    match &op.set {
+        Some(set) => merge_patch(slot, &Value::Object(set.clone())),
+        None => *slot = Value::Null,
+    }
+    // A deleted inner layer leaves a null in its parent's children.
+    fn prune(v: &mut Value) {
+        if let Some(Value::Array(c)) = v.get_mut("children") {
+            c.retain(|x| !x.is_null());
+            c.iter_mut().for_each(prune);
+        }
+    }
+    prune(root_of(scene, name));
+    Ok(())
+}
+
+fn root_of<'s>(scene: &'s mut Scene, name: &str) -> &'s mut Value {
+    scene
+        .components
+        .entry(name.to_owned())
+        .or_insert(Value::Null)
 }
 
 /// Creates, changes (merge patch) or deletes the text style `name`.
@@ -171,7 +300,12 @@ fn restyle(scene: &mut Scene, name: &str, op: &Op) -> Result<(), String> {
     }
 }
 
-fn apply(layers: &mut Vec<Layer>, op: &Op, changed: &mut Vec<String>) -> Result<(), String> {
+fn apply(
+    layers: &mut Vec<Layer>,
+    op: &Op,
+    tokens: &std::collections::BTreeMap<String, Value>,
+    changed: &mut Vec<String>,
+) -> Result<(), String> {
     let mut i = 0;
     while i < layers.len() {
         if op.target.matches(&layers[i]) {
@@ -182,12 +316,16 @@ fn apply(layers: &mut Vec<Layer>, op: &Op, changed: &mut Vec<String>) -> Result<
             }
             if let Some(set) = &op.set {
                 let mut v = serde_json::to_value(&layers[i]).map_err(|e| e.to_string())?;
+                // An explicit value replaces a token binding; a new "$name" binds again.
+                crate::reuse::tokens::unbind_set(&mut v, set);
                 merge_patch(&mut v, &Value::Object(set.clone()));
+                crate::reuse::tokens::bind(&mut v, tokens)
+                    .map_err(|e| format!("{}: {e}", layers[i].id))?;
                 layers[i] = parse_layer(&v).map_err(|e| format!("{}: {e}", layers[i].id))?;
             }
         }
         if let Some(children) = layers[i].kind.children_mut() {
-            apply(children, op, changed)?;
+            apply(children, op, tokens, changed)?;
         }
         i += 1;
     }
@@ -195,7 +333,7 @@ fn apply(layers: &mut Vec<Layer>, op: &Op, changed: &mut Vec<String>) -> Result<
 }
 
 /// Parses a layer and rejects unknown keys, recursing into frame children.
-fn parse_layer(v: &Value) -> Result<Layer, String> {
+pub(crate) fn parse_layer(v: &Value) -> Result<Layer, String> {
     let mut v = v.clone();
     normalize(&mut v);
     let layer: Layer = serde_json::from_value(v.clone()).map_err(|e| e.to_string())?;

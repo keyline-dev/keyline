@@ -26,7 +26,6 @@ impl Kind {
                 "fill",
                 "gradient",
                 "outline",
-                "style",
                 "italic",
                 "decoration",
                 "textWrap",
@@ -59,6 +58,7 @@ impl Kind {
             ],
             Kind::Spacer { .. } => &["minLength"],
             Kind::FirstFit { .. } => &["children"],
+            Kind::Use { .. } => &["component", "props", "each"],
         }
     }
 }
@@ -100,6 +100,8 @@ const COMMON_KEYS: &[&str] = &[
     "skew",
     "flipX",
     "flipY",
+    "style",
+    "$tokens",
 ];
 
 /// Rejects keys that don't belong to the layer's type, so a typo like

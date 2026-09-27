@@ -76,63 +76,67 @@ impl Server {
     }
 
     #[tool(
-        description = "Add layers, drawn bottom to top. Layer: {type, id?, role?, parent? (frame id), x, y (px or \"25%\" \
-of the parent), width, height (px, \"hug\" content, \"fill\" = rest of the parent or a stack's free space, \"40%\"), \
-minWidth…maxHeight, aspectRatio, place top-left|top|…|center|…|bottom-right + inset (pinned at every size), \
-constraints {h: left|right|center|stretch|scale, v: top|bottom|center|stretch|scale} (default left, top), hidden, \
-opacity, rotation (degrees), blendMode (multiply, screen, …), mask, \
-at {sizeId or landscape|square|portrait|wide|tall: {fields}}: changes for those sizes only}. \
-image: asset, fit fill|fit|tile (fill = cover; tileScale sizes tiles), focus [x,y] 0–1 kept in view (center), \
-crop {x, y, width, height} 0–1. \
-text: text (markup: <b> <i> <u> <s> <sup> <sub> <br>, <span color=… weight=… highlight=…>, style names as tags \
-<accent>…</accent>), style (name from styles), fontSize (16; the maximum when fitting), weight 100-900, color, \
-align left|center|right|justify, maxLines, ranges [{start, end, color, weight, italic, fontSize, highlight}]. Sizing follows the box: width+height → font shrinks to fit \
-(down to minFontScale 0.5), then ellipsis; width only → wraps, grows down; neither → one line. resize fixed|truncate \
-keeps the font size; ellipsis false cuts without …. Also fontFamily (Inter or any Google Fonts family), \
-letterSpacing px, lineHeight (× fontSize), textCase upper|lower|capitalize, italic, decoration underline|strike, \
-textWrap balance|pretty, verticalAlign top|center|bottom, trim \"cap\", highlight (color or {color, padding, radius, style \
-box|brush}), padding, direction, features {tnum: 1}, curve (arc radius), leader (\".\": text before \\t left, after it \
-right), knockout (cuts the parent frame), shadow {x, y, blur, color}, outline {width, color}, \
-fill {asset, fit, tileScale} or gradient paints the letters. \
-styles {name: {text fields}}: shared text fields; a layer's own fields win. \
-icon: name, set lucide (outline; mail, map-pin, landmark…)|solid|regular|brands (Font Awesome), color, strokeWidth; \
-24px tall unless sized. rect: color, cornerRadius. ellipse: color. line: from x,y by width,height; color, strokeWidth (1). \
-frame: children[], clip (true), color, cornerRadius, stack {dir row|column|row-reverse|column-reverse or a list \
-tried in order (first that fits: [\"row\", \"column\"]), gap (or [row, column]), padding (or [v, h] or [t, r, b, l]), \
-align start|center|end|stretch|baseline, justify start|center|end|between|around|evenly, wrap} places children in \
-order ignoring their x, y; unsized, it hugs them. Stack children: alignSelf, grow (fill share), priority (lower \
-gives way first when tight), position absolute (out of the flow). spacer: free space in a stack. firstFit: \
-children[], draws only the first that fits its box (e.g. a long, then a short headline). \
-rect, ellipse, frame: gradient, stroke {width, color or gradient, align inside|center|outside}. polygon: sides, \
-innerRadius (star). path: d or shape (ribbon, ribbon-banner, bubble, bubble-round, arrow, arrow-curved, chevron, \
-tag, arch, shield, heart, cloud, wave, burst, blob-1…6, brush-stroke). ellipse arc {start, end, inner}. Any layer: \
-fills (a color, or {color|gradient|image|pattern|noise, opacity, blendMode}, or a list bottom to top; [] none), \
-strokes (\"#000\" = 1px, or {width or [t,r,b,l], color|gradient, align, dash [on, off], cap, join, start|end \
-arrow|triangle|circle|diamond}), shadows {x, y, blur, spread, color, inset} or a list (follows a cutout's or \
-text's alpha), blur, backdropBlur, radius (px, [tl,tr,br,bl], \"full\"), scale, offset [x,y], skew [x,y], flipX, flipY \
-(visual, after layout). gradient {type linear|radial|conic, angle (CSS) or from/to [x,y] 0–1, center, radius, stops: \
-colors or [{at, color}]}. image fill {image, fit, focus, crop, adjust}; adjust {brightness, contrast, saturate, \
-grayscale, sepia, hue, duotone [dark, light], tint}. pattern dots|stripes|grid|checker|zigzag|rays, color, size, angle. \
-noise 0–1, seed. mask: a gradient, a shape name, {path}, {layer: id} or {image}, + mode luminance, invert. \
-Colors #RGB[A], #RRGGBB[AA] or CSS names."
+        description = "Add layers, drawn bottom to top. Any layer: {type, id?, role?, parent? (frame id), x, y (px or \
+\"25%\"), width, height (px, \"hug\", \"fill\", \"40%\"), min/maxWidth, min/maxHeight, aspectRatio, place \
+top-left…bottom-right + inset, constraints {h: left|right|center|stretch|scale, v: top|bottom|center|stretch|scale}, \
+hidden, opacity, rotation, blendMode, style (name or list), at {sizeId or landscape|square|portrait|wide|tall: \
+{fields}}, fills, strokes, shadows, blur, backdropBlur, radius (px, [tl,tr,br,bl], \"full\"), mask, scale, offset \
+[x,y], skew, flipX, flipY}. frame: children, clip (true), stack {dir row|column|row-reverse|column-reverse or a list \
+tried in order, gap, padding (1, 2 or 4 values), align start|center|end|stretch|baseline, justify \
+start|center|end|between|around|evenly, wrap}; its children flow in order and may set alignSelf, grow, priority (low \
+gives way first), position absolute; unsized, it hugs them. spacer: free space in a stack. firstFit: children, draws \
+the first that fits. text: text (markup <b> <i> <u> <s> <sup> <br>, <span color=… weight=…>, style names as tags), \
+fontSize (the max when fitting), weight, color, fontFamily (Inter or any Google Font), align left|center|right|justify, \
+lineHeight (× size), letterSpacing, textCase upper|lower|capitalize, italic, decoration underline|strike, maxLines, \
+textWrap balance|pretty, verticalAlign, trim \"cap\", highlight (color or {color, padding, radius, style brush}), \
+padding, curve (radius), leader (\".\" fills a tab gap, right part flush right), knockout, ranges [{start, end, \
+…fields}]. Box: width+height → shrinks to fit (minFontScale 0.5) then ellipsis; width → wraps down; neither → one line; resize \
+fixed|truncate keeps the size. image: asset, fit fill|fit|tile, focus [x,y], crop {x,y,width,height} 0–1, adjust \
+{brightness, contrast, saturate, grayscale, sepia, hue, duotone [dark, light], tint}. icon: name, set \
+lucide|solid|regular|brands, color (24px tall unless sized). rect, ellipse (arc {start, end, inner}), polygon \
+(sides, innerRadius → star), path (d, or shape: ribbon, bubble, arrow, chevron, tag, arch, shield, heart, cloud, wave, \
+burst, blob-1…6, brush-stroke): color, gradient, stroke. line: from x,y by width,height; color, strokeWidth. Fill: a \
+color or {color|gradient|image|pattern|noise, opacity, blendMode}; a list stacks, [] none. gradient {type \
+linear|radial|conic, angle or from/to [x,y], stops [colors] or [{at, color}]}. pattern \
+dots|stripes|grid|checker|zigzag|rays, color, size. Stroke: \"#000\" or {width or [t,r,b,l], color|gradient, align \
+inside|center|outside, dash [on, off], cap, start|end arrow|triangle|circle|diamond}. Shadow {x, y, blur, spread, \
+color, inset} (follows text's or a cutout's alpha). Mask: a gradient, a shape name, {path}, {layer: id} or {image}; \
+mode luminance, invert. Shared: styles {name: {fields}} (a later style wins; own fields win); tokens {name: value} \
+used as \"$name\"; components {name: layer tree with {prop}} placed by {type: use, component, props, each: [props…]} \
+(ids use.n.role). Colors #RGB[A], #RRGGBB[AA] or CSS names."
     )]
     async fn layer_add(&self, Parameters(a): Parameters<LayerAddArgs>) -> CallToolResult {
         let styles = Value::Object(a.styles.clone());
-        let fetched = match self.fetch_fonts(&[&a.layers[..], &[styles]].concat()).await {
+        let components = Value::Object(a.components.clone());
+        let fetched = match self
+            .fetch_fonts(&[&a.layers[..], &[styles, components]].concat())
+            .await
+        {
             Ok(f) => f,
             Err(e) => return reply(Err(e)),
         };
         reply(
-            self.edit(&a.scene_id, |s| ops::add_layers(s, a.styles, a.layers))
-                .await
-                .map(|(ids, s)| fetched + &edited("added", &ids, &s, &self.store.assets_dir())),
+            self.edit(&a.scene_id, |s| {
+                ops::add_layers(
+                    s,
+                    ops::Shared {
+                        styles: a.styles,
+                        tokens: a.tokens,
+                        components: a.components,
+                    },
+                    a.layers,
+                )
+            })
+            .await
+            .map(|(ids, s)| fetched + &edited("added", &ids, &s, &self.store.assets_dir())),
         )
     }
 
     #[tool(
-        description = "Change or delete layers atomically. Each op: {target: {id}|{role}|{style}, set: {fields}} \
-or {target, delete: true}. A role targets every layer with it; a style target creates or changes that text style. \
-null resets a field."
+        description = "Change or delete layers atomically. Each op: {target: {id}|{role}|{style}|{component, role?}, \
+set: {fields}} or {target, delete: true} or {target: {id}, detach: true} (a use becomes plain layers). A role targets \
+every layer with it; a style or component target changes it everywhere it's used. tokens {name: value} changes \
+tokens. null resets a field."
     )]
     async fn layer_update(&self, Parameters(a): Parameters<LayerUpdateArgs>) -> CallToolResult {
         let sets: Vec<Value> = a
@@ -145,9 +149,19 @@ null resets a field."
             Err(e) => return reply(Err(e)),
         };
         reply(
-            self.edit(&a.scene_id, |s| ops::update_layers(s, &a.ops))
-                .await
-                .map(|(ids, s)| fetched + &edited("changed", &ids, &s, &self.store.assets_dir())),
+            self.edit(&a.scene_id, |s| {
+                ops::update_layers(
+                    s,
+                    ops::Shared {
+                        styles: Default::default(),
+                        tokens: a.tokens,
+                        components: Default::default(),
+                    },
+                    &a.ops,
+                )
+            })
+            .await
+            .map(|(ids, s)| fetched + &edited("changed", &ids, &s, &self.store.assets_dir())),
         )
     }
 

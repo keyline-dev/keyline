@@ -2,6 +2,13 @@
 
 use super::*;
 use crate::scene::Kind;
+
+fn shared(styles: Map<String, Value>) -> Shared {
+    Shared {
+        styles,
+        ..Shared::default()
+    }
+}
 use serde_json::json;
 
 fn scene() -> Scene {
@@ -27,6 +34,7 @@ fn a_style_target_creates_changes_and_deletes_styles() {
     let op = |v: Value| serde_json::from_value::<Op>(v).unwrap();
     let ids = update_layers(
         &mut s,
+        Shared::default(),
         &[op(
             json!({"target": {"style": "h"}, "set": {"fontSize": 40, "weight": 800}}),
         )],
@@ -35,6 +43,7 @@ fn a_style_target_creates_changes_and_deletes_styles() {
     assert_eq!(ids, ["h"]);
     update_layers(
         &mut s,
+        Shared::default(),
         &[op(
             json!({"target": {"style": "h"}, "set": {"weight": null}}),
         )],
@@ -43,12 +52,14 @@ fn a_style_target_creates_changes_and_deletes_styles() {
     assert_eq!(s.styles["h"], *json!({"fontSize": 40}).as_object().unwrap());
     update_layers(
         &mut s,
+        Shared::default(),
         &[op(json!({"target": {"style": "h"}, "delete": true}))],
     )
     .unwrap();
     assert!(s.styles.is_empty());
     let err = update_layers(
         &mut s,
+        Shared::default(),
         &[op(json!({"target": {"style": "h"}, "delete": true}))],
     );
     assert!(err.unwrap_err().contains("no style h"));
@@ -59,7 +70,7 @@ fn add_generates_ids_and_nests_under_parent() {
     let mut s = scene();
     let ids = add_layers(
         &mut s,
-        Map::new(),
+        shared(Map::new()),
         vec![
             json!({"type": "rect", "color": "#FF0000"}),
             json!({"type": "rect", "parent": "bar"}),
@@ -84,7 +95,7 @@ fn generated_ids_avoid_ids_given_later_in_the_batch() {
     let mut s = scene();
     let ids = add_layers(
         &mut s,
-        Map::new(),
+        shared(Map::new()),
         vec![
             json!({"type": "rect"}),
             json!({"id": "rect1", "type": "rect"}),
@@ -99,7 +110,7 @@ fn add_is_atomic() {
     let mut s = scene();
     let err = add_layers(
         &mut s,
-        Map::new(),
+        shared(Map::new()),
         vec![
             json!({"type": "rect"}),
             json!({"type": "text", "text": "x", "fontsize": 3}),
@@ -114,7 +125,7 @@ fn add_is_atomic() {
     assert!(
         add_layers(
             &mut s,
-            Map::new(),
+            shared(Map::new()),
             vec![json!({"type": "rect", "parent": "t2"})]
         )
         .is_err()
@@ -122,7 +133,7 @@ fn add_is_atomic() {
     assert!(
         add_layers(
             &mut s,
-            Map::new(),
+            shared(Map::new()),
             vec![json!({"id": "bar", "type": "rect"})]
         )
         .unwrap_err()
@@ -133,14 +144,14 @@ fn add_is_atomic() {
 #[test]
 fn update_by_role_hits_every_match_and_merges() {
     let mut s = scene();
-    let changed = update_layers(
-        &mut s,
+    let changed = update_layers(&mut s, Shared::default(),
         &[op(json!({"target": {"role": "cta"}, "set": {"color": "#FFFFFF", "constraints": {"h": "center"}}}))],
     )
     .unwrap();
     assert_eq!(changed, ["label", "t2"]);
     update_layers(
         &mut s,
+        Shared::default(),
         &[op(
             json!({"target": {"id": "t2"}, "set": {"constraints": {"v": "bottom"}}}),
         )],
@@ -156,12 +167,14 @@ fn null_resets_and_delete_removes() {
     let mut s = scene();
     update_layers(
         &mut s,
+        Shared::default(),
         &[op(json!({"target": {"id": "t2"}, "set": {"role": null}}))],
     )
     .unwrap();
     assert_eq!(s.layers[1].role, None);
     update_layers(
         &mut s,
+        Shared::default(),
         &[op(json!({"target": {"id": "label"}, "delete": true}))],
     )
     .unwrap();
@@ -183,6 +196,7 @@ fn update_errors_leave_scene_untouched() {
         assert!(
             update_layers(
                 &mut s,
+                Shared::default(),
                 &[
                     op(json!({"target": {"id": "t2"}, "set": {"x": 5}})),
                     op(bad.clone())
@@ -200,7 +214,7 @@ fn common_guesses_are_accepted_on_shapes() {
     let mut s = scene();
     add_layers(
         &mut s,
-        Map::new(),
+        shared(Map::new()),
         vec![
             json!({"id": "r", "type": "rect", "fill": "#FFFFFF", "shadow": {"y": 4, "color": "#0004"}}),
             json!({"id": "t", "type": "text", "text": "x", "fill": {"asset": "missing"}}),
@@ -209,7 +223,7 @@ fn common_guesses_are_accepted_on_shapes() {
     .unwrap_err();
     // The text's `fill` is its own field (an image), so the missing asset fails;
     // the rect's `fill` and `shadow` became `fills` and `shadows`.
-    add_layers(&mut s, Map::new(), vec![json!({"id": "r", "type": "rect", "fill": "#FFFFFF", "shadow": {"y": 4, "color": "#0004"}})]).unwrap();
+    add_layers(&mut s, shared(Map::new()), vec![json!({"id": "r", "type": "rect", "fill": "#FFFFFF", "shadow": {"y": 4, "color": "#0004"}})]).unwrap();
     let r = s.layers.iter().find(|l| l.id == "r").unwrap();
     assert!(r.look.fills.is_some() && r.look.shadows.is_some());
 }
@@ -223,7 +237,7 @@ fn generic_shapes_and_sized_asset_ids_are_understood() {
     );
     add_layers(
         &mut s,
-        Map::new(),
+        shared(Map::new()),
         vec![
             json!({"id": "a", "type": "shape", "color": "#000"}),
             json!({"id": "b", "type": "shape", "shape": "heart"}),
@@ -237,7 +251,7 @@ fn generic_shapes_and_sized_asset_ids_are_understood() {
     assert!(matches!(kind("c"), Kind::Image { asset, .. } if asset == "photo"));
     let e = add_layers(
         &mut s,
-        Map::new(),
+        shared(Map::new()),
         vec![json!({"type": "image", "asset": "logo"})],
     )
     .unwrap_err();

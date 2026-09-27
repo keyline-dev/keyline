@@ -8,6 +8,7 @@ pub mod icons;
 pub mod layout;
 pub mod ops;
 pub mod render;
+pub mod reuse;
 pub mod scene;
 pub mod server;
 pub mod shapes;

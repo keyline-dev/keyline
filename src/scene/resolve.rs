@@ -1,65 +1,48 @@
 //! The scene as drawn: text styles and per-size `at` changes applied.
 
-use std::collections::BTreeMap;
-
 use super::{Kind, Layer, Scene, Size, check_keys};
 
-/// Text keys a style may set: everything but the content itself.
-pub(super) const STYLE_KEYS: &[&str] = &[
-    "resize",
-    "maxLines",
-    "minFontScale",
-    "ellipsis",
-    "fontSize",
-    "weight",
-    "align",
-    "color",
-    "fontFamily",
-    "letterSpacing",
-    "lineHeight",
-    "textCase",
-    "shadow",
-    "fill",
-    "gradient",
-    "outline",
-    "italic",
-    "decoration",
-    "textWrap",
-    "verticalAlign",
-    "trim",
-    "highlight",
-    "direction",
-    "features",
-    "padding",
-    "fills",
-    "strokes",
-    "shadows",
+/// Keys a style can't set: what makes a layer this layer.
+pub(super) const UNSTYLABLE: &[&str] = &[
+    "id",
+    "type",
+    "text",
+    "children",
+    "at",
+    "style",
+    "component",
+    "props",
+    "each",
+    "$tokens",
 ];
 
-/// `l` with its text style applied under its own fields, or `None` when it
-/// has no style. A field the layer leaves at its default takes the style's.
-pub(super) fn styled(
-    l: &Layer,
-    styles: &BTreeMap<String, serde_json::Map<String, serde_json::Value>>,
-) -> Result<Option<Layer>, String> {
-    let Kind::Text {
-        style: Some(name), ..
-    } = &l.kind
-    else {
+/// `l` with its styles applied under its own fields, or `None` when it has
+/// no style. A field the layer leaves at its default takes the style's; of
+/// several styles, a later one wins.
+pub(super) fn styled(l: &Layer, scene: &Scene) -> Result<Option<Layer>, String> {
+    let Some(names) = l.style.as_ref().map(super::StyleRef::names) else {
         return Ok(None);
     };
-    let style = styles
-        .get(name)
-        .ok_or_else(|| format!("unknown style {name}"))?;
     let mut v = serde_json::to_value(l).map_err(|e| e.to_string())?;
     let obj = v.as_object_mut().ok_or("layer isn't an object")?;
-    for (k, val) in style {
-        obj.entry(k.clone()).or_insert_with(|| val.clone());
+    for name in names.iter().rev() {
+        let style = scene.styles.get(name).ok_or_else(|| {
+            let known: Vec<&str> = scene.styles.keys().map(String::as_str).collect();
+            format!("unknown style {name}; styles: {}", known.join(", "))
+        })?;
+        let mut style = serde_json::Value::Object(style.clone());
+        crate::reuse::tokens::substitute(&mut style, &scene.tokens)
+            .map_err(|e| format!("style {name}: {e}"))?;
+        if let serde_json::Value::Object(style) = style {
+            for (k, val) in style {
+                obj.entry(k).or_insert(val);
+            }
+        }
     }
     obj.remove("style");
-    serde_json::from_value(v)
-        .map(Some)
-        .map_err(|e| format!("style {name}: {e}"))
+    let layer: Layer = serde_json::from_value(v.clone()).map_err(|e| format!("style: {e}"))?;
+    check_keys(&v, &layer).map_err(|e| format!("style {}: {e}", names.join(", ")))?;
+    Ok(Some(layer))
 }
 
 /// Aspect classes an `at` key can name instead of a size id.
@@ -149,34 +132,61 @@ impl Scene {
         })
     }
 
-    /// The scene as drawn: every text layer's style applied. Borrowed when
-    /// there are no styles. Call on a validated scene.
+    /// The scene as drawn: components expanded, styles applied, style
+    /// tags in markup expanded. Borrowed when there's nothing to resolve.
+    /// Call on a validated scene; see [`Scene::try_resolved`].
     pub fn resolved(&self) -> std::borrow::Cow<'_, Scene> {
-        fn go(layers: &mut [Layer], scene: &Scene) {
+        match self.try_resolved() {
+            Ok(Some(s)) => std::borrow::Cow::Owned(s),
+            Ok(None) | Err(_) => std::borrow::Cow::Borrowed(self),
+        }
+    }
+
+    /// Like [`Scene::resolved`], reporting what can't be resolved; `None`
+    /// when the scene is already as drawn.
+    ///
+    /// # Errors
+    /// An unknown component or style, or a layer that doesn't parse once
+    /// resolved.
+    pub fn try_resolved(&self) -> Result<Option<Scene>, String> {
+        fn go(layers: &mut [Layer], scene: &Scene) -> Result<(), String> {
             for l in layers {
                 if let Some(children) = l.kind.children_mut() {
-                    go(children, scene);
+                    go(children, scene)?;
                 }
-                if let Ok(Some(s)) = styled(l, &scene.styles) {
+                if let Some(s) = styled(l, scene).map_err(|e| format!("{}: {e}", l.id))? {
                     *l = s;
                 }
                 // Style-name tags in markup become spans with the style's fields.
                 if let Kind::Text { text, .. } = &mut l.kind
                     && text.contains('<')
+                    && !scene.styles.is_empty()
                 {
                     *text = crate::text::markup::expand_styles(text, &scene.styles);
                 }
             }
+            Ok(())
         }
-        if self.styles.is_empty() {
-            return std::borrow::Cow::Borrowed(self);
+        let mut any = false;
+        self.walk(&mut |l| any |= l.style.is_some() || matches!(l.kind, Kind::Use { .. }));
+        if !any && self.styles.is_empty() {
+            return Ok(None);
+        }
+        // Styles with their tokens in place, for layers and markup tags alike.
+        let mut scene = self.clone();
+        for (name, style) in &mut scene.styles {
+            let mut v = serde_json::Value::Object(std::mem::take(style));
+            crate::reuse::tokens::substitute(&mut v, &self.tokens)
+                .map_err(|e| format!("style {name}: {e}"))?;
+            if let serde_json::Value::Object(o) = v {
+                *style = o;
+            }
         }
         let mut layers = self.layers.clone();
-        go(&mut layers, self);
-        std::borrow::Cow::Owned(Scene {
-            layers,
-            ..self.clone()
-        })
+        crate::reuse::components::expand(&scene, &mut layers)?;
+        go(&mut layers, &scene)?;
+        scene.layers = layers;
+        Ok(Some(scene))
     }
 }
 

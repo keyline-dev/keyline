@@ -1,28 +1,19 @@
 //! Scene invariants serde can't express, checked after every mutation.
 
-use super::resolve::{ASPECT_CLASSES, STYLE_KEYS, patched, styled};
+use super::resolve::{ASPECT_CLASSES, UNSTYLABLE, patched};
 use super::{Kind, Layer, Length, Resize, Scene};
 
 impl Scene {
     /// Checks invariants serde can't express. Called after every mutation.
     pub fn validate(&self) -> Result<(), String> {
         for (name, style) in &self.styles {
-            if let Some(k) = style.keys().find(|k| !STYLE_KEYS.contains(&k.as_str())) {
-                return Err(format!(
-                    "style {name}: {k} can't be styled; allowed: {}",
-                    STYLE_KEYS.join(", ")
-                ));
+            if let Some(k) = style.keys().find(|k| UNSTYLABLE.contains(&k.as_str())) {
+                return Err(format!("style {name}: {k} can't be styled"));
             }
         }
-        let mut result = Ok(());
-        self.walk(&mut |l| {
-            if result.is_ok()
-                && let Err(e) = styled(l, &self.styles)
-            {
-                result = Err(format!("{}: {e}", l.id));
-            }
-        });
-        result?;
+        // Components expand and styles apply, or say why not.
+        let resolved = self.try_resolved()?;
+        let resolved = resolved.as_ref().unwrap_or(self);
         let mut result = Ok(());
         self.walk(&mut |l| {
             for size in l.at.keys() {
@@ -43,7 +34,6 @@ impl Scene {
             }
         });
         result?;
-        let resolved = self.resolved();
         resolved.validate_resolved()?;
         for size in &self.sizes {
             resolved.for_size(size).validate_resolved()?;

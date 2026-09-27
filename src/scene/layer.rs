@@ -92,6 +92,18 @@ pub struct Layer {
     /// Fills, strokes, shadows, blur, radius and post-layout transforms.
     #[serde(flatten)]
     pub look: Look,
+    /// A named style, or several applied in order (a later one wins); the
+    /// layer's own fields win over all of them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub style: Option<StyleRef>,
+    /// Which fields came from which token, by JSON pointer (`"/color": "brand"`),
+    /// so changing the token updates them. Kept by the server.
+    #[serde(
+        rename = "$tokens",
+        default,
+        skip_serializing_if = "BTreeMap::is_empty"
+    )]
+    pub token_refs: BTreeMap<String, String>,
     /// Per-size changes, by size id: fields merged over this layer's own
     /// for that size only, e.g. `{"sky": {"fontSize": 20}}`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -99,6 +111,26 @@ pub struct Layer {
     /// The type-specific part, tagged by `type`.
     #[serde(flatten)]
     pub kind: Kind,
+}
+
+/// One style name, or several applied in order.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum StyleRef {
+    /// One style.
+    One(String),
+    /// Several, a later one winning where they overlap.
+    Many(Vec<String>),
+}
+
+impl StyleRef {
+    /// The style names, in order.
+    pub fn names(&self) -> &[String] {
+        match self {
+            StyleRef::One(n) => std::slice::from_ref(n),
+            StyleRef::Many(v) => v,
+        }
+    }
 }
 
 #[cfg(test)]

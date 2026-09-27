@@ -96,9 +96,6 @@ pub enum Kind {
         /// An outline around the letters, drawn over the fill.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         outline: Option<Outline>,
-        /// A named style from `Scene::styles`, under this layer's own fields.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        style: Option<String>,
         /// Italic, decoration, wrapping, vertical alignment, trim,
         /// highlight, direction, features, padding, curve, leader, knockout.
         #[serde(flatten)]
@@ -241,6 +238,20 @@ pub enum Kind {
         #[serde(default, skip_serializing_if = "is_zero")]
         min_length: f32,
     },
+    /// An instance of a component, or one per entry of `each`, placed in
+    /// the parent's flow. Its own fields (width, constraints, …) apply to
+    /// each instance's root.
+    #[serde(rename_all = "camelCase")]
+    Use {
+        /// Component name from `Scene::components`.
+        component: String,
+        /// Values for the component's `{prop}` placeholders.
+        #[serde(default, skip_serializing_if = "serde_json::Map::is_empty")]
+        props: serde_json::Map<String, serde_json::Value>,
+        /// One instance per entry, each entry's props over `props`.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        each: Vec<serde_json::Map<String, serde_json::Value>>,
+    },
     /// Draws the first child that fits its box, like SwiftUI's
     /// `ViewThatFits`; e.g. a long headline, then a short one.
     #[serde(rename_all = "camelCase")]
@@ -308,6 +319,7 @@ impl Kind {
             Kind::Frame { .. } => "frame",
             Kind::Spacer { .. } => "spacer",
             Kind::FirstFit { .. } => "firstFit",
+            Kind::Use { .. } => "use",
         }
     }
 }

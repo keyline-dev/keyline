@@ -39,9 +39,15 @@ pub struct AssetAddArgs {
 /// Arguments of `layer_add`.
 pub struct LayerAddArgs {
     pub(super) scene_id: String,
-    /// Named text styles to add or replace, used by text layers' `style`.
+    /// Named styles to add or replace: layer fields a layer's `style` pulls in.
     #[serde(default)]
     pub(super) styles: serde_json::Map<String, Value>,
+    /// Named values to add or replace, used as "$name" in any field.
+    #[serde(default)]
+    pub(super) tokens: serde_json::Map<String, Value>,
+    /// Named layer trees to add or replace, placed by `use` layers.
+    #[serde(default)]
+    pub(super) components: serde_json::Map<String, Value>,
     pub(super) layers: Vec<Value>,
 }
 
@@ -50,6 +56,9 @@ pub struct LayerAddArgs {
 /// Arguments of `layer_update`.
 pub struct LayerUpdateArgs {
     pub(super) scene_id: String,
+    /// Tokens to change; every field using one follows.
+    #[serde(default)]
+    pub(super) tokens: serde_json::Map<String, Value>,
     pub(super) ops: Vec<Op>,
 }
 

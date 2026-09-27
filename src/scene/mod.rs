@@ -35,7 +35,7 @@ pub use fill::{
 pub use gradient::{Gradient, GradientKind, Stop};
 pub use keys::check_keys;
 pub use kind::{Arc, FillRule, FitPath, IconSet, Kind};
-pub use layer::Layer;
+pub use layer::{Layer, StyleRef};
 pub use length::{Inset, Length, Place, Position, Spot};
 pub use look::{Look, OneOrMany, Radius};
 pub use mask::{Mask, MaskMode, MaskSource};
@@ -73,10 +73,17 @@ pub struct Scene {
     /// Images the layers use, by asset id.
     #[serde(default)]
     pub assets: BTreeMap<String, Asset>,
-    /// Named text styles: text fields (`fontFamily`, `fontSize`, `weight`,
-    /// `color`, …) that a text layer's `style` pulls in under its own.
+    /// Named styles: layer fields (`fontSize`, `color`, `fills`, `radius`,
+    /// …) that a layer's `style` pulls in under its own.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub styles: BTreeMap<String, serde_json::Map<String, serde_json::Value>>,
+    /// Named values any layer field can use as `"$name"`: colors, sizes, …
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub tokens: BTreeMap<String, serde_json::Value>,
+    /// Named layer trees placed by `use` layers; `{prop}` in their strings
+    /// is filled from each instance's props.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub components: BTreeMap<String, serde_json::Value>,
     /// Top-level layers, drawn bottom to top.
     #[serde(default)]
     pub layers: Vec<Layer>,
