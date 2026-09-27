@@ -6,7 +6,7 @@ impl Kind {
     /// Keys a layer of this kind may carry, besides the common ones.
     fn keys(&self) -> &'static [&'static str] {
         match self {
-            Kind::Image { .. } => &["asset", "fit", "crop", "tileScale", "focus"],
+            Kind::Image { .. } => &["asset", "fit", "crop", "tileScale", "focus", "adjust"],
             Kind::Text { .. } => &[
                 "text",
                 "ranges",
@@ -29,7 +29,11 @@ impl Kind {
                 "style",
             ],
             Kind::Rect { .. } => &["color", "gradient", "stroke", "cornerRadius"],
-            Kind::Ellipse { .. } => &["color", "gradient", "stroke"],
+            Kind::Ellipse { .. } => &["color", "gradient", "stroke", "arc"],
+            Kind::Polygon { .. } => &["color", "gradient", "stroke", "sides", "innerRadius"],
+            Kind::Path { .. } => &[
+                "color", "gradient", "stroke", "d", "shape", "fillRule", "fitPath",
+            ],
             Kind::Line { .. } => &["color", "strokeWidth"],
             Kind::Icon { .. } => &["name", "set", "color", "strokeWidth"],
             Kind::Frame { .. } => &[
@@ -73,6 +77,17 @@ const COMMON_KEYS: &[&str] = &[
     "grow",
     "priority",
     "position",
+    "fills",
+    "strokes",
+    "shadows",
+    "blur",
+    "backdropBlur",
+    "radius",
+    "scale",
+    "offset",
+    "skew",
+    "flipX",
+    "flipY",
 ];
 
 /// Rejects keys that don't belong to the layer's type, so a typo like

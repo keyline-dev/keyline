@@ -138,9 +138,11 @@ fn content(scene: &Scene, layer: &Layer, k: f32, parent: (f32, f32), known: Forc
         }
         // A line's box is its run: a missing side is 0, not a default box.
         Kind::Line { .. } => (0.0, 0.0),
-        Kind::Rect { .. } | Kind::Ellipse { .. } | Kind::Frame { .. } => {
-            (DEFAULT_BOX * k, DEFAULT_BOX * k)
-        }
+        Kind::Rect { .. }
+        | Kind::Ellipse { .. }
+        | Kind::Frame { .. }
+        | Kind::Polygon { .. }
+        | Kind::Path { .. } => (DEFAULT_BOX * k, DEFAULT_BOX * k),
     }
 }
 

@@ -24,12 +24,12 @@ fn renders_deterministic_png_of_the_right_size() {
     assert_eq!(raster_size(&preview), Some((100.0, 50.0)));
 }
 
-fn pixels(layers: serde_json::Value) -> impl Fn(i32, i32) -> (u8, u8, u8) {
+pub(super) fn pixels(layers: serde_json::Value) -> impl Fn(i32, i32) -> (u8, u8, u8) {
     pixels_with(layers, &[])
 }
 
 /// Renders a 100×100 scene whose `assets` are `(id, PNG bytes)`.
-fn pixels_with(
+pub(super) fn pixels_with(
     layers: serde_json::Value,
     assets: &[(&str, Vec<u8>)],
 ) -> impl Fn(i32, i32) -> (u8, u8, u8) + use<> {
@@ -37,7 +37,10 @@ fn pixels_with(
     let mut registry = serde_json::Map::new();
     for (id, png) in assets {
         let sha = crate::store::sha256_hex(png);
-        std::fs::write(dir.join(&sha), png).unwrap();
+        // Tests run in parallel and share assets: write whole files only.
+        let tmp = dir.join(format!("{sha}.{:?}.tmp", std::thread::current().id()));
+        std::fs::write(&tmp, png).unwrap();
+        std::fs::rename(&tmp, dir.join(&sha)).unwrap();
         let (w, h) = raster_size(png).unwrap();
         registry.insert(
             (*id).to_owned(),
@@ -59,7 +62,7 @@ fn pixels_with(
 }
 
 /// A `w`×`h` PNG, left half `left`, right half `right`.
-fn two_tone(w: i32, h: i32, left: skia_safe::Color, right: skia_safe::Color) -> Vec<u8> {
+pub(super) fn two_tone(w: i32, h: i32, left: skia_safe::Color, right: skia_safe::Color) -> Vec<u8> {
     let mut surface = surfaces::raster_n32_premul((w, h)).unwrap();
     let c = surface.canvas();
     let mut p = Paint::default();
@@ -77,15 +80,18 @@ fn two_tone(w: i32, h: i32, left: skia_safe::Color, right: skia_safe::Color) -> 
 }
 
 /// How many pixels of the 100×100 render satisfy `f`.
-fn count(px: &impl Fn(i32, i32) -> (u8, u8, u8), f: impl Fn((u8, u8, u8)) -> bool) -> usize {
+pub(super) fn count(
+    px: &impl Fn(i32, i32) -> (u8, u8, u8),
+    f: impl Fn((u8, u8, u8)) -> bool,
+) -> usize {
     (0..100)
         .flat_map(|y| (0..100).map(move |x| (x, y)))
         .filter(|&(x, y)| f(px(x, y)))
         .count()
 }
 
-const RED: (u8, u8, u8) = (255, 0, 0);
-const BLUE: (u8, u8, u8) = (0, 0, 255);
+pub(super) const RED: (u8, u8, u8) = (255, 0, 0);
+pub(super) const BLUE: (u8, u8, u8) = (0, 0, 255);
 
 #[test]
 fn tiles_repeat_at_the_image_size_times_tile_scale() {

@@ -80,7 +80,7 @@ impl Server {
 of the parent), width, height (px, \"hug\" content, \"fill\" = rest of the parent or a stack's free space, \"40%\"), \
 minWidth…maxHeight, aspectRatio, place top-left|top|…|center|…|bottom-right + inset (pinned at every size), \
 constraints {h: left|right|center|stretch|scale, v: top|bottom|center|stretch|scale} (default left, top), hidden, \
-opacity, rotation (degrees), blendMode (multiply, screen, …), mask (gradient; its alpha fades the layer), \
+opacity, rotation (degrees), blendMode (multiply, screen, …), mask, \
 at {sizeId or landscape|square|portrait|wide|tall: {fields}}: changes for those sizes only}. \
 image: asset, fit fill|fit|tile (fill = cover; tileScale sizes tiles), focus [x,y] 0–1 kept in view (center), \
 crop {x, y, width, height} 0–1. \
@@ -99,8 +99,18 @@ align start|center|end|stretch|baseline, justify start|center|end|between|around
 order ignoring their x, y; unsized, it hugs them. Stack children: alignSelf, grow (fill share), priority (lower \
 gives way first when tight), position absolute (out of the flow). spacer: free space in a stack. firstFit: \
 children[], draws only the first that fits its box (e.g. a long, then a short headline). \
-rect, ellipse, frame: gradient {from: [x,y], to: [x,y] 0–1 of the box, stops: [{at, color}]}, \
-stroke {width, color or gradient, align inside|center|outside}. Colors #RRGGBB[AA]."
+rect, ellipse, frame: gradient, stroke {width, color or gradient, align inside|center|outside}. polygon: sides, \
+innerRadius (star). path: d or shape (ribbon, ribbon-banner, bubble, bubble-round, arrow, arrow-curved, chevron, \
+tag, arch, shield, heart, cloud, wave, burst, blob-1…6, brush-stroke). ellipse arc {start, end, inner}. Any layer: \
+fills (a color, or {color|gradient|image|pattern|noise, opacity, blendMode}, or a list bottom to top; [] none), \
+strokes (\"#000\" = 1px, or {width or [t,r,b,l], color|gradient, align, dash [on, off], cap, join, start|end \
+arrow|triangle|circle|diamond}), shadows {x, y, blur, spread, color, inset} or a list (follows a cutout's or \
+text's alpha), blur, backdropBlur, radius (px, [tl,tr,br,bl], \"full\"), scale, offset [x,y], skew [x,y], flipX, flipY \
+(visual, after layout). gradient {type linear|radial|conic, angle (CSS) or from/to [x,y] 0–1, center, radius, stops: \
+colors or [{at, color}]}. image fill {image, fit, focus, crop, adjust}; adjust {brightness, contrast, saturate, \
+grayscale, sepia, hue, duotone [dark, light], tint}. pattern dots|stripes|grid|checker|zigzag|rays, color, size, angle. \
+noise 0–1, seed. mask: a gradient, a shape name, {path}, {layer: id} or {image}, + mode luminance, invert. \
+Colors #RGB[A], #RRGGBB[AA] or CSS names."
     )]
     async fn layer_add(&self, Parameters(a): Parameters<LayerAddArgs>) -> CallToolResult {
         let styles = Value::Object(a.styles.clone());

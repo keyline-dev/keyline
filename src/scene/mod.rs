@@ -3,15 +3,22 @@
 //! Every field has a default and defaults are omitted when serialized, so the
 //! stored JSON stays as small as what the agent wrote.
 
+mod check;
 mod constraints;
 mod defaults;
+mod fill;
+mod gradient;
 mod keys;
+mod kind;
 mod layer;
 mod length;
+mod look;
+mod mask;
 mod paint;
 mod presets;
 mod resolve;
 mod stack;
+mod stroke;
 mod text;
 mod validate;
 
@@ -20,15 +27,21 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 pub use constraints::{Constraints, HConstraint, Pin, VConstraint};
-pub use keys::check_keys;
-pub use layer::{IconSet, Kind, Layer};
-pub use length::{Inset, Length, Place, Position, Spot};
-pub use paint::{
-    BlendMode, Color, Crop, Fit, Gradient, ImageFill, Outline, Shadow, Stop, Stroke, StrokeAlign,
+pub use fill::{
+    Adjust, Common, GradientFill, ImagePaint, NoisePaint, Paint, PatternKind, PatternPaint, Solid,
 };
+pub use gradient::{Gradient, GradientKind, Stop};
+pub use keys::check_keys;
+pub use kind::{Arc, FillRule, FitPath, IconSet, Kind};
+pub use layer::Layer;
+pub use length::{Inset, Length, Place, Position, Spot};
+pub use look::{Look, OneOrMany, Radius};
+pub use mask::{Mask, MaskMode, MaskSource};
+pub use paint::{BlendMode, Color, Crop, Fit, ImageFill, Outline};
 pub use presets::{PRESETS, SizeSpec};
 pub use resolve::{ASPECT_CLASSES, aspect_classes};
 pub use stack::{Dir, Dirs, Gap, Justify, Padding, Stack, StackAlign};
+pub use stroke::{Cap, Join, Marker, Shadow, Stroke, StrokeAlign, StrokeWidth};
 pub use text::{Align, Range, Resize, TextCase};
 
 use defaults::{is_false, is_one, one, white};

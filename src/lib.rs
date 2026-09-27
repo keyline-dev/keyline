@@ -10,5 +10,6 @@ pub mod ops;
 pub mod render;
 pub mod scene;
 pub mod server;
+pub mod shapes;
 pub mod store;
 pub mod text;

@@ -1,13 +1,21 @@
 //! Draws a laid-out scene with Skia on the CPU and encodes it as PNG.
 
+mod effects;
+mod fills;
 mod image;
+mod mask;
 mod output;
 mod paint;
+#[cfg(test)]
+mod paint_tests;
+mod shape;
+mod stroke;
 #[cfg(test)]
 mod tests;
 mod text;
 
-use std::collections::HashMap;
+use std::borrow::Cow;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use anyhow::{Context, Result, anyhow};
@@ -17,11 +25,11 @@ use skia_safe::{
 
 use crate::gpu::{self, Backend};
 use crate::layout::{Placed, layout};
-use crate::scene::{BlendMode, Color, Fit, Kind, Scene, Size};
+use crate::scene::{BlendMode, Fit, Kind, Layer, Mask, MaskSource, OneOrMany, Scene, Size, Stroke};
 
 use image::{CENTER, image_rect, svg_image};
 use output::encode_png;
-use paint::{draw_stroke, fill_paint, rrect, sk_blend, sk_color, sk_rect};
+use paint::{sk_blend, sk_color, sk_rect};
 
 pub use image::{image_crop, image_scale, raster_size, svg_size};
 pub use output::contact_sheet;
@@ -93,16 +101,29 @@ fn draw_scene(
 ) -> Result<()> {
     canvas.clear(sk_color(scene.background));
     canvas.scale((px, px));
+    let mut mask_layers = HashSet::new();
+    scene.walk(&mut |l| {
+        if let Some(Mask {
+            source: MaskSource::Layer(id),
+            ..
+        }) = &l.mask
+        {
+            mask_layers.insert(id.clone());
+        }
+    });
     let mut ctx = Ctx {
         scene,
         px,
         assets_dir,
         hide_text,
         rasters: HashMap::new(),
+        mask_layers,
+        drawing_mask: false,
     };
     let scene = &*scene.for_size(size);
-    for p in &layout(scene, size) {
-        ctx.draw(canvas, p)?;
+    let placed = layout(scene, size);
+    for p in &placed {
+        ctx.draw(canvas, p, &placed)?;
     }
     Ok(())
 }
@@ -114,62 +135,109 @@ struct Ctx<'a> {
     hide_text: bool,
     /// Decoded raster assets, so an icon used three times decodes once.
     rasters: HashMap<String, Image>,
+    /// Ids of layers other layers use as masks: drawn only as masks.
+    mask_layers: HashSet<String>,
+    /// True while drawing a mask layer into another layer's mask.
+    drawing_mask: bool,
 }
 
 impl Ctx<'_> {
-    fn draw(&mut self, canvas: &skia_safe::Canvas, p: &Placed) -> Result<()> {
+    /// Draws one placed layer and its children; `root` is the whole tree.
+    fn draw(&mut self, canvas: &skia_safe::Canvas, p: &Placed, root: &[Placed]) -> Result<()> {
         let l = p.layer;
-        if l.opacity < 1.0 || l.blend_mode != BlendMode::Normal || l.mask.is_some() {
+        if self.mask_layers.contains(&l.id) && !self.drawing_mask {
+            return Ok(());
+        }
+        let blur = l.look.blur * p.k;
+        if l.opacity < 1.0 || l.blend_mode != BlendMode::Normal || l.mask.is_some() || blur > 0.0 {
             // Composite the whole layer (children included) as one.
             let mut layer = Paint::default();
             layer.set_alpha_f(l.opacity);
             layer.set_blend_mode(sk_blend(l.blend_mode));
+            if blur > 0.0 {
+                layer.set_image_filter(skia_safe::image_filters::blur(
+                    (effects::sigma(blur), effects::sigma(blur)),
+                    None,
+                    None,
+                    None,
+                ));
+            }
             canvas.save_layer(&SaveLayerRec::default().paint(&layer));
         } else {
             canvas.save();
         }
-        let r = sk_rect(p.rect);
-        if l.rotation != 0.0 {
-            canvas.rotate(l.rotation, Some(r.center()));
+        effects::transform(canvas, p);
+        let shape = shape::shape_of(p);
+        if let (Some(sh), true) = (&shape, l.look.backdrop_blur > 0.0) {
+            effects::backdrop_blur(canvas, sh, l.look.backdrop_blur * p.k);
+        }
+        let shadows = l.look.shadows.as_ref().map_or(&[][..], OneOrMany::as_slice);
+        for s in shadows.iter().filter(|s| !s.inset) {
+            match &shape {
+                // Shapes cast CSS box shadows; images, text and icons cast
+                // the shadow of their own alpha (a cutout's outline).
+                Some(sh) if !matches!(l.kind, Kind::Image { .. } | Kind::Line { .. }) => {
+                    effects::shape_shadow(canvas, sh, s, p.k);
+                }
+                _ => {
+                    if let Some(paint) = effects::alpha_shadow_paint(s, p.k) {
+                        canvas.save_layer(&SaveLayerRec::default().paint(&paint));
+                        self.draw_own(canvas, p, shape.as_ref())?;
+                        canvas.restore();
+                    }
+                }
+            }
+        }
+        self.draw_own(canvas, p, shape.as_ref())?;
+        if let Some(sh) = &shape {
+            for s in shadows.iter().filter(|s| s.inset) {
+                effects::inset_shadow(canvas, sh, s, p.k);
+            }
         }
         match &l.kind {
-            Kind::Rect {
-                color,
-                gradient,
-                stroke,
-                corner_radius,
-            } => {
-                let radius = corner_radius * p.k;
-                if let Some(fill) = fill_paint(*color, gradient.as_ref(), r) {
-                    canvas.draw_rrect(rrect(r, radius), &fill);
+            Kind::Frame { clip, .. } => {
+                canvas.save();
+                if let (true, Some(sh)) = (*clip, &shape) {
+                    sh.clip(canvas, ClipOp::Intersect);
                 }
-                if let Some(s) = stroke {
-                    draw_stroke(canvas, s, r, radius, p.k);
+                for child in &p.children {
+                    self.draw(canvas, child, root)?;
+                }
+                canvas.restore();
+            }
+            Kind::FirstFit { .. } => {
+                for child in &p.children {
+                    self.draw(canvas, child, root)?;
                 }
             }
-            Kind::Ellipse {
-                color,
-                gradient,
-                stroke,
-            } => {
-                if let Some(fill) = fill_paint(*color, gradient.as_ref(), r) {
-                    canvas.draw_oval(r, &fill);
-                }
-                if let Some(s) = stroke {
-                    // Radii past half the box make Skia draw an ellipse.
-                    draw_stroke(canvas, s, r, r.width().max(r.height()), p.k);
-                }
+            _ => {}
+        }
+        // As in design tools, a frame's stroke sits above its children, unclipped.
+        if let Some(sh) = &shape {
+            for st in strokes_of(l) {
+                stroke::draw_stroke(canvas, sh, &st, p.k);
             }
-            Kind::Line {
-                color,
-                stroke_width,
-            } => {
-                let mut paint = Paint::default();
-                paint.set_anti_alias(true);
-                paint.set_color(sk_color(*color));
-                paint.set_stroke_width(stroke_width * p.k);
-                canvas.draw_line((r.left, r.top), (r.right, r.bottom), &paint);
-            }
+        }
+        if let Some(m) = &l.mask {
+            self.apply_mask(canvas, p, m, root)?;
+        }
+        canvas.restore();
+        Ok(())
+    }
+
+    /// The layer's own content: fills (or the image, icon or text), without
+    /// children, strokes or effects.
+    fn draw_own(
+        &mut self,
+        canvas: &skia_safe::Canvas,
+        p: &Placed,
+        shape: Option<&shape::Shape>,
+    ) -> Result<()> {
+        let l = p.layer;
+        let r = sk_rect(p.rect);
+        match &l.kind {
+            Kind::Text { .. } if self.hide_text => {}
+            Kind::Text { .. } => self.draw_text(canvas, p, r)?,
             Kind::Icon {
                 name,
                 set,
@@ -195,76 +263,98 @@ impl Ctx<'_> {
                     &paint,
                 );
             }
-            Kind::Frame {
-                clip,
-                color,
-                gradient,
-                stroke,
-                corner_radius,
-                ..
-            } => {
-                let radius = corner_radius * p.k;
-                let rr = rrect(r, radius);
-                if let Some(fill) = fill_paint(*color, gradient.as_ref(), r) {
-                    canvas.draw_rrect(rr, &fill);
-                }
-                canvas.save();
-                if *clip {
-                    canvas.clip_rrect(rr, ClipOp::Intersect, true);
-                }
-                for child in &p.children {
-                    self.draw(canvas, child)?;
-                }
-                canvas.restore();
-                // As in design tools, a frame's stroke sits above its children, unclipped.
-                if let Some(s) = stroke {
-                    draw_stroke(canvas, s, r, radius, p.k);
-                }
-            }
-            Kind::FirstFit { .. } => {
-                for child in &p.children {
-                    self.draw(canvas, child)?;
-                }
-            }
-            Kind::Spacer { .. } => {}
-            Kind::Text { .. } if self.hide_text => {}
-            Kind::Text {
-                fill,
-                gradient,
-                outline,
-                ..
-            } => self.draw_text(
-                canvas,
-                p,
-                r,
-                fill.as_ref(),
-                gradient.as_ref(),
-                outline.as_ref(),
-            )?,
             Kind::Image {
                 asset,
                 fit,
                 crop,
                 tile_scale,
                 focus,
+                adjust,
             } => {
-                let paint =
+                let mut paint =
                     self.image_paint(asset, p.rect, *fit, crop.as_ref(), tile_scale * p.k, *focus)?;
-                canvas.draw_rect(r, &paint);
+                if let Some(cf) = fills::adjust_filter(adjust) {
+                    paint.set_color_filter(cf);
+                }
+                match shape {
+                    Some(shape::Shape::Rect(rr)) if !rr.is_rect() => {
+                        shape::Shape::Rect(*rr).fill(canvas, &paint);
+                    }
+                    _ => {
+                        canvas.draw_rect(r, &paint);
+                    }
+                }
+                if let (Some(fs), Some(sh)) = (&l.look.fills, shape) {
+                    for f in fs.as_slice() {
+                        if let Some(fp) = self.fill(f, p.rect, p.k)? {
+                            sh.fill(canvas, &fp);
+                        }
+                    }
+                }
+            }
+            _ => {
+                if let Some(sh) = shape {
+                    for f in fills_of(l) {
+                        if let Some(fp) = self.fill(&f, p.rect, p.k)? {
+                            sh.fill(canvas, &fp);
+                        }
+                    }
+                }
             }
         }
-        if let Some(m) = &l.mask {
-            // Keep what's drawn in proportion to the gradient's alpha.
-            let mut stops = m.clone();
-            for s in &mut stops.stops {
-                s.color = Color(s.color.0 & 0xFF00_0000);
-            }
-            if let Some(mut paint) = fill_paint(None, Some(&stops), r) {
-                paint.set_blend_mode(skia_safe::BlendMode::DstIn);
-                canvas.draw_rect(r, &paint);
-            }
-        }
-        canvas.restore();
         Ok(())
+    }
+}
+
+/// A shape's fills: `fills`, else its MVP `color`/`gradient` (the gradient wins).
+fn fills_of(l: &Layer) -> Vec<crate::scene::Paint> {
+    if let Some(fs) = &l.look.fills {
+        return fs.as_slice().to_vec();
+    }
+    let (color, gradient) = match &l.kind {
+        Kind::Rect {
+            color, gradient, ..
+        }
+        | Kind::Ellipse {
+            color, gradient, ..
+        }
+        | Kind::Frame {
+            color, gradient, ..
+        }
+        | Kind::Polygon {
+            color, gradient, ..
+        }
+        | Kind::Path {
+            color, gradient, ..
+        } => (*color, gradient.as_ref()),
+        _ => (None, None),
+    };
+    match (gradient, color) {
+        (Some(g), _) => vec![crate::scene::Paint::Gradient(crate::scene::GradientFill {
+            gradient: g.clone(),
+            opacity: 1.0,
+            blend_mode: BlendMode::Normal,
+        })],
+        (None, Some(c)) => vec![crate::scene::Paint::color(c)],
+        (None, None) => Vec::new(),
+    }
+}
+
+/// A shape's strokes: `strokes`, else its MVP `stroke` (a line's color and width).
+fn strokes_of(l: &Layer) -> Vec<Cow<'_, Stroke>> {
+    if let Some(ss) = &l.look.strokes {
+        return ss.as_slice().iter().map(Cow::Borrowed).collect();
+    }
+    match &l.kind {
+        Kind::Rect { stroke, .. }
+        | Kind::Ellipse { stroke, .. }
+        | Kind::Frame { stroke, .. }
+        | Kind::Polygon { stroke, .. }
+        | Kind::Path { stroke, .. } => stroke.iter().map(Cow::Borrowed).collect(),
+        Kind::Line {
+            color,
+            stroke_width,
+        } => vec![Cow::Owned(Stroke::solid(*stroke_width, *color))],
+        _ => Vec::new(),
     }
 }

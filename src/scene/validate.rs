@@ -96,16 +96,19 @@ impl Scene {
         }
         | Kind::Frame {
             gradient, stroke, ..
+        }
+        | Kind::Polygon {
+            gradient, stroke, ..
+        }
+        | Kind::Path {
+            gradient, stroke, ..
         } = &l.kind
         {
-            let strokes = stroke.iter().filter_map(|s| s.gradient.as_ref());
-            for g in gradient.iter().chain(strokes) {
-                if g.stops.len() < 2 || g.stops.iter().any(|s| !(0.0..=1.0).contains(&s.at)) {
-                    return Err("gradient needs at least 2 stops, each at 0–1".into());
-                }
+            if let Some(g) = gradient {
+                super::check::gradient(g)?;
             }
-            if stroke.as_ref().is_some_and(|s| s.width <= 0.0) {
-                return Err("stroke width must be > 0".into());
+            if let Some(s) = stroke {
+                super::check::stroke(s)?;
             }
         }
         if let Kind::Frame { stack: Some(s), .. } = &l.kind {
@@ -117,11 +120,9 @@ impl Scene {
             }
         }
         check_lengths(l)?;
-        if let Some(m) = &l.mask
-            && (m.stops.len() < 2 || m.stops.iter().any(|s| !(0.0..=1.0).contains(&s.at)))
-        {
-            return Err("mask needs at least 2 stops, each at 0–1".into());
-        }
+        super::check::look(self, l)?;
+        super::check::mask(self, l)?;
+        super::check::shape(l)?;
         match &l.kind {
             Kind::Image { asset, .. } if !self.assets.contains_key(asset) => {
                 Err(format!("unknown asset {asset}"))

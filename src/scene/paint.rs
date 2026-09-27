@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::defaults::{is_default, is_one, left_mid, one, right_mid};
+use super::defaults::{is_default, is_one, one};
 
 /// An image painted inside text: the letters show the image laid out over
 /// the text's box (like CSS `background-clip: text`).
@@ -42,78 +42,6 @@ pub struct Crop {
     pub width: f32,
     /// Height of the region.
     pub height: f32,
-}
-
-/// A linear gradient. `from` and `to` are points in the box, 0–1 on each
-/// axis (like a design tool's gradient handles): `[0.5, 0]` → `[0.5, 1]` runs top to bottom.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Gradient {
-    /// Start point in the box, 0–1 per axis (default left middle).
-    #[serde(default = "left_mid")]
-    pub from: [f32; 2],
-    /// End point in the box, 0–1 per axis (default right middle).
-    #[serde(default = "right_mid")]
-    pub to: [f32; 2],
-    /// Color stops, at least two.
-    pub stops: Vec<Stop>,
-}
-
-/// One color stop of a gradient.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Stop {
-    /// Position along the gradient, 0–1.
-    pub at: f32,
-    /// Color at that position.
-    pub color: Color,
-}
-
-/// An outline; `color` or `gradient` paints it (black when neither).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Stroke {
-    /// Width, px.
-    pub width: f32,
-    /// Solid color.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub color: Option<Color>,
-    /// Gradient; wins over `color`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub gradient: Option<Gradient>,
-    /// Inside, centered on, or outside the edge.
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub align: StrokeAlign,
-}
-
-/// Where a stroke sits relative to the box edge; inside by default.
-#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum StrokeAlign {
-    /// Wholly inside the box.
-    #[default]
-    Inside,
-    /// Centered on the edge.
-    Center,
-    /// Wholly outside the box.
-    Outside,
-}
-
-/// A drop shadow behind text: offset `x`, `y` and `blur` radius in px.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Shadow {
-    /// Horizontal offset, px.
-    #[serde(default)]
-    pub x: f32,
-    /// Vertical offset, px.
-    #[serde(default)]
-    pub y: f32,
-    /// Blur radius, px.
-    #[serde(default)]
-    pub blur: f32,
-    /// Shadow color, usually translucent.
-    pub color: Color,
 }
 
 /// How a layer composites onto what's below it (the usual design-tool set).
@@ -159,25 +87,35 @@ pub enum BlendMode {
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Fit {
-    /// Cover the box, cropping the overflow (centered).
+    /// Cover the box, cropping the overflow (centered); also `cover`.
     #[default]
+    #[serde(alias = "cover")]
     Fill,
-    /// Contain within the box, letterboxed.
+    /// Contain within the box, letterboxed; also `contain`.
+    #[serde(alias = "contain")]
     Fit,
     /// Repeat the image at its own size × `tileScale`, from the top-left.
     Tile,
 }
 
-/// `#RRGGBB` or `#RRGGBBAA`, stored as ARGB.
+/// `#RRGGBB`, `#RRGGBBAA`, `#RGB`, `#RGBA` or a common CSS color name,
+/// stored as ARGB.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Color(pub u32);
 
 impl Color {
-    /// Parses `#RRGGBB` or `#RRGGBBAA`.
+    /// Parses `#RRGGBB`, `#RRGGBBAA`, `#RGB`, `#RGBA` or a CSS color name.
     pub fn parse(s: &str) -> Option<Self> {
-        let hex = s.strip_prefix('#')?;
-        let v = u32::from_str_radix(hex, 16).ok()?;
-        match hex.len() {
+        let Some(hex) = s.strip_prefix('#') else {
+            return named(s);
+        };
+        // #RGB and #RGBA double each digit, as in CSS.
+        let long: String = match hex.len() {
+            3 | 4 => hex.chars().flat_map(|c| [c, c]).collect(),
+            _ => hex.to_owned(),
+        };
+        let v = u32::from_str_radix(&long, 16).ok()?;
+        match long.len() {
             6 => Some(Color(0xFF00_0000 | v)),
             8 => Some(Color(v.rotate_right(8))),
             _ => None,
@@ -211,6 +149,30 @@ impl<'de> Deserialize<'de> for Color {
     }
 }
 
+/// Common CSS color names, for agents that write `white` instead of hex.
+fn named(s: &str) -> Option<Color> {
+    let rgb = match s.to_ascii_lowercase().as_str() {
+        "transparent" => return Some(Color(0)),
+        "black" => 0x000000,
+        "white" => 0xFFFFFF,
+        "red" => 0xFF0000,
+        "green" => 0x008000,
+        "blue" => 0x0000FF,
+        "yellow" => 0xFFFF00,
+        "orange" => 0xFFA500,
+        "purple" => 0x800080,
+        "pink" => 0xFFC0CB,
+        "gray" | "grey" => 0x808080,
+        "navy" => 0x000080,
+        "teal" => 0x008080,
+        "gold" => 0xFFD700,
+        "silver" => 0xC0C0C0,
+        "maroon" => 0x800000,
+        _ => return None,
+    };
+    Some(Color(0xFF00_0000 | rgb))
+}
+
 #[cfg(test)]
 mod tests {
     use crate::scene::Color;
@@ -221,7 +183,12 @@ mod tests {
             assert_eq!(Color::parse(s).unwrap().to_string(), s);
         }
         assert_eq!(Color::parse("#FFFFFF80").unwrap().0, 0x80FF_FFFF);
-        assert!(Color::parse("red").is_none());
-        assert!(Color::parse("#FFF").is_none());
+        // Short hex and CSS names, as agents often write them.
+        assert_eq!(Color::parse("#FFF").unwrap().0, 0xFFFF_FFFF);
+        assert_eq!(Color::parse("#0008").unwrap().0, 0x8800_0000);
+        assert_eq!(Color::parse("White").unwrap().0, 0xFFFF_FFFF);
+        assert_eq!(Color::parse("transparent").unwrap().0, 0);
+        assert!(Color::parse("#12345").is_none());
+        assert!(Color::parse("reddish").is_none());
     }
 }

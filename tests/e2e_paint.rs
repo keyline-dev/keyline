@@ -1,0 +1,129 @@
+//! End-to-end: an agent paints with the v2 model through MCP — fill stacks,
+//! gradients, image fills in shapes, patterns, grain, shadows, backdrop
+//! blur, radii, dashed strokes with markers, polygons, named shapes, arcs,
+//! masks, adjustments and transforms — and the renders match golden PNGs.
+
+// Test support: a panic is how a test reports failure.
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
+mod common;
+
+use common::golden::check_golden;
+use common::{Mcp, b64, photo_png};
+use serde_json::json;
+
+#[tokio::test]
+async fn the_paint_kit_renders_at_every_size() {
+    let mcp = Mcp::start("paint").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 800, "height": 800, "sizes": [
+                {"id": "square", "width": 800, "height": 800},
+                {"id": "banner", "width": 1200, "height": 628, "scale": 0.78}
+            ]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    mcp.ok(
+        "asset_add",
+        json!({"sceneId": id, "id": "photo", "base64": b64(&photo_png())}),
+    )
+    .await;
+    let reply = mcp
+        .ok("layer_add", json!({"sceneId": id, "layers": [
+            {"id": "bg", "type": "rect", "width": "fill", "height": "fill",
+             "fills": [{"gradient": {"angle": 135, "stops": ["#1B2A5C", "#D0202E"]}}, {"noise": 0.08, "seed": 3}]},
+            {"id": "stripes", "type": "rect", "y": 700, "width": "fill", "height": 100,
+             "constraints": {"v": "bottom"}, "fills": {"pattern": "stripes", "color": "#FFFFFF22", "size": 24, "angle": 45}},
+            {"id": "card", "type": "frame", "x": 60, "y": 60, "width": 420, "height": 300, "radius": 28,
+             "fills": "#FFFFFF", "shadows": [{"y": 18, "blur": 40, "color": "#00000066"}],
+             "children": [
+                {"id": "avatar", "type": "ellipse", "x": 30, "y": 30, "width": 120, "height": 120,
+                 "fills": {"image": "photo", "fit": "cover"}, "strokes": {"width": 6, "color": "#D0202E", "align": "outside"}},
+                {"id": "gray", "type": "image", "asset": "photo", "x": 180, "y": 30, "width": 210, "height": 120,
+                 "radius": [24, 0, 24, 0], "adjust": {"grayscale": 1, "contrast": 0.2}},
+                {"id": "headline", "type": "text", "x": 30, "y": 180, "width": 360, "text": "Bold paint", "fontSize": 56, "weight": 900,
+                 "fills": {"gradient": {"stops": ["#D0202E", "#1B2A5C"]}}, "strokes": {"width": 2, "color": "#1B2A5C"}},
+                {"id": "divider", "type": "line", "x": 30, "y": 270, "width": 330,
+                 "strokes": {"width": 3, "color": "#1B2A5C", "dash": [12, 8], "cap": "round", "end": "triangle"}}
+             ]},
+            {"id": "glass", "type": "rect", "x": 380, "y": 280, "width": 360, "height": 220, "radius": 32,
+             "backdropBlur": 24, "fills": "#FFFFFF33", "strokes": {"width": 1.5, "color": "#FFFFFF88"},
+             "shadows": {"blur": 0, "spread": 0, "x": 0, "y": 0, "color": "#FFFFFF55", "inset": true}},
+            {"id": "seal", "type": "polygon", "sides": 16, "innerRadius": 0.82, "width": 170, "height": 170,
+             "place": "top-right", "inset": 50, "color": "#FFD700", "radius": 6,
+             "shadows": {"y": 6, "blur": 12, "color": "#0000004D"}},
+            {"id": "sale", "type": "text", "text": "SALE", "fontSize": 40, "weight": 900, "color": "#1B2A5C",
+             "place": "top-right", "inset": [80, 113], "rotation": -12},
+            {"id": "ribbon", "type": "path", "shape": "ribbon", "x": 60, "y": 420, "width": 280, "height": 70, "color": "#FFD700",
+             "fitPath": "stretch"},
+            {"id": "heart", "type": "path", "shape": "heart", "x": 90, "y": 540, "width": 110, "height": 110,
+             "fills": {"gradient": {"type": "radial", "stops": ["#FF7A8A", "#D0202E"]}}, "skew": [-8, 0]},
+            {"id": "gauge-track", "type": "ellipse", "x": 250, "y": 530, "width": 140, "height": 140,
+             "color": "#FFFFFF33", "arc": {"inner": 0.78}},
+            {"id": "gauge", "type": "ellipse", "x": 250, "y": 530, "width": 140, "height": 140,
+             "fills": {"gradient": {"type": "conic", "stops": ["#FFD700", "#D0202E"]}}, "arc": {"start": 0, "end": 250, "inner": 0.78}},
+            {"id": "portrait", "type": "image", "asset": "photo", "x": 440, "y": 540, "width": 300, "height": 200,
+             "mask": {"shape": "blob-3"}, "flipX": true}
+        ]}))
+        .await;
+    assert!(
+        reply
+            .lines()
+            .next()
+            .unwrap()
+            .starts_with("added bg,stripes,card"),
+        "{reply}"
+    );
+
+    let rendered = mcp.ok("render", json!({"sceneId": id})).await;
+    for line in rendered.lines().filter(|l| !l.starts_with(' ')) {
+        let (size, path) = line.split_once(' ').unwrap();
+        check_golden(&format!("paint-{size}.png"), &std::fs::read(path).unwrap());
+    }
+    mcp.stop().await;
+}
+
+#[tokio::test]
+async fn bad_paint_gets_one_line_errors() {
+    let mcp = Mcp::start("paint-errors").await;
+    let id = mcp
+        .ok("scene_create", json!({"sizes": ["600x600"]}))
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    let err = |layer: serde_json::Value| {
+        let mcp = &mcp;
+        let id = id.clone();
+        async move {
+            let e = mcp
+                .call("layer_add", json!({"sceneId": id, "layers": [layer]}))
+                .await
+                .unwrap_err();
+            assert_eq!(e.lines().count(), 1, "{e}");
+            e
+        }
+    };
+    let e = err(json!({"type": "rect", "fills": {"colour": "#000"}})).await;
+    assert!(e.contains("a fill is a color, or an object with"), "{e}");
+    let e = err(json!({"type": "rect", "fills": {"image": "nope"}})).await;
+    assert!(e.contains("unknown asset nope"), "{e}");
+    let e = err(json!({"type": "path", "shape": "unicorn"})).await;
+    assert!(
+        e.contains("unknown shape unicorn") && e.contains("ribbon"),
+        "{e}"
+    );
+    let e = err(json!({"type": "rect", "mask": {"layer": "ghost"}})).await;
+    assert!(e.contains("mask layer ghost not found"), "{e}");
+    let e = err(json!({"type": "polygon", "sides": 2})).await;
+    assert!(e.contains("polygon sides must be >= 3"), "{e}");
+    let e = err(json!({"type": "rect", "radius": "round"})).await;
+    assert!(e.contains("\"full\""), "{e}");
+    mcp.stop().await;
+}
