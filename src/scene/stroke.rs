@@ -39,13 +39,23 @@ pub struct Stroke {
 }
 
 /// One stroke width, or one per side of a rect.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum StrokeWidth {
     /// The same everywhere, px.
     All(f32),
     /// `[top, right, bottom, left]`, px.
     Sides([f32; 4]),
+}
+
+impl<'de> Deserialize<'de> for StrokeWidth {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let v = serde_json::Value::deserialize(d)?;
+        super::de::float(&v)
+            .map(StrokeWidth::All)
+            .or_else(|| super::de::floats(&v).map(StrokeWidth::Sides))
+            .ok_or_else(|| super::de::expected("stroke width px or [top, right, bottom, left]", &v))
+    }
 }
 
 impl StrokeWidth {

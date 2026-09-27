@@ -5,6 +5,7 @@
 
 mod check;
 mod constraints;
+mod de;
 mod defaults;
 mod fill;
 mod gradient;

@@ -59,31 +59,55 @@ pub struct Stop {
     pub color: Color,
 }
 
-/// Stops as objects, or as bare colors placed evenly from 0 to 1.
+/// Stops as objects (`at`, or CSS's `offset`/`position`, 0–1 or "40%"),
+/// or as bare colors placed evenly from 0 to 1.
 fn stops<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Stop>, D::Error> {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum Raw {
-        Stop(Stop),
-        Color(Color),
-    }
-    let raw = Vec::<Raw>::deserialize(d)?;
+    use serde::de::Error;
+    let raw = Vec::<serde_json::Value>::deserialize(d)?;
     let n = raw.len();
-    Ok(raw
-        .into_iter()
+    let even = |i: usize| {
+        if n > 1 {
+            i as f32 / (n - 1) as f32
+        } else {
+            0.0
+        }
+    };
+    raw.into_iter()
         .enumerate()
-        .map(|(i, r)| match r {
-            Raw::Stop(s) => s,
-            Raw::Color(color) => Stop {
-                at: if n > 1 {
-                    i as f32 / (n - 1) as f32
-                } else {
-                    0.0
-                },
-                color,
-            },
+        .map(|(i, v)| match &v {
+            serde_json::Value::String(s) => Color::parse(s)
+                .map(|color| Stop { at: even(i), color })
+                .ok_or_else(|| D::Error::custom(format!("stop {i}: bad color {s}"))),
+            serde_json::Value::Object(o) => {
+                if let Some(k) = o
+                    .keys()
+                    .find(|k| !["at", "offset", "position", "color"].contains(&k.as_str()))
+                {
+                    return Err(D::Error::custom(format!(
+                        "stop {i}: unknown field {k}; use {{at, color}}"
+                    )));
+                }
+                let color = o
+                    .get("color")
+                    .and_then(|c| c.as_str())
+                    .and_then(Color::parse)
+                    .ok_or_else(|| D::Error::custom(format!("stop {i}: needs a color")))?;
+                let at = match ["at", "offset", "position"].iter().find_map(|k| o.get(*k)) {
+                    None => even(i),
+                    Some(p) => super::de::float(p)
+                        .or_else(|| {
+                            p.as_str()
+                                .and_then(|s| s.strip_suffix('%'))
+                                .and_then(|s| s.trim().parse::<f32>().ok())
+                                .map(|pc| pc / 100.0)
+                        })
+                        .ok_or_else(|| super::de::expected("a stop position 0–1", p))?,
+                };
+                Ok(Stop { at, color })
+            }
+            other => Err(super::de::expected("a color or {at, color}", other)),
         })
-        .collect())
+        .collect()
 }
 
 impl Gradient {
@@ -107,6 +131,26 @@ impl Gradient {
 mod tests {
     use super::{Gradient, GradientKind};
     use serde_json::json;
+
+    #[test]
+    fn stops_take_css_names_and_percentages() {
+        let g: Gradient = serde_json::from_value(json!({"stops": [
+            {"offset": 0, "color": "#FFFFFF"}, {"position": "55%", "color": "#FFFFFFEE"}, {"at": 1, "color": "#FFFFFF00"}]}))
+        .unwrap();
+        assert_eq!(
+            g.stops.iter().map(|s| s.at).collect::<Vec<_>>(),
+            [0.0, 0.55, 1.0]
+        );
+        let e = serde_json::from_value::<Gradient>(
+            json!({"stops": [{"pos": 0, "color": "#000"}, "#FFF"]}),
+        )
+        .unwrap_err();
+        assert!(
+            e.to_string()
+                .contains("stop 0: unknown field pos; use {at, color}"),
+            "{e}"
+        );
+    }
 
     #[test]
     fn stops_may_be_bare_colors_spread_evenly() {

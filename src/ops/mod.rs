@@ -195,8 +195,10 @@ fn apply(layers: &mut Vec<Layer>, op: &Op, changed: &mut Vec<String>) -> Result<
 
 /// Parses a layer and rejects unknown keys, recursing into frame children.
 fn parse_layer(v: &Value) -> Result<Layer, String> {
+    let mut v = v.clone();
+    normalize(&mut v);
     let layer: Layer = serde_json::from_value(v.clone()).map_err(|e| e.to_string())?;
-    check_keys(v, &layer)?;
+    check_keys(&v, &layer)?;
     if let (Some(_), Some(children)) = (
         layer.kind.children(),
         v.get("children").and_then(Value::as_array),
@@ -206,6 +208,26 @@ fn parse_layer(v: &Value) -> Result<Layer, String> {
         }
     }
     Ok(layer)
+}
+
+/// Accepts the names agents reach for first: on shapes, `fill` and
+/// `shadow` mean `fills` and `shadows` (text keeps its own `fill`, an image
+/// in the letters, and `shadow`). A rejected guess costs the agent a
+/// resend of its whole batch, so these are cheaper to accept than to refuse.
+pub(crate) fn normalize(v: &mut Value) {
+    let Some(o) = v.as_object_mut() else { return };
+    if o.get("type").and_then(Value::as_str) != Some("text") {
+        for (short, full) in [("fill", "fills"), ("shadow", "shadows")] {
+            if !o.contains_key(full)
+                && let Some(x) = o.remove(short)
+            {
+                o.insert(full.into(), x);
+            }
+        }
+    }
+    if let Some(Value::Array(children)) = o.get_mut("children") {
+        children.iter_mut().for_each(normalize);
+    }
 }
 
 /// Marks the ids a layer and its children were given explicitly as taken.

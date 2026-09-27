@@ -138,21 +138,14 @@ impl Serialize for Radius {
 
 impl<'de> Deserialize<'de> for Radius {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        #[derive(Deserialize)]
-        #[serde(untagged)]
-        enum Raw {
-            All(f32),
-            Corners([f32; 4]),
-            Word(String),
+        let v = serde_json::Value::deserialize(d)?;
+        if v.as_str() == Some("full") {
+            return Ok(Radius::Full);
         }
-        match Raw::deserialize(d)? {
-            Raw::All(r) => Ok(Radius::All(r)),
-            Raw::Corners(c) => Ok(Radius::Corners(c)),
-            Raw::Word(w) if w == "full" => Ok(Radius::Full),
-            Raw::Word(w) => Err(serde::de::Error::custom(format!(
-                "bad radius {w:?}: use px, [tl, tr, br, bl] or \"full\""
-            ))),
-        }
+        super::de::float(&v)
+            .map(Radius::All)
+            .or_else(|| super::de::floats(&v).map(Radius::Corners))
+            .ok_or_else(|| super::de::expected("radius px, [tl, tr, br, bl] or \"full\"", &v))
     }
 }
 

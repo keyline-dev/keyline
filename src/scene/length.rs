@@ -57,15 +57,11 @@ impl Serialize for Length {
 
 impl<'de> Deserialize<'de> for Length {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        #[derive(Deserialize)]
-        #[serde(untagged)]
-        enum Raw {
-            Num(f32),
-            Text(String),
-        }
-        match Raw::deserialize(d)? {
-            Raw::Num(v) => Ok(Length::Px(v)),
-            Raw::Text(t) => t.parse().map_err(serde::de::Error::custom),
+        let v = serde_json::Value::deserialize(d)?;
+        match &v {
+            serde_json::Value::Number(_) => Ok(Length::Px(super::de::float(&v).unwrap_or(0.0))),
+            serde_json::Value::String(t) => t.parse().map_err(serde::de::Error::custom),
+            _ => Err(super::de::expected("px, \"hug\", \"fill\" or \"40%\"", &v)),
         }
     }
 }
@@ -88,13 +84,23 @@ impl std::str::FromStr for Length {
 }
 
 /// An inset from the parent's edges: one value for both axes, or `[x, y]`.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum Inset {
     /// The same inset on both axes, px.
     Both(f32),
     /// Horizontal and vertical insets, px.
     Axes([f32; 2]),
+}
+
+impl<'de> Deserialize<'de> for Inset {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let v = serde_json::Value::deserialize(d)?;
+        super::de::float(&v)
+            .map(Inset::Both)
+            .or_else(|| super::de::floats(&v).map(Inset::Axes))
+            .ok_or_else(|| super::de::expected("inset px or [x, y]", &v))
+    }
 }
 
 impl Inset {

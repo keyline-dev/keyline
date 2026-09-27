@@ -194,3 +194,22 @@ fn update_errors_leave_scene_untouched() {
         assert_eq!(s, scene());
     }
 }
+
+#[test]
+fn common_guesses_are_accepted_on_shapes() {
+    let mut s = scene();
+    add_layers(
+        &mut s,
+        Map::new(),
+        vec![
+            json!({"id": "r", "type": "rect", "fill": "#FFFFFF", "shadow": {"y": 4, "color": "#0004"}}),
+            json!({"id": "t", "type": "text", "text": "x", "fill": {"asset": "missing"}}),
+        ],
+    )
+    .unwrap_err();
+    // The text's `fill` is its own field (an image), so the missing asset fails;
+    // the rect's `fill` and `shadow` became `fills` and `shadows`.
+    add_layers(&mut s, Map::new(), vec![json!({"id": "r", "type": "rect", "fill": "#FFFFFF", "shadow": {"y": 4, "color": "#0004"}})]).unwrap();
+    let r = s.layers.iter().find(|l| l.id == "r").unwrap();
+    assert!(r.look.fills.is_some() && r.look.shadows.is_some());
+}

@@ -34,13 +34,25 @@ pub struct Stack {
 }
 
 /// One main axis, or several tried in order.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum Dirs {
     /// Always this axis.
     One(Dir),
     /// The first axis whose layout fits; the last one otherwise.
     FirstFit(Vec<Dir>),
+}
+
+impl<'de> Deserialize<'de> for Dirs {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let v = serde_json::Value::deserialize(d)?;
+        let what = "dir row|column|row-reverse|column-reverse, or a list of them";
+        let parsed = match &v {
+            serde_json::Value::Array(_) => serde_json::from_value(v.clone()).map(Dirs::FirstFit),
+            _ => serde_json::from_value(v.clone()).map(Dirs::One),
+        };
+        parsed.map_err(|_| super::de::expected(what, &v))
+    }
 }
 
 impl Dirs {
@@ -96,7 +108,7 @@ impl Dir {
 }
 
 /// Space between children.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum Gap {
     /// The same gap between children and between wrapped lines, px.
@@ -109,6 +121,16 @@ pub enum Gap {
 impl Default for Gap {
     fn default() -> Self {
         Gap::Both(0.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for Gap {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let v = serde_json::Value::deserialize(d)?;
+        super::de::float(&v)
+            .map(Gap::Both)
+            .or_else(|| super::de::floats(&v).map(Gap::Axes))
+            .ok_or_else(|| super::de::expected("gap px or [rowGap, columnGap]", &v))
     }
 }
 
@@ -138,7 +160,7 @@ impl Gap {
 }
 
 /// Space inside a frame's edges, like CSS `padding`.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum Padding {
     /// The same on every side, px.
@@ -152,6 +174,22 @@ pub enum Padding {
 impl Default for Padding {
     fn default() -> Self {
         Padding::All(0.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for Padding {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let v = serde_json::Value::deserialize(d)?;
+        super::de::float(&v)
+            .map(Padding::All)
+            .or_else(|| super::de::floats(&v).map(Padding::Axes))
+            .or_else(|| super::de::floats(&v).map(Padding::Sides))
+            .ok_or_else(|| {
+                super::de::expected(
+                    "padding px, [vertical, horizontal] or [top, right, bottom, left]",
+                    &v,
+                )
+            })
     }
 }
 
