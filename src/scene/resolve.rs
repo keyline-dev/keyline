@@ -1,0 +1,199 @@
+//! The scene as drawn: text styles and per-size `at` changes applied.
+
+use std::collections::BTreeMap;
+
+use super::{Kind, Layer, Scene, check_keys};
+
+/// Text keys a style may set: everything but the content itself.
+pub(super) const STYLE_KEYS: &[&str] = &[
+    "resize",
+    "maxLines",
+    "minFontScale",
+    "ellipsis",
+    "fontSize",
+    "weight",
+    "align",
+    "color",
+    "fontFamily",
+    "letterSpacing",
+    "lineHeight",
+    "textCase",
+    "shadow",
+    "fill",
+    "gradient",
+    "outline",
+];
+
+/// `l` with its text style applied under its own fields, or `None` when it
+/// has no style. A field the layer leaves at its default takes the style's.
+pub(super) fn styled(
+    l: &Layer,
+    styles: &BTreeMap<String, serde_json::Map<String, serde_json::Value>>,
+) -> Result<Option<Layer>, String> {
+    let Kind::Text {
+        style: Some(name), ..
+    } = &l.kind
+    else {
+        return Ok(None);
+    };
+    let style = styles
+        .get(name)
+        .ok_or_else(|| format!("unknown style {name}"))?;
+    let mut v = serde_json::to_value(l).map_err(|e| e.to_string())?;
+    let obj = v.as_object_mut().ok_or("layer isn't an object")?;
+    for (k, val) in style {
+        obj.entry(k.clone()).or_insert_with(|| val.clone());
+    }
+    obj.remove("style");
+    serde_json::from_value(v)
+        .map(Some)
+        .map_err(|e| format!("style {name}: {e}"))
+}
+
+/// `l` with its changes for `size` merged over its own fields, or `None`
+/// when it has none.
+pub(super) fn sized(l: &Layer, size: &str) -> Result<Option<Layer>, String> {
+    let Some(patch) = l.at.get(size) else {
+        return Ok(None);
+    };
+    if let Some(k) = ["id", "type", "children", "at"]
+        .iter()
+        .find(|k| patch.contains_key(**k))
+    {
+        return Err(format!("at.{size} can't change {k}"));
+    }
+    let mut v = serde_json::to_value(l).map_err(|e| e.to_string())?;
+    crate::ops::merge_patch(&mut v, &serde_json::Value::Object(patch.clone()));
+    if let Some(o) = v.as_object_mut() {
+        o.remove("at");
+    }
+    let layer: Layer = serde_json::from_value(v.clone()).map_err(|e| format!("at.{size}: {e}"))?;
+    check_keys(&v, &layer).map_err(|e| format!("at.{size}: {e}"))?;
+    Ok(Some(layer))
+}
+
+impl Scene {
+    /// The scene as drawn at one size: every layer's `at` changes for it
+    /// applied. Borrowed when no layer has any. Call on a validated scene.
+    pub fn for_size(&self, size: &str) -> std::borrow::Cow<'_, Scene> {
+        fn go(layers: &mut [Layer], size: &str) {
+            for l in layers {
+                if let Ok(Some(s)) = sized(l, size) {
+                    *l = s;
+                }
+                if let Kind::Frame { children, .. } = &mut l.kind {
+                    go(children, size);
+                }
+            }
+        }
+        let mut any = false;
+        self.walk(&mut |l| any |= !l.at.is_empty());
+        if !any {
+            return std::borrow::Cow::Borrowed(self);
+        }
+        let mut layers = self.layers.clone();
+        go(&mut layers, size);
+        std::borrow::Cow::Owned(Scene {
+            layers,
+            ..self.clone()
+        })
+    }
+
+    /// The scene as drawn: every text layer's style applied. Borrowed when
+    /// there are no styles. Call on a validated scene.
+    pub fn resolved(&self) -> std::borrow::Cow<'_, Scene> {
+        fn go(layers: &mut [Layer], scene: &Scene) {
+            for l in layers {
+                if let Kind::Frame { children, .. } = &mut l.kind {
+                    go(children, scene);
+                }
+                if let Ok(Some(s)) = styled(l, &scene.styles) {
+                    *l = s;
+                }
+            }
+        }
+        if self.styles.is_empty() {
+            return std::borrow::Cow::Borrowed(self);
+        }
+        let mut layers = self.layers.clone();
+        go(&mut layers, self);
+        std::borrow::Cow::Owned(Scene {
+            layers,
+            ..self.clone()
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::scene::{Kind, Scene};
+
+    #[test]
+    fn at_changes_a_layer_for_one_size_only() {
+        let mut s: Scene = serde_json::from_value(serde_json::json!({
+            "width": 100, "height": 100,
+            "sizes": [{"id": "a", "width": 100, "height": 100}, {"id": "b", "width": 50, "height": 100}],
+            "layers": [{"id": "t", "type": "text", "text": "Hi", "fontSize": 10,
+                        "at": {"b": {"fontSize": 20, "color": "#FF0000"}}}]
+        }))
+        .unwrap();
+        s.validate().unwrap();
+        let size = |id: &str| match &s.for_size(id).layers[0].kind {
+            Kind::Text {
+                font_size, color, ..
+            } => (*font_size, color.to_string()),
+            _ => unreachable!(),
+        };
+        assert_eq!(size("a"), (10.0, "#000000".into()));
+        assert_eq!(size("b"), (20.0, "#FF0000".into()));
+
+        s.layers[0].at.insert("c".into(), serde_json::Map::new());
+        assert!(s.validate().unwrap_err().contains("no size c"));
+        s.layers[0].at.remove("c");
+        let bad = serde_json::json!({"type": "rect"});
+        s.layers[0]
+            .at
+            .insert("b".into(), bad.as_object().unwrap().clone());
+        assert!(s.validate().unwrap_err().contains("at.b can't change type"));
+        let typo = serde_json::json!({"fontsize": 20});
+        s.layers[0]
+            .at
+            .insert("b".into(), typo.as_object().unwrap().clone());
+        assert!(s.validate().unwrap_err().contains("fontsize → fontSize"));
+    }
+
+    #[test]
+    fn styles_fill_in_what_a_text_layer_leaves_out() {
+        let mut s: Scene = serde_json::from_value(serde_json::json!({
+            "width": 100, "height": 100, "sizes": [{"id": "a", "width": 100, "height": 100}],
+            "styles": {"label": {"fontSize": 30, "weight": 700, "color": "#FF0000"}},
+            "layers": [
+                {"id": "a", "type": "text", "text": "A", "style": "label"},
+                {"id": "b", "type": "text", "text": "B", "style": "label", "color": "#0000FF"}
+            ]
+        }))
+        .unwrap();
+        s.validate().unwrap();
+        let r = s.resolved();
+        let look = |i: usize| match &r.layers[i].kind {
+            Kind::Text {
+                font_size,
+                weight,
+                color,
+                ..
+            } => (*font_size, *weight, color.to_string()),
+            _ => unreachable!(),
+        };
+        assert_eq!(look(0), (30.0, 700, "#FF0000".into()));
+        // The layer's own color wins over the style's.
+        assert_eq!(look(1), (30.0, 700, "#0000FF".into()));
+
+        s.styles
+            .get_mut("label")
+            .unwrap()
+            .insert("text".into(), "x".into());
+        assert!(s.validate().unwrap_err().contains("text can't be styled"));
+        s.styles.clear();
+        assert!(s.validate().unwrap_err().contains("unknown style label"));
+    }
+}

@@ -1,0 +1,195 @@
+//! Tests of batched adds and updates: ids, targets, styles and atomicity.
+
+use super::*;
+use serde_json::json;
+
+fn scene() -> Scene {
+    serde_json::from_value(json!({
+        "width": 100, "height": 100, "sizes": [{"id": "a", "width": 100, "height": 100}],
+        "layers": [
+            {"id": "bar", "type": "frame", "width": 100, "height": 20, "children": [
+                {"id": "label", "role": "cta", "type": "text", "text": "Go"}
+            ]},
+            {"id": "t2", "role": "cta", "type": "text", "text": "Now"}
+        ]
+    }))
+    .unwrap()
+}
+
+fn op(v: Value) -> Op {
+    serde_json::from_value(v).unwrap()
+}
+
+#[test]
+fn a_style_target_creates_changes_and_deletes_styles() {
+    let mut s = scene();
+    let op = |v: Value| serde_json::from_value::<Op>(v).unwrap();
+    let ids = update_layers(
+        &mut s,
+        &[op(
+            json!({"target": {"style": "h"}, "set": {"fontSize": 40, "weight": 800}}),
+        )],
+    )
+    .unwrap();
+    assert_eq!(ids, ["h"]);
+    update_layers(
+        &mut s,
+        &[op(
+            json!({"target": {"style": "h"}, "set": {"weight": null}}),
+        )],
+    )
+    .unwrap();
+    assert_eq!(s.styles["h"], *json!({"fontSize": 40}).as_object().unwrap());
+    update_layers(
+        &mut s,
+        &[op(json!({"target": {"style": "h"}, "delete": true}))],
+    )
+    .unwrap();
+    assert!(s.styles.is_empty());
+    let err = update_layers(
+        &mut s,
+        &[op(json!({"target": {"style": "h"}, "delete": true}))],
+    );
+    assert!(err.unwrap_err().contains("no style h"));
+}
+
+#[test]
+fn add_generates_ids_and_nests_under_parent() {
+    let mut s = scene();
+    let ids = add_layers(
+        &mut s,
+        Map::new(),
+        vec![
+            json!({"type": "rect", "color": "#FF0000"}),
+            json!({"type": "rect", "parent": "bar"}),
+            json!({"type": "frame", "children": [{"type": "text", "text": "x"}]}),
+        ],
+    )
+    .unwrap();
+    assert_eq!(ids, ["rect1", "rect2", "frame1"]);
+    assert_eq!(s.version, 1);
+    let Kind::Frame { children, .. } = &s.layers[0].kind else {
+        panic!()
+    };
+    assert_eq!(children[1].id, "rect2");
+    let Kind::Frame { children, .. } = &s.layers[3].kind else {
+        panic!()
+    };
+    assert_eq!(children[0].id, "text1");
+}
+
+#[test]
+fn generated_ids_avoid_ids_given_later_in_the_batch() {
+    let mut s = scene();
+    let ids = add_layers(
+        &mut s,
+        Map::new(),
+        vec![
+            json!({"type": "rect"}),
+            json!({"id": "rect1", "type": "rect"}),
+        ],
+    )
+    .unwrap();
+    assert_eq!(ids, ["rect2", "rect1"]);
+}
+
+#[test]
+fn add_is_atomic() {
+    let mut s = scene();
+    let err = add_layers(
+        &mut s,
+        Map::new(),
+        vec![
+            json!({"type": "rect"}),
+            json!({"type": "text", "text": "x", "fontsize": 3}),
+        ],
+    )
+    .unwrap_err();
+    assert!(
+        err.starts_with("layers[1]") && err.contains("fontsize"),
+        "{err}"
+    );
+    assert_eq!(s, scene());
+    assert!(
+        add_layers(
+            &mut s,
+            Map::new(),
+            vec![json!({"type": "rect", "parent": "t2"})]
+        )
+        .is_err()
+    );
+    assert!(
+        add_layers(
+            &mut s,
+            Map::new(),
+            vec![json!({"id": "bar", "type": "rect"})]
+        )
+        .unwrap_err()
+        .contains("duplicate")
+    );
+}
+
+#[test]
+fn update_by_role_hits_every_match_and_merges() {
+    let mut s = scene();
+    let changed = update_layers(
+        &mut s,
+        &[op(json!({"target": {"role": "cta"}, "set": {"color": "#FFFFFF", "constraints": {"h": "center"}}}))],
+    )
+    .unwrap();
+    assert_eq!(changed, ["label", "t2"]);
+    update_layers(
+        &mut s,
+        &[op(
+            json!({"target": {"id": "t2"}, "set": {"constraints": {"v": "bottom"}}}),
+        )],
+    )
+    .unwrap();
+    let t2 = serde_json::to_value(&s.layers[1]).unwrap();
+    assert_eq!(t2["constraints"], json!({"h": "center", "v": "bottom"}));
+    assert_eq!(t2["color"], "#FFFFFF");
+}
+
+#[test]
+fn null_resets_and_delete_removes() {
+    let mut s = scene();
+    update_layers(
+        &mut s,
+        &[op(json!({"target": {"id": "t2"}, "set": {"role": null}}))],
+    )
+    .unwrap();
+    assert_eq!(s.layers[1].role, None);
+    update_layers(
+        &mut s,
+        &[op(json!({"target": {"id": "label"}, "delete": true}))],
+    )
+    .unwrap();
+    let Kind::Frame { children, .. } = &s.layers[0].kind else {
+        panic!()
+    };
+    assert!(children.is_empty());
+}
+
+#[test]
+fn update_errors_leave_scene_untouched() {
+    let mut s = scene();
+    for bad in [
+        json!({"target": {"id": "nope"}, "set": {"x": 1}}),
+        json!({"target": {"id": "t2"}, "set": {"type": "rect"}}),
+        json!({"target": {"id": "t2"}, "set": {"weight": 450}}),
+        json!({"target": {"id": "t2"}}),
+    ] {
+        assert!(
+            update_layers(
+                &mut s,
+                &[
+                    op(json!({"target": {"id": "t2"}, "set": {"x": 5}})),
+                    op(bad.clone())
+                ]
+            )
+            .is_err(),
+            "{bad}"
+        );
+        assert_eq!(s, scene());
+    }
+}
