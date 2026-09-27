@@ -3,6 +3,7 @@
 
 mod args;
 mod handlers;
+mod schema;
 
 use std::sync::Arc;
 
@@ -54,11 +55,13 @@ pub struct Server {
 impl Server {
     /// A server over `store`, rendering final PNGs on `backend`.
     pub fn new(store: Store, backend: Backend) -> Self {
+        let mut tool_router = Self::tool_router();
+        schema::compact_all(&mut tool_router);
         Server {
             store: Arc::new(store),
             lock: Arc::new(Mutex::new(())),
             backend,
-            tool_router: Self::tool_router(),
+            tool_router,
         }
     }
 
