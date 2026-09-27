@@ -2,7 +2,7 @@
 
 **An image composition engine that only an AI agent drives.** The agent describes a design once as a small JSON scene through [MCP](https://modelcontextprotocol.io) tools. A Rust renderer built on [Skia](https://skia.org) turns it into pixel-exact PNGs at every size you need: portrait post, landscape banner and skyscraper ad from one master layout. There's no browser anywhere in the pipeline.
 
-> Status: MVP complete (v0.1.0).
+> Status: MVP complete (v0.1.1).
 
 ![One master layout, three sizes](tests/golden/macos/reference-portrait.png)
 
@@ -73,7 +73,15 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 **Linux:** download the `.deb` for your machine (amd64 or arm64) from the latest release and install it; it puts `keyline-mcp` in `/usr/bin`. A plain tarball of the binary is there too.
 
 ```sh
-sudo apt install ./keyline-mcp_0.1.0-1_amd64.deb
+sudo apt install ./keyline-mcp_0.1.1-1_amd64.deb
+```
+
+**macOS (Apple silicon):** download `keyline-mcp-<version>-macos-arm64.tar.gz` from the latest release, unpack it and put `keyline-mcp` on your PATH. The binary isn't signed by Apple, so if you downloaded it in a browser, clear the quarantine flag once:
+
+```sh
+tar xzf keyline-mcp-v0.1.1-macos-arm64.tar.gz
+sudo mv keyline-mcp-v0.1.1-macos-arm64/keyline-mcp /usr/local/bin/
+xattr -d com.apple.quarantine /usr/local/bin/keyline-mcp 2>/dev/null || true
 ```
 
 **From source** (any OS; requires Rust stable; Skia comes precompiled; on Linux also `libfontconfig1-dev libfreetype6-dev`):

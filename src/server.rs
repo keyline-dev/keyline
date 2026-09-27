@@ -7,7 +7,7 @@ use base64::Engine;
 use rmcp::{
     ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
-    model::{CallToolResult, ContentBlock, ServerCapabilities, ServerConfig},
+    model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig},
     tool, tool_handler, tool_router,
 };
 use serde::Deserialize;
@@ -390,12 +390,16 @@ impl Server {
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for Server {
     fn get_info(&self) -> ServerConfig {
-        ServerConfig::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            format!(
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
+            // Not `Implementation::from_build_env`, which names rmcp itself.
+            .with_server_info(Implementation::new(
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION"),
+            ))
+            .with_instructions(format!(
                 "{INSTRUCTIONS} Fonts: any Google Fonts family (downloaded once, then cached); installed now: {}.",
                 crate::text::families().join(", ")
-            ),
-        )
+            ))
     }
 }
 

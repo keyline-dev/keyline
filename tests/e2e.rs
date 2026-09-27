@@ -351,6 +351,7 @@ async fn bad_input_gets_one_line_errors() {
 #[tokio::test]
 async fn tool_surface_stays_small() {
     let mcp = Mcp::start("tools").await;
+    assert_eq!(mcp.server_name(), "keyline-mcp");
     let tools = mcp.tools().await;
     let names: Vec<&str> = tools.iter().map(|t| t.name.as_ref()).collect();
     assert_eq!(names.len(), 6, "{names:?}");

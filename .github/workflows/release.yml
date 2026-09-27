@@ -1,8 +1,8 @@
 name: Release
 
-# Push a tag like v0.1.0 to build Linux packages and attach them to a
-# GitHub release: a .deb (install with `sudo apt install ./keyline-mcp_*.deb`)
-# and a plain tarball of the binary, for x86_64 and arm64.
+# Push a tag like v0.1.0 to build and attach to a GitHub release: for Linux
+# (x86_64 and arm64) a .deb (install with `sudo apt install ./keyline-mcp_*.deb`)
+# and a tarball of the binary; for macOS (Apple silicon) a tarball.
 on:
   push:
     tags: ["v*"]
@@ -12,32 +12,39 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.arch }}
+    name: ${{ matrix.os }}-${{ matrix.arch }}
     strategy:
       matrix:
         include:
           # 22.04's older glibc keeps the binary working on newer distros too.
-          - { arch: amd64, runner: ubuntu-22.04 }
-          - { arch: arm64, runner: ubuntu-22.04-arm }
+          - { os: linux, arch: amd64, runner: ubuntu-22.04 }
+          - { os: linux, arch: arm64, runner: ubuntu-22.04-arm }
+          # ponytail: Apple silicon only; add macos-15-intel if anyone needs x86_64.
+          - { os: macos, arch: arm64, runner: macos-latest }
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Build dependencies
+        if: matrix.os == 'linux'
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev libfreetype6-dev
       - name: Build the .deb (and the release binary)
+        if: matrix.os == 'linux'
         run: |
           cargo install cargo-deb --locked
           cargo deb
+      - name: Build the release binary
+        if: matrix.os == 'macos'
+        run: cargo build --release --locked
       - name: Tarball
         run: |
-          name=keyline-mcp-${GITHUB_REF_NAME}-linux-${{ matrix.arch }}
+          name=keyline-mcp-${GITHUB_REF_NAME}-${{ matrix.os }}-${{ matrix.arch }}
           mkdir "$name"
           cp target/release/keyline-mcp LICENSE README.md "$name"/
           tar czf "$name.tar.gz" "$name"
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.arch }}
+          name: ${{ matrix.os }}-${{ matrix.arch }}
           path: |
             target/debian/*.deb
             *.tar.gz

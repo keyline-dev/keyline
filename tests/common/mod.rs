@@ -37,7 +37,7 @@ impl Mcp {
     pub async fn start_in(data: PathBuf) -> Mcp {
         let mut cmd = tokio::process::Command::new(env!("CARGO_BIN_EXE_keyline-mcp"));
         cmd.env("KEYLINE_MCP_DATA", &data);
-        // Reference images are CPU renders, byte-identical on every machine.
+        // Reference images are CPU renders, deterministic on each OS version.
         cmd.env("KEYLINE_MCP_RENDERER", "cpu");
         let client =
             ().serve(TokioChildProcess::new(cmd).expect("spawn server"))
@@ -48,6 +48,18 @@ impl Mcp {
             data,
             traffic: 0.into(),
         }
+    }
+
+    /// The name the server gave in its MCP handshake.
+    pub fn server_name(&self) -> String {
+        self.client
+            .peer_info()
+            .expect("handshake done")
+            .server_info
+            .as_ref()
+            .expect("server info")
+            .name
+            .clone()
     }
 
     pub async fn tools(&self) -> Vec<Tool> {
