@@ -72,8 +72,15 @@ pub fn describe(
         // A backdrop that fails to render (e.g. an asset missing from the
         // store) only skips the contrast check; `render` reports the error.
         let backdrop = assets.and_then(|dir| render_image(scene, size, 1.0, dir, true).ok());
+        let [st, sr, sb, sl] = size.safe;
         let checks = Checks {
             scene,
+            safe: (size.safe != [0.0; 4]).then_some(Rect {
+                x: sl,
+                y: st,
+                w: size.width - sl - sr,
+                h: size.height - st - sb,
+            }),
             overlaps: overlaps(&placed),
             backdrop: backdrop.as_ref().and_then(skia_safe::Image::peek_pixels),
         };
@@ -121,6 +128,8 @@ pub fn warnings(scene: &Scene, assets: Option<&Path>) -> Option<String> {
 /// Per-size context the warnings need beyond a single layer.
 struct Checks<'s, 'i> {
     scene: &'s Scene,
+    /// The part of the canvas the platform doesn't cover, when it covers any.
+    safe: Option<Rect>,
     /// Text ids whose ink overlaps other texts' ink.
     overlaps: HashMap<&'s str, Vec<&'s str>>,
     /// The size rendered without text: what each text is read against.
@@ -192,6 +201,9 @@ fn line(
                 if fit.truncated {
                     out.push_str(" !truncated");
                 }
+            }
+            if checks.safe.is_some_and(|safe| !contains(safe, r)) {
+                out.push_str(" !unsafe");
             }
             if let Some(others) = checks.overlaps.get(l.id.as_str()) {
                 let _ = write!(out, " !overlaps {}", others.join(","));

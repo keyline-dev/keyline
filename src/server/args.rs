@@ -4,17 +4,19 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::ops::Op;
-use crate::scene::Size;
+use crate::scene::SizeSpec;
 
 #[derive(Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 /// Arguments of `scene_create`.
 pub struct SceneCreateArgs {
-    /// Master size, px.
-    pub(super) width: f32,
-    pub(super) height: f32,
-    /// Target sizes. `scale` (default 1) shrinks everything, fonts included, before constraints apply.
-    pub(super) sizes: Vec<Size>,
+    /// Master size, px; the first size's when omitted.
+    pub(super) width: Option<f32>,
+    pub(super) height: Option<f32>,
+    /// Target sizes: {id, width, height, scale, safe}, a preset (instagram-portrait|-square|-story,
+    /// facebook-feed, linkedin-post, x-post, youtube-thumbnail, iab-medium-rectangle|-leaderboard|-skyscraper|-half-page,
+    /// a4-portrait) or "WxH". `scale` (default 1) shrinks everything, fonts included, before constraints apply.
+    pub(super) sizes: Vec<SizeSpec>,
     /// Hex color, default #FFFFFF.
     pub(super) background: Option<String>,
 }

@@ -141,3 +141,52 @@ async fn bad_layout_values_get_one_line_errors() {
     );
     mcp.stop().await;
 }
+
+#[tokio::test]
+async fn presets_name_sizes_and_story_safe_zones_are_checked() {
+    let mcp = Mcp::start("presets").await;
+    // No master size: the first size is the master.
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"sizes": ["instagram-story", "1200x628"]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    mcp.ok("layer_add", json!({"sceneId": id, "layers": [
+        {"id": "title", "type": "text", "text": "Under the story bar", "fontSize": 48, "place": "top", "inset": [0, 100]},
+        {"id": "cta", "type": "text", "text": "Safe", "fontSize": 48, "place": "center"}
+    ]}))
+    .await;
+    let d = format!(
+        "\n{}",
+        mcp.ok("scene_describe", json!({"sceneId": id, "full": true}))
+            .await
+    );
+    assert!(d.contains("\ninstagram-story 1080×1920\n"), "{d}");
+    assert!(d.contains("\n1200x628 1200×628\n"), "{d}");
+    assert!(
+        line(&d, "instagram-story", "title").contains("!unsafe"),
+        "{d}"
+    );
+    assert!(
+        !line(&d, "instagram-story", "cta").contains("!unsafe"),
+        "{d}"
+    );
+    assert!(!line(&d, "1200x628", "title").contains("!unsafe"), "{d}");
+    // The default reply lists only that problem.
+    let problems = mcp.ok("scene_describe", json!({"sceneId": id})).await;
+    assert!(
+        problems.starts_with("instagram-story title text") && problems.contains("!unsafe"),
+        "{problems}"
+    );
+    let e = mcp
+        .call("scene_create", json!({"sizes": ["tiktok"]}))
+        .await
+        .unwrap_err();
+    assert!(e.contains("unknown size tiktok"), "{e}");
+    mcp.stop().await;
+}

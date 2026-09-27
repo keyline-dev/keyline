@@ -12,7 +12,7 @@ use crate::describe::text_report;
 use crate::fetch::{MAX_ASSET_BYTES, fetch};
 use crate::fonts::{Outcome, ensure as ensure_font};
 use crate::render::{contact_sheet, raster_size, render_png_on, svg_size};
-use crate::scene::{Asset, Color, SCHEMA_VERSION, Scene, Size};
+use crate::scene::{Asset, Color, SCHEMA_VERSION, Scene, Size, SizeSpec};
 
 impl Server {
     pub(super) async fn scene_create_impl(&self, a: SceneCreateArgs) -> Result<String, String> {
@@ -20,12 +20,18 @@ impl Server {
             Some(b) => Color::parse(&b).ok_or_else(|| format!("bad color {b}"))?,
             None => Color(0xFFFF_FFFF),
         };
+        let sizes = a
+            .sizes
+            .into_iter()
+            .map(SizeSpec::resolve)
+            .collect::<Result<Vec<_>, _>>()?;
+        let first = sizes.first().map_or((0.0, 0.0), |s| (s.width, s.height));
         let scene = Scene {
             schema_version: SCHEMA_VERSION,
-            width: a.width,
-            height: a.height,
+            width: a.width.unwrap_or(first.0),
+            height: a.height.unwrap_or(first.1),
             background,
-            sizes: a.sizes,
+            sizes,
             assets: Default::default(),
             styles: Default::default(),
             layers: Vec::new(),

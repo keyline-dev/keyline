@@ -135,7 +135,7 @@ null resets a field."
     }
 
     #[tool(
-        description = "Problems per size, or ok. Defects: !overflow !truncated !clipped !hidden !overlaps. \
+        description = "Problems per size, or ok. Defects: !overflow !truncated !clipped !hidden !overlaps !unsafe (under a size's safe insets). \
 Advisory: warn contrast. full: one line per layer per size: id type x,y w×h, font px, lines, image crop, upscale."
     )]
     async fn scene_describe(&self, Parameters(a): Parameters<SceneDescribeArgs>) -> CallToolResult {

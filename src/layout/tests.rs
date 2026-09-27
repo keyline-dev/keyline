@@ -19,6 +19,7 @@ fn size(w: f32, h: f32, scale: f32) -> Size {
         width: w,
         height: h,
         scale,
+        safe: [0.0; 4],
     }
 }
 

@@ -9,6 +9,7 @@ mod keys;
 mod layer;
 mod length;
 mod paint;
+mod presets;
 mod resolve;
 mod stack;
 mod text;
@@ -25,6 +26,7 @@ pub use length::{Inset, Length, Place, Position, Spot};
 pub use paint::{
     BlendMode, Color, Crop, Fit, Gradient, ImageFill, Outline, Shadow, Stop, Stroke, StrokeAlign,
 };
+pub use presets::{PRESETS, SizeSpec};
 pub use resolve::{ASPECT_CLASSES, aspect_classes};
 pub use stack::{Dir, Dirs, Gap, Justify, Padding, Stack, StackAlign};
 pub use text::{Align, Range, Resize, TextCase};
@@ -78,6 +80,14 @@ pub struct Size {
     /// Scale-tool factor applied to the master before constraints (default 1).
     #[serde(default = "one", skip_serializing_if = "is_one")]
     pub scale: f32,
+    /// Insets the platform covers, px `[top, right, bottom, left]` (a
+    /// story's UI bars); `scene_describe` flags text inside them (0).
+    #[serde(default, skip_serializing_if = "is_zero4")]
+    pub safe: [f32; 4],
+}
+
+fn is_zero4(v: &[f32; 4]) -> bool {
+    *v == [0.0; 4]
 }
 
 /// An image in the asset store.
