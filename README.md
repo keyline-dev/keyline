@@ -12,13 +12,13 @@ Think of it as Figma or Canva for AI agents: a design tool whose only user is a 
   <img src="tests/golden/macos/showcase-story.png" height="240" alt="The same design as a tall story, the graphic above the text">
 </p>
 
-<sub>One scene, three sizes: a square post, a wide banner and a story, each laid out by the engine from a single design (<a href="tests/fixtures/showcase.json">the scene</a>).</sub>
+<p align="center">One scene, three sizes: a square post, a wide banner and a story, each laid out by the engine from a single design (<a href="tests/fixtures/showcase.json">the scene</a>).</p>
 
 <p align="center">
   <img src="docs/media/showcase-motion.png" width="400" alt="The same design animated: the headline assembles letter by letter, the button pops in and pulses">
 </p>
 
-<sub>The same design with motion, rendered as an animated PNG with no browser and no video tool (<a href="tests/fixtures/showcase-motion.json">the scene</a>).</sub>
+<p align="center">The same design with motion, rendered as an animated PNG with no browser and no video tool (<a href="tests/fixtures/showcase-motion.json">the scene</a>).</p>
 
 ---
 
