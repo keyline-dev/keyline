@@ -28,13 +28,15 @@ jobs:
       # Unit tests everywhere. The GPU test skips itself on runners without
       # a GPU; renders then use the CPU fallback.
       - run: cargo test --lib
+      # Layout tests check boxes, not pixels, so they run everywhere.
+      - run: cargo test --test layout
       # End-to-end tests compare against reference PNGs, which are per OS
       # (glyph rasterization differs by platform) and allow for anti-aliasing
       # that differs between versions of it. They exist for macOS;
       # create them on another OS with UPDATE_GOLDEN=1 before enabling it here.
       - name: End-to-end tests
         if: runner.os == 'macOS'
-        run: cargo test --test e2e
+        run: cargo test --tests
       - name: Upload renders that missed their golden
         if: failure() && runner.os == 'macOS'
         uses: actions/upload-artifact@v4
