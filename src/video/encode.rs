@@ -116,10 +116,12 @@ pub fn render_video(
     if !done.status.success() {
         let _ = std::fs::remove_file(&out);
         let why = String::from_utf8_lossy(&done.stderr);
-        return Err(anyhow!(
-            "ffmpeg failed: {}",
-            why.lines().last().unwrap_or("no message")
-        ));
+        // The first error says why; later lines are its consequences.
+        let first = why
+            .lines()
+            .find(|l| l.to_lowercase().contains("error"))
+            .or_else(|| why.lines().last());
+        return Err(anyhow!("ffmpeg failed: {}", first.unwrap_or("no message")));
     }
     fed?;
     let bytes = std::fs::read(&out)?;
