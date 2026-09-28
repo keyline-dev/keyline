@@ -16,3 +16,4 @@ pub mod server;
 pub mod shapes;
 pub mod store;
 pub mod text;
+pub mod video;

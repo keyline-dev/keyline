@@ -13,8 +13,9 @@ use common::{Mcp, b64, build_reference_ad};
 use serde_json::json;
 
 /// Tool definitions are sent to the model on every turn, so they have a
-/// budget (~2.25k tokens). Raise it only on purpose, for features worth it.
-const TOOLS_LIST_MAX_CHARS: usize = 9000;
+/// budget (~2.5k tokens; motion, video and shots take ~1k of it, and
+/// `--no-motion` gives that back). Raise it only on purpose.
+const TOOLS_LIST_MAX_CHARS: usize = 10_000;
 
 #[test]
 fn golden_check_tolerates_glyph_edges_but_not_changed_content() {

@@ -8,7 +8,6 @@ use std::path::Path;
 use anyhow::{Result, anyhow};
 use skia_safe::{AlphaType, ColorType, ImageInfo};
 
-use super::render_image;
 use crate::scene::{Scene, Size};
 
 /// One frame's pixels, RGBA, unpremultiplied.
@@ -18,7 +17,10 @@ type Frame = Vec<u8>;
 /// frame to `emit` in order, with the frame before it. Frames are drawn a
 /// batch at a time, one per core, and only a batch and one earlier frame
 /// are ever held: a long story doesn't fill memory with every frame.
-fn each_frame(
+///
+/// # Errors
+/// A frame that fails to draw, or `emit` failing.
+pub fn each_frame(
     scene: &Scene,
     size: &Size,
     fps: f32,
@@ -28,14 +30,30 @@ fn each_frame(
 ) -> Result<()> {
     let cores = std::thread::available_parallelism().map_or(4, std::num::NonZero::get);
     let mut prev: Option<Frame> = None;
+    // Clips decode in order on this thread; frames then draw in parallel.
+    let mut clips = crate::video::frame::has_video(scene)
+        .then(|| crate::video::decode::Clips::new(fps, size.width.max(size.height)));
     for start in (0..count).step_by(cores) {
         let batch = start..(start + cores).min(count);
+        let mut moments = Vec::with_capacity(cores);
+        for i in batch {
+            let t = i as f32 / fps;
+            let at = crate::anim::at_time(scene, t, size);
+            let (at, needed) = crate::video::frame::at(&at, t, assets_dir);
+            let seeded = match &mut clips {
+                Some(c) => c.frames(&needed)?,
+                None => std::collections::HashMap::new(),
+            };
+            moments.push((at, seeded));
+        }
         let drawn: Vec<Result<Frame>> = std::thread::scope(|s| {
-            let handles: Vec<_> = batch
-                .map(|i| {
+            let handles: Vec<_> = moments
+                .into_iter()
+                .map(|(at, seeded)| {
                     s.spawn(move || {
-                        let at = crate::anim::at_time(scene, i as f32 / fps);
-                        rgba(&render_image(&at, size, 1.0, assets_dir, false)?)
+                        rgba(&super::render_image_with(
+                            &at, size, 1.0, assets_dir, false, seeded,
+                        )?)
                     })
                 })
                 .collect();
@@ -108,9 +126,16 @@ fn changed(a: &[u8], b: &[u8], w: usize) -> [usize; 4] {
 }
 
 /// An animated scene's frame count at `fps`, and its frame size in pixels.
-fn dims(scene: &Scene, size: &Size, fps: f32, format: &str) -> Result<(usize, usize, usize)> {
-    let duration = scene
-        .duration
+///
+/// # Errors
+/// A scene without `duration` (named by `format`), or a size too big.
+pub fn animation_dims(
+    scene: &Scene,
+    size: &Size,
+    fps: f32,
+    format: &str,
+) -> Result<(usize, usize, usize)> {
+    let duration = crate::anim::shots::length(scene)
         .ok_or_else(|| anyhow!("{format} needs an animated scene: give it a duration"))?;
     let px = |v: f32| usize::try_from(v.round().max(1.0) as i64);
     Ok((
@@ -140,7 +165,7 @@ fn part(frame: &[u8], prev: Option<&Frame>, w: usize) -> ([usize; 4], Vec<u8>) {
 /// # Errors
 /// A scene without `duration`, missing assets, or an encoding failure.
 pub fn render_apng(scene: &Scene, size: &Size, fps: f32, assets_dir: &Path) -> Result<Vec<u8>> {
-    let (count, w, h) = dims(scene, size, fps, "apng")?;
+    let (count, w, h) = animation_dims(scene, size, fps, "apng")?;
     let (pw, ph) = (u32::try_from(w)?, u32::try_from(h)?);
     let mut out = Vec::new();
     let mut enc = png::Encoder::new(&mut out, pw, ph);
@@ -171,7 +196,7 @@ pub fn render_apng(scene: &Scene, size: &Size, fps: f32, assets_dir: &Path) -> R
 /// A scene without `duration`, a size over 65,535 px, missing assets, or
 /// an encoding failure.
 pub fn render_gif(scene: &Scene, size: &Size, fps: f32, assets_dir: &Path) -> Result<Vec<u8>> {
-    let (count, w, h) = dims(scene, size, fps, "gif")?;
+    let (count, w, h) = animation_dims(scene, size, fps, "gif")?;
     let mut out = Vec::new();
     {
         let mut enc = gif::Encoder::new(&mut out, u16::try_from(w)?, u16::try_from(h)?, &[])?;

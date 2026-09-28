@@ -5,6 +5,7 @@
 
 pub mod ease;
 pub mod motion;
+pub mod shots;
 pub mod track;
 
 use serde::{Deserialize, Serialize};
@@ -35,6 +36,10 @@ pub struct LayerTime {
     /// own, GSAP's SplitText; the text stays laid out as one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub split: Option<Split>,
+    /// On a top-level frame: it's a shot, playing after the one before
+    /// (`{duration, transition}`) instead of stacking on it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shot: Option<shots::ShotTime>,
     /// Set when drawing a moment of split text: the time and the scene's
     /// end, for the renderer to move each piece. Never stored.
     #[serde(skip)]
@@ -58,15 +63,36 @@ impl LayerTime {
     }
 }
 
-/// `scene` as drawn `t` seconds in. Call on a resolved scene (styles and
-/// components applied).
-pub fn at_time(scene: &Scene, t: f32) -> Scene {
-    let end = scene.duration.unwrap_or(0.0);
+/// `scene` as drawn `t` seconds in at `size` (which sets how far slides and
+/// pushes travel). Call on a resolved scene (styles and components applied).
+pub fn at_time(scene: &Scene, t: f32, size: &crate::scene::Size) -> Scene {
+    let end = shots::length(scene).unwrap_or(0.0);
     let mut out = scene.clone();
-    for l in &mut out.layers {
-        apply(l, t, end, None);
+    let k = size.scale.max(1e-3);
+    let visible = shots::place(&mut out, t, (size.width / k, size.height / k));
+    for (i, l) in out.layers.iter_mut().enumerate() {
+        match (l.time.shot.is_some(), visible.iter().find(|v| v.0 == i)) {
+            // A shot's layers keep its own clock; its clips start with it.
+            (true, Some(&(_, start, dur))) => {
+                delay_clips(l, start);
+                apply(l, t - start, dur, None);
+            }
+            (true, None) => {}
+            (false, _) => apply(l, t, end, None),
+        }
     }
     out
+}
+
+/// Starts the clips in `l` `by` seconds later: a shot's clips play from
+/// the shot's start.
+fn delay_clips(l: &mut Layer, by: f32) {
+    if let Kind::Video { delay, .. } = &mut l.kind {
+        *delay += by;
+    }
+    for c in l.kind.children_mut().into_iter().flatten() {
+        delay_clips(c, by);
+    }
 }
 
 /// Moves `l` (and its children) to where it is at `t`. `given` is an

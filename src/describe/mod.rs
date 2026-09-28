@@ -67,47 +67,64 @@ pub fn describe(
         let _ = writeln!(out, "assets {}", list.join(", "));
     }
     for size in sizes {
-        let scene = &*scene.for_size(size);
-        let placed = layout(scene, size);
-        // A backdrop that fails to render (e.g. an asset missing from the
-        // store) only skips the contrast check; `render` reports the error.
-        let backdrop = assets.and_then(|dir| render_image(scene, size, 1.0, dir, true).ok());
-        let [st, sr, sb, sl] = size.safe;
-        let checks = Checks {
-            scene,
-            safe: (size.safe != [0.0; 4]).then_some(Rect {
-                x: sl,
-                y: st,
-                w: size.width - sl - sr,
-                h: size.height - st - sb,
-            }),
-            overlaps: overlaps(&placed),
-            backdrop: backdrop.as_ref().and_then(skia_safe::Image::peek_pixels),
-        };
-        let clip = Clip {
-            rect: Rect {
-                x: 0.0,
-                y: 0.0,
-                w: size.width,
-                h: size.height,
-            },
-            by: "canvas",
-        };
-        let mut lines = Vec::new();
-        for p in &placed {
-            line(&mut lines, &checks, p, clip, 1, 1.0);
-        }
-        if full {
-            let _ = writeln!(out, "{} {}×{}", size.id, n(size.width), n(size.height));
-            for l in lines {
-                let _ = writeln!(out, "{l}");
-            }
-        } else {
-            for l in lines
+        let sized = &*scene.for_size(size);
+        for (view, t, first) in views(sized) {
+            let scene = &view;
+            let placed = layout(scene, size);
+            // A backdrop that fails to render (e.g. an asset missing from the
+            // store) only skips the contrast check; `render` reports the error.
+            let backdrop = assets.and_then(|dir| {
+                // Text is read against the video under it, not an empty canvas;
+                // without ffmpeg there is no backdrop and no contrast check.
+                if crate::video::frame::has_video(scene) {
+                    let (at, frames) = crate::video::frame::still(scene, size, t, dir).ok()?;
+                    crate::render::render_image_with(&at, size, 1.0, dir, true, frames).ok()
+                } else {
+                    render_image(scene, size, 1.0, dir, true).ok()
+                }
+            });
+            let [st, sr, sb, sl] = size.safe;
+            let checks = Checks {
+                scene,
+                safe: (size.safe != [0.0; 4]).then_some(Rect {
+                    x: sl,
+                    y: st,
+                    w: size.width - sl - sr,
+                    h: size.height - st - sb,
+                }),
+                overlaps: overlaps(&placed),
+                backdrop: backdrop.as_ref().and_then(skia_safe::Image::peek_pixels),
+            };
+            let clip = Clip {
+                rect: Rect {
+                    x: 0.0,
+                    y: 0.0,
+                    w: size.width,
+                    h: size.height,
+                },
+                by: "canvas",
+            };
+            let mut lines = Vec::new();
+            // After the first shot, only the shot is new: the layers around it
+            // were listed with the first.
+            for p in placed
                 .iter()
-                .filter(|l| l.contains(" !") || l.contains(" warn "))
+                .filter(|p| first || p.layer.time.shot.is_some())
             {
-                let _ = writeln!(out, "{} {}", size.id, l.trim_start());
+                line(&mut lines, &checks, p, clip, 1, 1.0);
+            }
+            if full {
+                let _ = writeln!(out, "{} {}×{}", size.id, n(size.width), n(size.height));
+                for l in lines {
+                    let _ = writeln!(out, "{l}");
+                }
+            } else {
+                for l in lines
+                    .iter()
+                    .filter(|l| l.contains(" !") || l.contains(" warn "))
+                {
+                    let _ = writeln!(out, "{} {}", size.id, l.trim_start());
+                }
             }
         }
     }
@@ -115,6 +132,32 @@ pub fn describe(
         out.push_str("ok");
     }
     Ok(out)
+}
+
+/// The scene as checked: whole, or once per shot with only that shot
+/// shown, each with a moment it's fully on screen (its transition in done)
+/// and whether it's the first view.
+fn views(scene: &Scene) -> Vec<(Scene, f32, bool)> {
+    let shots = crate::anim::shots::timeline(scene);
+    if shots.is_empty() {
+        return vec![(scene.clone(), 0.0, true)];
+    }
+    shots
+        .iter()
+        .enumerate()
+        .map(|(n, &(i, start, _, into))| {
+            let mut view = scene.clone();
+            for &(j, ..) in &shots {
+                view.layers[j].hidden = j != i;
+            }
+            let settled = if n == 0 {
+                0.0
+            } else {
+                start + into.map_or(0.0, crate::anim::shots::Transition::overlap)
+            };
+            (view, settled, n == 0)
+        })
+        .collect()
 }
 
 /// Defect and advisory lines for every size, or `None` when the design is clean.

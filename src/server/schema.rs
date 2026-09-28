@@ -22,15 +22,21 @@ const DROP: &[&str] = &[
 const LAYER_ADD_MOTION: &str = " Motion (scene duration): in/out fade|fade-up|-down|-left|-right|pop|zoom-in|zoom-out|blur-in \
 or {effect, at, duration, ease, distance}; animate {opacity|scale|rotation|blur|offset|skew|color: [values] or {from,to}, \
 at, duration, ease, repeat (-1), yoyo, times} or a list; values may be \"random(a,b)\"; ease: GSAP names (power2.out, \
-back.out, elastic.inOut, steps(n), none); stagger (s) on frame, use or split text; split chars|words.";
+back.out, elastic.inOut, steps(n), none); stagger (s) on frame, use or split text; split chars|words. video: asset \
+(a clip), fit, focus, crop, adjust, start (s into clip), delay, speed, loop, audio. shot (top level, plays in turn; \
+its times are its own): duration, transition cut|fade|slide-*|push-*|wipe-* (left|right|up|down)|zoom or \
+{type, duration, ease}.";
+
+/// What `asset_add` adds to its description when motion is on.
+const ASSET_ADD_MOTION: &str = " Or a video clip (mp4, mov, webm) by path or url.";
 
 /// What `render` adds to its description when motion is on.
-const RENDER_MOTION: &str = " apng or gif renders the motion; time (s) a still of it.";
+const RENDER_MOTION: &str = " apng, gif, mp4 or webm (mp4/webm need ffmpeg) renders the motion; time (s) a still of it; audio false drops clips' sound.";
 
 /// Arguments that exist only for motion, by tool.
 const MOTION_ARGS: &[(&str, &[&str])] = &[
     ("scene_create", &["duration", "fps", "loop"]),
-    ("render", &["time"]),
+    ("render", &["time", "audio"]),
 ];
 
 /// Trims every tool's input schema in place, and adds motion's words to the
@@ -52,6 +58,7 @@ pub(super) fn compact_all<S>(router: &mut ToolRouter<S>, motion: bool) {
         }
         let extra = match route.attr.name.as_ref() {
             "layer_add" => LAYER_ADD_MOTION,
+            "asset_add" => ASSET_ADD_MOTION,
             "render" => RENDER_MOTION,
             _ => "",
         };

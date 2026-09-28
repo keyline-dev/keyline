@@ -45,17 +45,18 @@ sfc5e3bbb5b v0
 | Input | Type | Default | Meaning |
 |---|---|---|---|
 | `sceneId` | string, required | | The scene |
-| `url` | string | | Public http(s) URL of a PNG, JPEG or SVG |
+| `url` | string | | Public http(s) URL of a PNG, JPEG or SVG (or a video clip) |
 | `path` | string | | Or a local file, inside a folder the server was started with (`--allow-read <folder>`) |
 | `base64` | string | | Or the file's bytes, base64. They pass through the model, so keep this for small files |
 | `id` | string | generated | The id layers use to refer to it |
 
-Give exactly one of `url`, `path` or `base64`. The limit is 50 MB. A `path` is resolved through every symlink and `..` first, then must lie inside an allowed folder and be a regular file; without `--allow-read`, paths are refused. SVGs are rasterized at their drawn size, so they stay sharp.
+Give exactly one of `url`, `path` or `base64`. The limit is 50 MB, or 500 MB for a video clip by `path`. Clips (MP4, MOV, WebM…) are read with ffprobe, so they need ffmpeg installed, and can't be sent as base64. A `path` is resolved through every symlink and `..` first, then must lie inside an allowed folder and be a regular file; without `--allow-read`, paths are refused. SVGs are rasterized at their drawn size, so they stay sharp.
 
 Reply: the asset's id, its intrinsic size and the scene version.
 
 ```text
 photo 864×530 v1
+beach 1920×1080 12.5s 30fps v2
 ```
 
 ## layer_add
@@ -168,13 +169,18 @@ A layer's line is `id type x,y w×h`, in px at that size, then:
 |---|---|---|---|
 | `sceneId` | string, required | | The scene |
 | `sizes` | array of strings | all sizes | Size ids to render |
-| `format` | `png` \| `jpeg` \| `webp` \| `pdf` \| `apng` \| `gif` | `png` | File format; PDF is vector, one page per size (1 px = 1 pt); `apng` and `gif` animate a moving scene |
+| `format` | `png` \| `jpeg` \| `webp` \| `pdf` \| `apng` \| `gif` \| `mp4` \| `webm` | `png` | File format; PDF is vector, one page per size (1 px = 1 pt); `apng`, `gif`, `mp4` and `webm` play a moving scene |
 | `quality` | 0–100 | 90 | JPEG and WebP quality |
 | `maxKB` | number | | File-size cap: JPEG and WebP lower their quality until the file fits |
 | `preview` | boolean | false | Also returns one small image (384 px tall) of all sizes side by side |
 | `time` | number | | Seconds into a moving scene: a still at that moment, saved as `<size>-v<n>.at<time>s.<ext>` |
+| `audio` | boolean | true | `false` leaves the clips' sound out of `mp4` and `webm` |
 
-`format: "apng"` renders a moving scene as an animated PNG (`<size>-v<n>.anim.png`: lossless, fully transparent, plays in browsers), and `format: "gif"` as an animated GIF (plays everywhere, including email and chat, in 256 colors per frame). Frames are drawn in memory, several at once, and each stores only the part that changed; `maxKB` halves the frame rate until it fits. Scenes without a `duration` refuse both. `--no-motion` leaves `duration`, `fps`, `loop`, `time` and the motion fields out of the tools.
+`format: "apng"` renders a moving scene as an animated PNG (`<size>-v<n>.anim.png`: lossless, fully transparent, plays in browsers), and `format: "gif"` as an animated GIF (plays everywhere, including email and chat, in 256 colors per frame). Frames are drawn in memory, several at once, and each stores only the part that changed; `maxKB` halves the frame rate until it fits. Scenes without a `duration` or shots refuse both.
+
+`format: "mp4"` (H.264, plays everywhere) and `"webm"` (VP9) render video through [ffmpeg](https://ffmpeg.org), run as a separate program: found on the PATH or at `KEYLINE_MCP_FFMPEG` when a call needs it, so it can be installed without a restart. Without it, video is refused with how to install it, and everything else works. MP4 encodes on the GPU when ffmpeg has a hardware encoder that works on the machine (VideoToolbox on macOS; NVENC, Quick Sync or AMF elsewhere), else with `libx264`; `KEYLINE_MCP_ENCODER` picks one (`software`, or an encoder name). The clips' sound comes along (AAC in MP4, Opus in WebM) unless `audio` is `false`. PDF refuses scenes with video.
+
+`--no-motion` leaves `duration`, `fps`, `loop`, `time`, `audio`, video, shots and the motion fields out of the tools.
 
 Reply: per size, the size id and the file's path. With `maxKB`, the path is followed by `quality N` when the quality was lowered, or `!too-big N KB` when even the lowest quality (or a lossless format) doesn't fit. Under each size, every text that wrapped, shrank or was cut, as actually drawn, so wording and line breaks can be checked without looking at the image:
 

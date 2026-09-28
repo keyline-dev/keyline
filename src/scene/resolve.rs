@@ -171,7 +171,9 @@ impl Scene {
             Ok(())
         }
         let mut any = false;
-        self.walk(&mut |l| any |= l.style.is_some() || matches!(l.kind, Kind::Use { .. }));
+        self.walk(&mut |l| {
+            any |= l.style.is_some() || matches!(l.kind, Kind::Use { .. }) || l.time.shot.is_some();
+        });
         if !any && self.styles.is_empty() && self.tokens.is_empty() {
             return Ok(None);
         }
@@ -188,6 +190,10 @@ impl Scene {
         let mut layers = self.layers.clone();
         crate::reuse::components::expand(&scene, &mut layers)?;
         go(&mut layers, &scene)?;
+        // At rest (stills, checks), a scene of shots shows its first shot.
+        for l in layers.iter_mut().filter(|l| l.time.shot.is_some()).skip(1) {
+            l.hidden = true;
+        }
         scene.layers = layers;
         Ok(Some(scene))
     }

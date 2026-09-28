@@ -200,3 +200,18 @@ fn text_report_shows_only_wrapped_shrunk_or_cut_text() {
         "{r}"
     );
 }
+
+#[test]
+fn every_shot_is_checked_not_only_the_one_shown_at_rest() {
+    let s = scene(json!([
+        {"id": "s1", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 1},
+         "children": [{"id": "a", "type": "text", "text": "fine", "fontSize": 30}]},
+        {"id": "s2", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 1},
+         "children": [{"id": "b", "type": "text", "text": "a very long headline that will not fit",
+                       "fontSize": 30, "resize": "fixed", "width": 100, "height": 30}]},
+        {"id": "logo", "type": "text", "text": "logo", "x": 380, "fontSize": 30}
+    ]));
+    let w = warnings(&s.resolved(), None).unwrap();
+    assert!(w.contains("wide b ") && w.contains("!overflow"), "{w}");
+    assert_eq!(w.matches("logo").count(), 2, "listed once per size: {w}");
+}

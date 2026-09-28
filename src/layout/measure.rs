@@ -129,7 +129,7 @@ fn content(scene: &Scene, layer: &Layer, k: f32, parent: (f32, f32), known: Forc
         // Spacers take space only from a stack; `use` layers are expanded before layout.
         Kind::Spacer { .. } | Kind::Use { .. } => (0.0, 0.0),
         Kind::Text { .. } => text_content(layer, k, known),
-        Kind::Image { asset, .. } => {
+        Kind::Image { asset, .. } | Kind::Video { asset, .. } => {
             let (iw, ih) = scene
                 .assets
                 .get(asset)

@@ -17,6 +17,57 @@ impl Scene {
         {
             return Err("duration must be > 0 and fps between 1 and 120".into());
         }
+        let top: Vec<&str> = self
+            .layers
+            .iter()
+            .filter(|l| l.time.shot.is_some())
+            .map(|l| l.id.as_str())
+            .collect();
+        let mut shot_error = None;
+        let mut prev: Option<f32> = None;
+        for l in self.layers.iter().filter(|l| l.time.shot.is_some()) {
+            let shot = l.time.shot.as_ref().map_or(0.0, |s| s.duration);
+            let into = l
+                .time
+                .shot
+                .as_ref()
+                .and_then(|s| s.transition)
+                .map_or(0.0, crate::anim::shots::Transition::overlap);
+            if !matches!(l.kind, Kind::Frame { .. }) {
+                shot_error = Some(format!("{}: a shot is a frame", l.id));
+            } else if shot <= 0.0 {
+                shot_error = Some(format!("{}: a shot needs a duration > 0", l.id));
+            } else if into < 0.0 {
+                shot_error = Some(format!("{}: a transition lasts 0 s or more", l.id));
+            } else if prev.is_some_and(|p| into > p.min(shot)) {
+                shot_error = Some(format!(
+                    "{}: its transition is longer than a shot it joins",
+                    l.id
+                ));
+            }
+            prev = Some(shot);
+        }
+        self.walk(&mut |l| {
+            if l.time.shot.is_some() && !top.contains(&l.id.as_str()) {
+                shot_error = Some(format!("{}: shots are top-level layers", l.id));
+            }
+            if let Kind::Video {
+                start,
+                delay,
+                speed,
+                ..
+            } = l.kind
+                && (start < 0.0 || delay < 0.0 || !(0.01..=100.0).contains(&speed))
+            {
+                shot_error = Some(format!(
+                    "{}: start and delay are 0 s or more, speed 0.01 to 100",
+                    l.id
+                ));
+            }
+        });
+        if let Some(e) = shot_error {
+            return Err(e);
+        }
         let resolved = self.try_resolved()?;
         let resolved = resolved.as_ref().unwrap_or(self);
         let mut result = Ok(());
@@ -327,6 +378,25 @@ mod tests {
         s.layers[0] = serde_json::from_value(json!({"id": "t", "type": "rect"})).unwrap();
         s.layers.push(s.layers[0].clone());
         assert!(s.validate().unwrap_err().contains("duplicate"));
+    }
+
+    #[test]
+    fn clips_and_transitions_refuse_negative_times() {
+        let s: Scene = serde_json::from_value(json!({
+            "width": 100, "height": 100, "sizes": [{"id": "a", "width": 100, "height": 100}],
+            "assets": {"v": {"sha256": "c", "width": 10, "height": 10}},
+            "layers": [{"id": "v", "type": "video", "asset": "v", "delay": -1}]
+        }))
+        .unwrap();
+        assert!(s.validate().unwrap_err().contains("delay are 0 s or more"));
+        let s: Scene = serde_json::from_value(json!({
+            "width": 100, "height": 100, "sizes": [{"id": "a", "width": 100, "height": 100}],
+            "layers": [{"id": "a", "type": "frame", "shot": {"duration": 1}},
+                       {"id": "b", "type": "frame", "shot": {"duration": 1,
+                        "transition": {"type": "fade", "duration": -0.5}}}]
+        }))
+        .unwrap();
+        assert!(s.validate().unwrap_err().contains("0 s or more"));
     }
 
     #[test]

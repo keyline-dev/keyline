@@ -141,6 +141,22 @@ pub struct Asset {
     /// Whether the asset is an SVG, rasterized at draw size.
     #[serde(default, skip_serializing_if = "is_false")]
     pub svg: bool,
+    /// For a video clip: its length and frame rate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clip: Option<Clip>,
+}
+
+/// A video clip's timing.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Clip {
+    /// Length, seconds.
+    pub duration: f32,
+    /// Frames per second.
+    pub fps: f32,
+    /// Whether it has sound.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub audio: bool,
 }
 
 impl Scene {

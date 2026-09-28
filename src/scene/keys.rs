@@ -7,6 +7,10 @@ impl Kind {
     fn keys(&self) -> &'static [&'static str] {
         match self {
             Kind::Image { .. } => &["asset", "fit", "crop", "tileScale", "focus", "adjust"],
+            Kind::Video { .. } => &[
+                "asset", "fit", "crop", "focus", "adjust", "start", "delay", "speed", "loop",
+                "audio",
+            ],
             Kind::Text { .. } => &[
                 "text",
                 "ranges",
@@ -112,6 +116,7 @@ const COMMON_KEYS: &[&str] = &[
     "animate",
     "stagger",
     "split",
+    "shot",
 ];
 
 /// Rejects keys that don't belong to the layer's type, so a typo like

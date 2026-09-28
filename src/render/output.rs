@@ -63,6 +63,10 @@ pub enum Format {
     Apng,
     /// Animated GIF of an animated scene: plays everywhere, 256 colors.
     Gif,
+    /// H.264 MP4 video of an animated scene (needs ffmpeg).
+    Mp4,
+    /// VP9 WebM video of an animated scene (needs ffmpeg).
+    Webm,
 }
 
 impl schemars::JsonSchema for Format {
@@ -87,6 +91,8 @@ impl Format {
             Format::Pdf => "pdf",
             Format::Apng => "anim.png",
             Format::Gif => "gif",
+            Format::Mp4 => "mp4",
+            Format::Webm => "webm",
         }
     }
 }
@@ -111,7 +117,7 @@ pub fn encode(image: &Image, format: Format, quality: u32, max_kb: Option<u32>) 
         Format::Png => EncodedImageFormat::PNG,
         Format::Jpeg => EncodedImageFormat::JPEG,
         Format::Webp => EncodedImageFormat::WEBP,
-        Format::Pdf | Format::Apng | Format::Gif => {
+        Format::Pdf | Format::Apng | Format::Gif | Format::Mp4 | Format::Webm => {
             return Err(anyhow!("{} isn't a still format", format.ext()));
         }
     };
@@ -172,7 +178,15 @@ pub fn render_pdf(scene: &Scene, size: &Size, assets_dir: &Path) -> Result<Vec<u
     let mut out = Vec::new();
     let mut page =
         skia_safe::pdf::new_document(&mut out, None).begin_page((size.width, size.height), None);
-    draw_scene(page.canvas(), scene, size, 1.0, assets_dir, false)?;
+    draw_scene(
+        page.canvas(),
+        scene,
+        size,
+        1.0,
+        assets_dir,
+        false,
+        std::collections::HashMap::new(),
+    )?;
     page.end_page().close();
     Ok(out)
 }

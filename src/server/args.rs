@@ -93,7 +93,9 @@ pub struct RenderArgs {
     #[serde(default)]
     pub(super) preview: bool,
     pub(super) time: Option<f32>,
-    /// png|jpeg|webp|pdf|apng|gif
+    /// false leaves the clips' sound out of mp4/webm
+    pub(super) audio: Option<bool>,
+    /// png|jpeg|webp|pdf|apng|gif|mp4|webm
     #[serde(default)]
     pub(super) format: crate::render::Format,
     /// 0–100 (90)

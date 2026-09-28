@@ -37,7 +37,7 @@ use image::{CENTER, image_rect, svg_image};
 use output::encode_png;
 use paint::{sk_blend, sk_color, sk_rect};
 
-pub use animated::{render_apng, render_gif};
+pub use animated::{animation_dims, each_frame, render_apng, render_gif};
 pub use image::{image_crop, image_scale, raster_size, svg_size};
 pub use output::{Encoded, Format, contact_sheet, encode, render_pdf};
 pub use text_extras::curve_sagitta;
@@ -66,7 +66,7 @@ pub fn render_png_on(
     if backend == Backend::Gpu {
         let (w, h) = pixel_size(size, 1.0);
         let drawn = gpu::render_png(w, h, |canvas| {
-            draw_scene(canvas, scene, size, 1.0, assets_dir, false)
+            draw_scene(canvas, scene, size, 1.0, assets_dir, false, HashMap::new())
         })?;
         if let Some(png) = drawn {
             return Ok(png);
@@ -91,10 +91,34 @@ pub fn render_image(
     assets_dir: &Path,
     hide_text: bool,
 ) -> Result<Image> {
+    render_image_with(scene, size, px, assets_dir, hide_text, HashMap::new())
+}
+
+/// Like [`render_image`], with images already decoded by key (a video's
+/// frame for this moment, drawn by an image layer whose asset is the key).
+///
+/// # Errors
+/// Missing assets.
+pub fn render_image_with(
+    scene: &Scene,
+    size: &Size,
+    px: f32,
+    assets_dir: &Path,
+    hide_text: bool,
+    seeded: HashMap<String, Image>,
+) -> Result<Image> {
     let (w, h) = pixel_size(size, px);
     let mut surface =
         surfaces::raster_n32_premul((w, h)).ok_or_else(|| anyhow!("can't allocate {w}×{h}"))?;
-    draw_scene(surface.canvas(), scene, size, px, assets_dir, hide_text)?;
+    draw_scene(
+        surface.canvas(),
+        scene,
+        size,
+        px,
+        assets_dir,
+        hide_text,
+        seeded,
+    )?;
     Ok(surface.image_snapshot())
 }
 
@@ -106,6 +130,7 @@ fn draw_scene(
     px: f32,
     assets_dir: &Path,
     hide_text: bool,
+    seeded: HashMap<String, Image>,
 ) -> Result<()> {
     canvas.clear(sk_color(scene.background));
     canvas.scale((px, px));
@@ -124,7 +149,7 @@ fn draw_scene(
         px,
         assets_dir,
         hide_text,
-        rasters: HashMap::new(),
+        rasters: seeded,
         mask_layers,
         drawing_mask: false,
     };

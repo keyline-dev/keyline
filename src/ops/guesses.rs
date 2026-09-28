@@ -36,8 +36,28 @@ pub(crate) fn normalize(v: &mut Value) {
         o.insert("name".into(), n);
     }
     line_ends(o);
+    shot(o);
     if let Some(Value::Array(children)) = o.get_mut("children") {
         children.iter_mut().for_each(normalize);
+    }
+}
+
+/// `{"type": "shot", "duration": 3, "transition": "fade", …}`: a frame that
+/// fills the canvas, with its timing under `shot`.
+fn shot(o: &mut Map<String, Value>) {
+    if o.get("type").and_then(Value::as_str) != Some("shot") {
+        return;
+    }
+    o.insert("type".into(), "frame".into());
+    let mut timing = Map::new();
+    for k in ["duration", "transition"] {
+        if let Some(v) = o.remove(k) {
+            timing.insert(k.into(), v);
+        }
+    }
+    o.insert("shot".into(), Value::Object(timing));
+    for side in ["width", "height"] {
+        o.entry(side).or_insert_with(|| "fill".into());
     }
 }
 

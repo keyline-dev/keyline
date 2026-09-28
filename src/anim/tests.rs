@@ -39,7 +39,7 @@ fn a_layer_enters_and_leaves_on_the_timeline() {
             "out": {"effect": "fade", "duration": 1, "ease": "none"}}]),
         json!({}),
     );
-    let at = |t: f32| find(&at_time(&s, t).layers, "t").clone();
+    let at = |t: f32| find(&at_time(&s, t, &s.sizes[0]).layers, "t").clone();
     assert_eq!(at(0.5).opacity, 0.0, "not in yet");
     assert_eq!(at(0.5).look.offset, [0.0, 40.0]);
     assert!((at(1.25).opacity - 0.5).abs() < 1e-5);
@@ -63,7 +63,7 @@ fn tracks_set_values_and_effects_apply_on_top() {
             "in": {"effect": "fade", "duration": 1, "ease": "none"}}]),
         json!({}),
     );
-    let l = |t: f32| find(&at_time(&s, t).layers, "cta").clone();
+    let l = |t: f32| find(&at_time(&s, t, &s.sizes[0]).layers, "cta").clone();
     assert!((l(1.0).look.scale - 1.2).abs() < 1e-5);
     assert!((l(0.5).look.scale - 1.1).abs() < 1e-5);
     assert!(
@@ -89,7 +89,7 @@ fn a_staggering_frame_hands_its_entrance_to_its_children() {
                          {"id": "c", "type": "rect", "width": 50, "height": 50}]}]),
         json!({}),
     );
-    let t = at_time(&s, 0.75);
+    let t = at_time(&s, 0.75, &s.sizes[0]);
     assert_eq!(
         find(&t.layers, "row").opacity,
         1.0,
@@ -110,14 +110,19 @@ fn use_instances_enter_one_after_another() {
             "in": {"effect": "pop", "duration": 0.4, "ease": "none"}, "each": [{}, {}, {}]}]),
         json!({"components": {"card": {"type": "rect", "width": 50, "height": 50}}}),
     );
-    let t = at_time(&s, 0.4);
+    let t = at_time(&s, 0.4, &s.sizes[0]);
     let opacity = |id: &str| find(&t.layers, id).opacity;
     assert_eq!(
         (opacity("cards.0"), opacity("cards.1"), opacity("cards.2")),
         (1.0, 0.0, 0.0)
     );
     assert_eq!(opacity("cards.1"), 0.0);
-    assert!(at_time(&s, 1.2).layers.iter().all(|l| l.opacity == 1.0));
+    assert!(
+        at_time(&s, 1.2, &s.sizes[0])
+            .layers
+            .iter()
+            .all(|l| l.opacity == 1.0)
+    );
 }
 
 #[test]

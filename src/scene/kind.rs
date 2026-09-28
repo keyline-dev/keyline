@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::defaults::{
-    black, center, half, inter, is_black, is_center, is_default, is_half, is_inter, is_one,
-    is_sixteen, is_true, is_w400, is_zero, one, sixteen, w400, yes,
+    black, center, half, inter, is_black, is_center, is_default, is_false, is_half, is_inter,
+    is_one, is_sixteen, is_true, is_w400, is_zero, one, sixteen, w400, yes,
 };
 use super::{
     Adjust, Align, Color, Crop, Fit, Gradient, Grid, ImageFill, Layer, Outline, Range, Resize,
@@ -39,6 +39,41 @@ pub enum Kind {
         /// sepia, hue, duotone, tint).
         #[serde(default, skip_serializing_if = "Adjust::is_none")]
         adjust: Adjust,
+    },
+    /// A video clip, drawn like an image: each moment shows the clip's
+    /// frame for that moment.
+    #[serde(rename_all = "camelCase")]
+    Video {
+        /// A video asset from `asset_add`.
+        asset: String,
+        /// Cover or contain the box (default cover).
+        #[serde(default, skip_serializing_if = "is_default")]
+        fit: Fit,
+        /// Show only this part of the frame, stretched to the box.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        crop: Option<Crop>,
+        /// The point kept in view when `fill` crops (default center).
+        #[serde(default = "center", skip_serializing_if = "is_center")]
+        focus: [f32; 2],
+        /// Color adjustments, applied to every frame.
+        #[serde(default, skip_serializing_if = "Adjust::is_none")]
+        adjust: Adjust,
+        /// Where in the clip to begin, seconds (0).
+        #[serde(default, skip_serializing_if = "is_zero")]
+        start: f32,
+        /// When the clip starts playing in the scene, seconds (0); before,
+        /// its first frame holds.
+        #[serde(default, skip_serializing_if = "is_zero")]
+        delay: f32,
+        /// Playback speed: 0.5 is slow motion (1).
+        #[serde(default = "one", skip_serializing_if = "is_one")]
+        speed: f32,
+        /// Repeat the clip until the scene ends (false: its last frame holds).
+        #[serde(rename = "loop", default, skip_serializing_if = "is_false")]
+        looping: bool,
+        /// Play the clip's own sound in video output (true).
+        #[serde(default = "yes", skip_serializing_if = "is_true")]
+        audio: bool,
     },
     /// Text, sized by its box like iOS `UILabel`.
     #[serde(rename_all = "camelCase")]
@@ -312,6 +347,7 @@ impl Kind {
     pub fn name(&self) -> &'static str {
         match self {
             Kind::Image { .. } => "image",
+            Kind::Video { .. } => "video",
             Kind::Text { .. } => "text",
             Kind::Rect { .. } => "rect",
             Kind::Ellipse { .. } => "ellipse",

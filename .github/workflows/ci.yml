@@ -34,6 +34,10 @@ jobs:
       # (glyph rasterization differs by platform) and allow for anti-aliasing
       # that differs between versions of it. They exist for macOS;
       # create them on another OS with UPDATE_GOLDEN=1 before enabling it here.
+      # Video tests need ffmpeg; the rest of the server works without it.
+      - name: ffmpeg for the video tests
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
       - name: End-to-end tests
         if: runner.os == 'macOS'
         run: cargo test --tests

@@ -1,6 +1,6 @@
 # keyline-mcp
 
-**An AI-native design engine: agents design, keyline renders. No Chrome, no browser.** An AI agent (Claude Code, Cursor, Cline or any [MCP](https://modelcontextprotocol.io) client) describes a design once as a small JSON scene. A Rust renderer built on [Skia](https://skia.org) turns it into PNG, JPEG, WebP, vector PDF, animated PNG or GIF at every size you need: portrait post, landscape banner and skyscraper ad from one master layout. Output is deterministic: no model generates pixels, so the same scene always renders the same design. There's no browser anywhere in the pipeline: no headless Chrome, Puppeteer or Playwright to install, run or keep patched on the server, just one native binary.
+**An AI-native design engine: agents design, keyline renders. No Chrome, no browser.** An AI agent (Claude Code, Cursor, Cline or any [MCP](https://modelcontextprotocol.io) client) describes a design once as a small JSON scene. A Rust renderer built on [Skia](https://skia.org) turns it into PNG, JPEG, WebP, vector PDF, animated PNG, GIF, MP4 or WebM at every size you need: portrait post, landscape banner and skyscraper ad from one master layout. Output is deterministic: no model generates pixels, so the same scene always renders the same design. There's no browser anywhere in the pipeline: no headless Chrome, Puppeteer or Playwright to install, run or keep patched on the server, just one native binary.
 
 Think of it as Figma or Canva for AI agents: a design tool whose only user is a language model, for social posts, display ads, flyers, banners and other marketing images.
 
@@ -40,7 +40,7 @@ flowchart LR
     L --> C["Checks<br/>defects · advisories · facts"]
     C -- "ok, or what to fix" --> A
     L --> R["Skia renderer<br/>GPU, CPU fallback"]
-    R --> P["PNG, JPEG, WebP, PDF, animated PNG or GIF per size"]
+    R --> P["PNG, JPEG, WebP, PDF, animated PNG, GIF, MP4 or WebM per size"]
 ```
 
 1. **One master layout.** The scene is designed once, at a master size (say 1080×1350), and lists the target sizes.
@@ -72,7 +72,7 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 
 ## Features
 
-- **Layers:** `text`, `image` (PNG, JPEG, SVG), `icon`, `rect`, `ellipse` (and arcs and rings), `polygon` (and stars), `path` (SVG path data or a named shape), `line`, `frame` (nesting, clipping, stacks, grids), `spacer`, `firstFit`, and `use` for components
+- **Layers:** `text`, `image` (PNG, JPEG, SVG), `video`, `icon`, `rect`, `ellipse` (and arcs and rings), `polygon` (and stars), `path` (SVG path data or a named shape), `line`, `frame` (nesting, clipping, stacks, grids), `spacer`, `firstFit`, and `use` for components
 - **Layout:** stacks (rows and columns with gap, padding, alignment, justification and wrapping; `fill`, `grow` and priorities), grids (CSS-style tracks, named areas, spans), `hug`/`fill`/percentage sizes with min/max and aspect ratio, direction lists and `firstFit` that pick what fits, constraints, placement at nine spots, a scale factor per size, per-size and per-aspect changes (`at`), size presets for common social and ad formats, and safe areas a platform covers
 - **Text:** fit, wrap or one line; inline markup (`<b>`, `<i>`, `<span color=…>`, style names as tags); weights, italics, letter spacing, line height, case; balanced or pretty wrapping; highlights behind words; underline and strike; text on a curve; dot leaders; text filled with an image, pattern or gradient; outlines; text that knocks out its frame. Fonts work like CSS web fonts: name any [Google Fonts](https://fonts.google.com) family and the server downloads it on first use and caches it (tracked in `fonts/index.json`); [Inter](https://rsms.me/inter/) is bundled, and you can add your own font files
 - **Paint:** stacked fills (solid, linear/radial/conic gradients, images, patterns, film grain), strokes (inside, center or outside, per side, dashed, with arrowheads, hand-drawn), shadows (outer and inner, following a cutout's or text's shape), blur and backdrop blur, masks (gradient, shape, path, another layer or an image), torn edges, 16 blend modes, corner radius, rotation, skew, flips
@@ -80,8 +80,9 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 - **Icons:** about 5,000 built in, by name: [Lucide](https://lucide.dev) outline icons and [Font Awesome Free](https://fontawesome.com) solid, regular and brand icons, in any color
 - **Reuse:** named styles on any layer, tokens (`"$brand"`) that update every field using them, and components placed once or once per data row
 - **Motion:** GSAP-style animation: enter and exit effects (fade, fade-up, pop, zoom, blur-in), keyframes on opacity, scale, rotation, offset, skew, blur and color with GSAP's eases, `random()` starts, staggered children, and text split into letters or words that move on their own
+- **Video:** video clips as layers, trimmed, slowed or looped, with titles and graphics over them; shots that play in turn, joined by cuts, fades, slides, pushes, wipes or zooms; each clip's own sound carried into the video
 - **Assets:** stored under content hashes. URLs are fetched only over http(s), and private and local addresses are refused.
-- **Output:** PNG, JPEG, WebP, vector PDF, animated PNG or animated GIF per size, a still of any moment, with a file-size cap for ad networks, plus an optional contact-sheet preview; rendered on the GPU when available
+- **Output:** PNG, JPEG, WebP, vector PDF, animated PNG, animated GIF, MP4 or WebM per size, a still of any moment, with a file-size cap for ad networks, plus an optional contact-sheet preview; rendered on the GPU when available
 
 ## Quick start
 
@@ -130,7 +131,7 @@ Then ask your agent for a design: *"Make a vote-by-mail flyer with this photo, i
 | Command-line option | Purpose |
 |---|---|
 | `--allow-read <folder>` | Lets `asset_add` read local files by path inside this folder (repeatable); without it, paths are refused |
-| `--no-motion` | Leaves animation out of the tools, for stills-only use (fewer tokens per turn) |
+| `--no-motion` | Leaves animation and video out of the tools, for stills-only use (fewer tokens per turn) |
 | `-h`, `--help` | Prints the options and environment variables |
 
 | Environment variable | Default | Purpose |
@@ -138,6 +139,10 @@ Then ask your agent for a design: *"Make a vote-by-mail flyer with this photo, i
 | `KEYLINE_MCP_DATA` | `~/.keyline-mcp` | Scenes, assets, renders and the web-font cache |
 | `KEYLINE_MCP_FONTS` | none | Extra folder of `.ttf` and `.otf` fonts; `<data>/fonts` is loaded too |
 | `KEYLINE_MCP_RENDERER` | `gpu` | `gpu` renders on the GPU and falls back to the CPU; `cpu` always uses the CPU |
+| `KEYLINE_MCP_FFMPEG` | `ffmpeg` on the PATH | The ffmpeg program, for video clips and MP4/WebM output |
+| `KEYLINE_MCP_ENCODER` | `auto` | H.264 encoder: `auto` (a GPU encoder that works, else `libx264`), `software`, or an ffmpeg encoder name |
+
+**Video** needs [ffmpeg](https://ffmpeg.org) (`brew install ffmpeg`, `apt install ffmpeg`), run as a separate program and looked up when a call needs it. It's optional: without it, everything else works, animated PNG and GIF included.
 
 **GPU on a Linux server:** it needs a GPU with Vulkan drivers (NVIDIA's, or Mesa for AMD and Intel); no display is needed. In Docker, pass the GPU through (for NVIDIA: the Container Toolkit, `--gpus all`, with graphics capability) and install `libvulkan1`. Software Vulkan drivers are skipped, since the CPU renderer is faster; without a GPU, renders use the CPU.
 

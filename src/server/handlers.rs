@@ -11,6 +11,9 @@ use serde_json::Value;
 use super::{AssetAddArgs, PREVIEW_HEIGHT, RenderArgs, SceneCreateArgs, Server, err};
 use crate::describe::text_report;
 use crate::fetch::{MAX_ASSET_BYTES, fetch};
+
+/// The largest local video file `asset_add` takes.
+const MAX_VIDEO_BYTES: usize = 500 * 1024 * 1024;
 use crate::fonts::{Outcome, ensure as ensure_font};
 use crate::render::{
     Format, contact_sheet, encode, raster_size, render_apng, render_gif, render_image, render_pdf,
@@ -55,7 +58,8 @@ impl Server {
     pub(super) async fn asset_add_impl(&self, a: AssetAddArgs) -> Result<String, String> {
         let bytes = match (&a.url, &a.path, &a.base64) {
             (Some(url), None, None) => fetch(url).await.map_err(err)?,
-            (None, Some(path), None) => self.reads.read(path, MAX_ASSET_BYTES)?,
+            // Local files may be video, so their limit is video's.
+            (None, Some(path), None) => self.reads.read(path, MAX_VIDEO_BYTES)?,
             (None, None, Some(b64)) => {
                 let bytes = base64::engine::general_purpose::STANDARD
                     .decode(b64.trim())
@@ -67,20 +71,32 @@ impl Server {
             }
             _ => return Err("give exactly one of url, path or base64".into()),
         };
-        let (width, height, svg) = match raster_size(&bytes) {
-            Some((w, h)) => (w, h, false),
+        let still = raster_size(&bytes)
+            .map(|(w, h)| (w, h, false))
+            .or_else(|| svg_size(&bytes).ok().map(|(w, h)| (w, h, true)));
+        if still.is_some() && bytes.len() > MAX_ASSET_BYTES {
+            return Err(format!("image larger than {} MB", MAX_ASSET_BYTES >> 20));
+        }
+        if still.is_none() && a.base64.is_some() {
+            return Err("not a PNG, JPEG or SVG; a video comes by path or url, not base64".into());
+        }
+        let sha256 = self.store.put_asset(&bytes).map_err(err)?;
+        let (width, height, svg, clip) = match still {
+            Some((w, h, svg)) => (w, h, svg, None),
             None => {
-                let (w, h) = svg_size(&bytes).map_err(|_| "not a PNG, JPEG or SVG".to_string())?;
-                (w, h, true)
+                let file = self.store.assets_dir().join(&sha256);
+                let (w, h, clip) =
+                    crate::video::probe::probe(&file)?.ok_or("not a PNG, JPEG, SVG or video")?;
+                (w, h, false, Some(clip))
             }
         };
-        let sha256 = self.store.put_asset(&bytes).map_err(err)?;
         let id = a.id.unwrap_or_else(|| format!("a{}", &sha256[..6]));
         let asset = Asset {
             sha256,
             width,
             height,
             svg,
+            clip,
         };
         let (_, scene) = self
             .edit(&a.scene_id, |s| {
@@ -89,18 +105,27 @@ impl Server {
                 Ok(())
             })
             .await?;
-        Ok(format!("{id} {width}×{height} v{}", scene.version))
+        let length = clip.map_or_else(String::new, |c| {
+            format!(
+                " {}s {}fps",
+                (c.duration * 10.0).round() / 10.0,
+                c.fps.round()
+            )
+        });
+        Ok(format!("{id} {width}×{height}{length} v{}", scene.version))
     }
 
     pub(super) async fn render_impl(&self, a: RenderArgs) -> Result<Vec<ContentBlock>, String> {
         let scene = self.store.load(&a.scene_id).map_err(err)?;
         let fetched = self.scene_fonts(&scene).await?;
-        let mut scene = scene.resolved().into_owned();
-        if let Some(t) = a.time {
-            if matches!(a.format, Format::Apng | Format::Gif) {
-                return Err("time renders a still; leave it out for apng and gif".into());
-            }
-            scene = crate::anim::at_time(&scene, t);
+        let scene = scene.resolved().into_owned();
+        if a.time.is_some()
+            && matches!(
+                a.format,
+                Format::Apng | Format::Gif | Format::Mp4 | Format::Webm
+            )
+        {
+            return Err("time renders a still; leave it out for moving formats".into());
         }
         let scene = Arc::new(scene);
         let sizes: Vec<Size> = match &a.sizes {
@@ -127,13 +152,51 @@ impl Server {
                 let assets = self.store.assets_dir();
                 let backend = self.backend;
                 let (format, quality, max_kb) = (a.format, a.quality.unwrap_or(90), a.max_kb);
+                let time = a.time;
+                let sound = a.audio.unwrap_or(true);
                 tokio::task::spawn_blocking(move || {
+                    // A still of a moment: the scene as it is then, at this
+                    // size (slides travel this size's width).
+                    let scene = match time {
+                        Some(t) => Arc::new(crate::anim::at_time(&scene, t, &size)),
+                        None => scene,
+                    };
                     let mut note = String::new();
+                    let still = matches!(format, Format::Png | Format::Jpeg | Format::Webp);
+                    let video = crate::video::frame::has_video(&scene);
+                    if video && format == Format::Pdf {
+                        return Err(anyhow::anyhow!(
+                            "pdf can't hold video; render png, jpeg or webp"
+                        ));
+                    }
                     let bytes = match format {
+                        // A still of a scene with video shows the clips' frames at that moment.
+                        _ if still && video => {
+                            let (at, frames) = crate::video::frame::still(
+                                &scene,
+                                &size,
+                                time.unwrap_or(0.0),
+                                &assets,
+                            )?;
+                            let image = crate::render::render_image_with(
+                                &at, &size, 1.0, &assets, false, frames,
+                            )?;
+                            encode(&image, format, quality, max_kb)?.bytes
+                        }
                         Format::Png if max_kb.is_none() => {
                             render_png_on(&scene, &size, &assets, backend)?
                         }
                         Format::Pdf => render_pdf(&scene, &size, &assets)?,
+                        Format::Mp4 | Format::Webm => {
+                            let container = if format == Format::Mp4 {
+                                crate::video::encode::Container::Mp4
+                            } else {
+                                crate::video::encode::Container::Webm
+                            };
+                            crate::video::encode::render_video(
+                                &scene, &size, scene.fps, &assets, container, sound,
+                            )?
+                        }
                         Format::Apng | Format::Gif => {
                             // maxKB: halve the frame rate until it fits.
                             let mut fps = scene.fps;

@@ -49,6 +49,7 @@ Presets: `instagram-portrait` 1080×1350, `instagram-square` 1080×1080, `instag
 | `frame` | Container with free, stack or grid layout | `children`, `clip` (true), `stack`, `grid` |
 | `text` | Text in a box | see [Text](#text) |
 | `image` | An image in a box | `asset`, `fit` (`fill`), `focus` ([0.5, 0.5]), `crop`, `tileScale` (1), `adjust` |
+| `video` | A video clip in a box, playing in a moving scene | see [Video](#video) |
 | `rect` | Rectangle | |
 | `ellipse` | Ellipse in the box; arcs and rings | `arc {start, end, inner}` (0, 360, 0) |
 | `polygon` | Regular polygon in the box; a star with `innerRadius` | `sides` (3), `innerRadius` (the inner points' share of the outer radius: 0.38 for a classic star, 0.8 for a starburst) |
@@ -304,11 +305,11 @@ Models miscount character offsets, so text takes a small HTML subset instead:
 
 ## Motion
 
-A scene with a `duration` moves. Only fields that don't change layout animate, so the layout is the same at every moment and every check about it holds throughout; a scene without motion fields is drawn at rest. `render` makes an animated PNG (`format: "apng"`) or GIF (`format: "gif"`), or a still at any moment (`time`).
+A scene with a `duration`, or made of [shots](#shots-and-transitions), moves. Only fields that don't change layout animate, so the layout is the same at every moment and every check about it holds throughout; a scene without motion fields is drawn at rest. `render` makes an animated PNG (`format: "apng"`), a GIF (`format: "gif"`), an MP4 or WebM video (`format: "mp4"`, `"webm"`, with ffmpeg), or a still at any moment (`time`).
 
 | Scene field | Meaning | Default |
 |---|---|---|
-| `duration` | Length, seconds; its presence makes the scene move | none (a still) |
+| `duration` | Length, seconds; its presence makes the scene move | none (a still), or where the last shot ends |
 | `fps` | Frames per second | 30 |
 | `loop` | The animation repeats forever | false (plays once) |
 
@@ -369,6 +370,42 @@ GSAP's names: `none`, `power1` … `power4`, `sine`, `expo`, `circ`, `back`, `el
 ```
 
 Frames clip their children, animated ones included: give a frame `clip: false` when its children move beyond its edges.
+
+### Video
+
+A `video` layer plays a clip added with `asset_add`, drawn like an image and under any layers above it: titles, captions, logos.
+
+```json
+{"type": "video", "asset": "beach", "width": "fill", "height": "fill", "start": 2, "speed": 0.5, "audio": false}
+```
+
+| Field | Meaning | Default |
+|---|---|---|
+| `asset` | A clip from `asset_add` (MP4, MOV, WebM…) | required |
+| `fit`, `focus`, `crop`, `adjust` | As for [images](#images), applied to every frame | `fill`, center |
+| `start` | Where in the clip to begin, seconds | 0 |
+| `delay` | When the clip starts playing in the scene, seconds; before, its first frame holds | 0 |
+| `speed` | Playback speed: 0.5 is slow motion | 1 |
+| `loop` | Repeat the clip until the scene ends; otherwise its last frame holds | false |
+| `audio` | Play the clip's own sound in MP4 and WebM output | true |
+
+Each clip's sound plays with its pictures: from `start`, at `speed`, looping with it, and only while its shot is on; several clips' sounds are mixed. Stills (`time`, or a scene at rest) show the clip's frame at that moment. Decoding clips and writing MP4 or WebM needs [ffmpeg](https://ffmpeg.org), found on the PATH (or `KEYLINE_MCP_FFMPEG`) when a call needs it; everything else, APNG and GIF included, works without it.
+
+### Shots and transitions
+
+A top-level frame with `shot` is a shot: shots play one after another instead of stacking, each joined to the one before by a transition. Times inside a shot (`in`, `animate`, a clip's `delay`) count from the shot's own start. Layers that aren't shots, such as a logo or a caption bar, stay on across all of them. At rest, the first shot shows.
+
+```json
+{"id": "s1", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 3}, "children": ["…"]}
+{"id": "s2", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 3, "transition": "push-left"}, "children": ["…"]}
+```
+
+| Field | Meaning | Default |
+|---|---|---|
+| `duration` | Seconds on screen, including its transitions | required |
+| `transition` | How it enters from the shot before: a name, or `{type, duration, ease}` | `cut` |
+
+Transitions: `cut`, `fade`, `slide-left`, `slide-right`, `slide-up`, `slide-down` (slides in over the last shot), `push-left` … `push-down` (pushes the last shot out), `wipe-left` … `wipe-down` (a moving edge reveals it) and `zoom` (the last shot grows and fades). A transition lasts 0.5 s with `power2.inOut` unless given, and overlaps the two shots, so each shot starts where the one before ends minus its transition. The scene's length is where the last shot ends unless `duration` says otherwise.
 
 ## Example
 

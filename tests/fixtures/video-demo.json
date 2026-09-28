@@ -1,0 +1,199 @@
+{
+ "create": {
+  "sizes": [
+   "1280x720"
+  ],
+  "fps": 30
+ },
+ "add": {
+  "layers": [
+   {
+    "id": "s1",
+    "width": "fill",
+    "height": "fill",
+    "shot": {
+     "duration": 1.0
+    },
+    "type": "frame",
+    "children": [
+     {
+      "id": "video1",
+      "width": "fill",
+      "height": "fill",
+      "type": "video",
+      "asset": "one"
+     },
+     {
+      "id": "text1",
+      "place": "center",
+      "shadows": {
+       "x": 0.0,
+       "y": 10.0,
+       "blur": 40.0,
+       "color": "#00000099"
+      },
+      "animate": {
+       "duration": 0.5,
+       "ease": "back.out",
+       "offset": {
+        "from": [
+         0.0,
+         "random(80, 160)"
+        ]
+       },
+       "opacity": {
+        "from": 0.0
+       },
+       "rotation": {
+        "from": "random(-40, 40)"
+       }
+      },
+      "stagger": 0.04,
+      "split": "chars",
+      "type": "text",
+      "text": "Render",
+      "fontSize": 150.0,
+      "weight": 900,
+      "color": "#FFFFFF"
+     }
+    ]
+   },
+   {
+    "id": "s2",
+    "width": "fill",
+    "height": "fill",
+    "shot": {
+     "duration": 1.0,
+     "transition": {
+      "duration": 0.35,
+      "type": "push-left"
+     }
+    },
+    "type": "frame",
+    "children": [
+     {
+      "id": "video2",
+      "width": "fill",
+      "height": "fill",
+      "type": "video",
+      "asset": "two"
+     },
+     {
+      "id": "text2",
+      "place": "center",
+      "shadows": {
+       "x": 0.0,
+       "y": 10.0,
+       "blur": 40.0,
+       "color": "#00000099"
+      },
+      "in": {
+       "at": 0.15,
+       "distance": 60.0,
+       "duration": 0.45,
+       "effect": "fade-up"
+      },
+      "stagger": 0.035,
+      "split": "chars",
+      "type": "text",
+      "text": "Motion",
+      "fontSize": 150.0,
+      "weight": 900,
+      "color": "#FFFFFF"
+     }
+    ]
+   },
+   {
+    "id": "s3",
+    "width": "fill",
+    "height": "fill",
+    "shot": {
+     "duration": 1.0,
+     "transition": {
+      "duration": 0.35,
+      "type": "wipe-right"
+     }
+    },
+    "type": "frame",
+    "children": [
+     {
+      "id": "video3",
+      "width": "fill",
+      "height": "fill",
+      "type": "video",
+      "asset": "three"
+     },
+     {
+      "id": "text3",
+      "place": "center",
+      "shadows": {
+       "x": 0.0,
+       "y": 10.0,
+       "blur": 40.0,
+       "color": "#00000099"
+      },
+      "animate": {
+       "at": 0.1,
+       "duration": 0.55,
+       "ease": "expo.out",
+       "opacity": {
+        "from": 0.0
+       },
+       "scale": {
+        "from": "random(0, 2.5)"
+       }
+      },
+      "stagger": 0.03,
+      "split": "chars",
+      "type": "text",
+      "text": "Anywhere",
+      "fontSize": 150.0,
+      "weight": 900,
+      "color": "#FFFFFF"
+     }
+    ]
+   },
+   {
+    "id": "bar",
+    "place": "bottom",
+    "inset": 48.0,
+    "fills": "#0E100FCC",
+    "radius": "full",
+    "in": {
+     "at": 0.3,
+     "duration": 0.5,
+     "effect": "fade-up"
+    },
+    "type": "frame",
+    "children": [
+     {
+      "id": "icon1",
+      "width": 30.0,
+      "height": 30.0,
+      "type": "icon",
+      "name": "sparkles",
+      "color": "#FEC5FB"
+     },
+     {
+      "id": "text4",
+      "type": "text",
+      "text": "keyline \u00b7 rendered without a browser",
+      "fontSize": 30.0,
+      "weight": 700,
+      "color": "#FFFFFF",
+      "trim": "cap"
+     }
+    ],
+    "stack": {
+     "dir": "row",
+     "gap": 14.0,
+     "padding": [
+      16.0,
+      30.0
+     ],
+     "align": "center"
+    }
+   }
+  ]
+ }
+}

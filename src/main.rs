@@ -20,6 +20,9 @@ Environment:
   KEYLINE_MCP_DATA        Scenes, assets, renders and the web-font cache (~/.keyline-mcp)
   KEYLINE_MCP_FONTS       Extra folder of .ttf and .otf fonts
   KEYLINE_MCP_RENDERER    gpu (default: GPU with CPU fallback) or cpu
+  KEYLINE_MCP_FFMPEG      The ffmpeg program for video (default: ffmpeg on the PATH)
+  KEYLINE_MCP_ENCODER     H.264 encoder: auto (default: a working GPU encoder, else
+                          libx264), software, or an ffmpeg encoder name
 
 Docs: https://github.com/yuvalt/keyline";
 
