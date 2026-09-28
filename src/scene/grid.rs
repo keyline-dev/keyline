@@ -14,11 +14,11 @@ pub struct Grid {
     /// Column tracks, CSS style: `"1fr 2fr"`, `"200px auto 25%"`,
     /// `"repeat(3, 1fr)"`; or `{"min": 160}`, as many equal columns as fit
     /// at least that wide. Default: one `1fr` per `areas` column, else one.
-    #[serde(default, skip_serializing_if = "Tracks::is_empty")]
-    pub columns: Tracks,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub columns: Option<Tracks>,
     /// Row tracks, as `columns`; rows beyond them are `auto` (default).
-    #[serde(default, skip_serializing_if = "Tracks::is_empty")]
-    pub rows: Tracks,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rows: Option<Tracks>,
     /// Space between cells, px; `[rowGap, columnGap]` (default 0).
     #[serde(default, skip_serializing_if = "Gap::is_zero")]
     pub gap: Gap,
@@ -45,11 +45,8 @@ pub enum Track {
 }
 
 /// A grid's tracks on one axis.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Tracks {
-    /// Not given: the default applies.
-    #[default]
-    None,
     /// These tracks, in order.
     List(Vec<Track>),
     /// As many `1fr` tracks as fit, each at least `min` px.
@@ -59,11 +56,11 @@ pub enum Tracks {
     },
 }
 
-impl Tracks {
-    fn is_empty(&self) -> bool {
-        matches!(self, Tracks::None)
-    }
+/// Most tracks a grid may have on one axis, and the largest `cell` or
+/// `span`: far past any real layout, and it bounds the memory a scene can ask for.
+pub const MAX_TRACKS: usize = 100;
 
+impl Tracks {
     /// The listed tracks (none for `None` and `Fit`).
     pub fn list(&self) -> &[Track] {
         match self {
@@ -87,7 +84,9 @@ fn parse_tracks(s: &str) -> Result<Vec<Track>, String> {
             let n: usize = n
                 .trim()
                 .parse()
-                .map_err(|_| format!("bad repeat count {n}"))?;
+                .ok()
+                .filter(|n| *n <= MAX_TRACKS)
+                .ok_or_else(|| format!("bad repeat count {n}: 0–{MAX_TRACKS}"))?;
             let inner = parse_tracks(inner)?;
             for _ in 0..n {
                 out.extend_from_slice(&inner);
@@ -115,6 +114,9 @@ fn parse_tracks(s: &str) -> Result<Vec<Track>, String> {
         });
         rest = r.trim_start();
     }
+    if out.len() > MAX_TRACKS {
+        return Err(format!("at most {MAX_TRACKS} tracks"));
+    }
     Ok(out)
 }
 
@@ -129,7 +131,7 @@ impl<'de> Deserialize<'de> for Tracks {
             // A count is that many equal columns: 3 → "repeat(3, 1fr)".
             serde_json::Value::Number(n) => n
                 .as_u64()
-                .filter(|n| (1..=100).contains(n))
+                .filter(|n| (1..=MAX_TRACKS as u64).contains(n))
                 .map(|n| Tracks::List(vec![Track::Fr(1.0); n as usize]))
                 .ok_or_else(|| super::de::expected(what, &v)),
             serde_json::Value::Object(o) if o.len() == 1 => o
@@ -146,7 +148,6 @@ impl<'de> Deserialize<'de> for Tracks {
 impl Serialize for Tracks {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         match self {
-            Tracks::None => s.serialize_str(""),
             Tracks::Fit { min } => serde_json::json!({ "min": min }).serialize(s),
             Tracks::List(t) => {
                 let words: Vec<String> = t
@@ -232,7 +233,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            g.columns.list(),
+            g.columns.as_ref().unwrap().list(),
             [
                 Track::Px(200.0),
                 Track::Fr(1.0),
@@ -242,17 +243,30 @@ mod tests {
                 Track::Px(10.0)
             ]
         );
-        assert_eq!(g.rows.list(), [Track::Fr(1.0), Track::Fr(1.0)]);
+        assert_eq!(
+            g.rows.as_ref().unwrap().list(),
+            [Track::Fr(1.0), Track::Fr(1.0)]
+        );
+        let mut g = g;
+        g.rows = None;
         let v = serde_json::to_value(&g).unwrap();
         assert_eq!(v["columns"], "200px 1fr 1fr auto 25% 10px");
+        assert!(v.get("rows").is_none());
         let g: Grid = serde_json::from_value(json!({"columns": {"min": 160}})).unwrap();
-        assert_eq!(g.columns, Tracks::Fit { min: 160.0 });
+        assert_eq!(g.columns, Some(Tracks::Fit { min: 160.0 }));
         assert_eq!(
             serde_json::to_value(&g).unwrap(),
             json!({"columns": {"min": 160.0}})
         );
         let e = serde_json::from_value::<Grid>(json!({"columns": "1fr 2em"})).unwrap_err();
         assert!(e.to_string().contains("bad track 2em"), "{e}");
+        for huge in [
+            json!({"columns": "repeat(100000, 1fr)"}),
+            json!({"columns": 101}),
+            json!({"columns": "repeat(60, 1fr) repeat(60, 1fr)"}),
+        ] {
+            assert!(serde_json::from_value::<Grid>(huge).is_err());
+        }
     }
 
     #[test]

@@ -32,7 +32,8 @@ pub(super) fn torn(r: skia_safe::Rect, e: &Edges, k: f32) -> Path {
             let len = (to.0 - from.0).hypot(to.1 - from.1);
             let mut t = 0.0;
             loop {
-                t += depth * (0.4 + rng.next() * 0.8);
+                // Steps of at least 1 px bound the points to the perimeter.
+                t += (depth * (0.4 + rng.next() * 0.8)).max(1.0);
                 if t >= len {
                     break;
                 }
@@ -96,6 +97,9 @@ mod tests {
         assert!(pts.len() > 10, "{}", pts.len());
         assert!(pts.iter().all(|q| q.y <= 10.0 || q.y == 100.0), "{pts:?}");
         assert_eq!(torn(r, &e, 1.0), p, "the same seed tears the same way");
+        // A hair-thin tear still steps at least 1 px: points stay bounded.
+        let fine: Edges = serde_json::from_value(serde_json::json!({"depth": 0.001})).unwrap();
+        assert!(torn(r, &fine, 1.0).points().len() <= 610);
         let mut a = Rng::new(1);
         assert!((0..100).map(|_| a.next()).all(|v| (0.0..1.0).contains(&v)));
     }

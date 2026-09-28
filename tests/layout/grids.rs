@@ -183,3 +183,14 @@ fn grid_errors_are_one_line() {
         .contains("count from 1")
     );
 }
+
+#[test]
+fn min_columns_never_outnumber_the_children() {
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "width": 1000, "height": 100,
+        "grid": {"columns": {"min": 1}}, "children": rects(2)}]),
+    );
+    let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
+    // A 1 px minimum fits 1000 columns; two children get two, 500 each.
+    check(&b, "c1", (500.0, 0.0, 500.0, 100.0));
+}

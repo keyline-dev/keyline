@@ -2,13 +2,10 @@
 //! the next free one), tracks sized (px, %, `auto` to the content, `fr`
 //! sharing what's left), then each child stretched to its cell.
 
-use crate::scene::{Dir, Grid, Layer, Length, Position, Scene, Track, Tracks};
+use crate::scene::{Area, Dir, Grid, Layer, Length, MAX_TRACKS, Position, Scene, Track, Tracks};
 
 use super::measure::{Forced, clamp, measure};
 use super::stack::Item;
-
-/// Where a child sits: `(row, column, rows, columns)`, 0-based.
-type Slot = (usize, usize, usize, usize);
 
 /// A grid's children in their cells, and the content's size (padding
 /// excluded). `inner` are the known sides of the grid's inside.
@@ -25,27 +22,29 @@ pub(super) fn arrange<'a>(
         .iter()
         .filter(|c| !c.hidden && c.position != Position::Absolute)
         .collect();
-    let mut cols = match grid.columns {
-        Tracks::Fit { min } => {
-            // As many as fit; hugging, one per child.
+    let mut cols = match &grid.columns {
+        Some(Tracks::Fit { min }) => {
+            // As many as fit, no more than there are children (CSS auto-fit
+            // collapses the empty ones); hugging, one per child.
             let n = inner.0.map_or(flow.len(), |w| {
-                ((w + col_gap) / (min * k + col_gap)).floor() as usize
+                ((w + col_gap) / (min * k + col_gap)).floor().max(1.0) as usize
             });
-            vec![Track::Fr(1.0); n.max(1)]
+            vec![Track::Fr(1.0); n.min(flow.len()).clamp(1, MAX_TRACKS)]
         }
-        Tracks::List(ref t) => t.clone(),
-        Tracks::None => vec![Track::Fr(1.0); grid.area_columns().max(1)],
+        Some(Tracks::List(t)) => t.clone(),
+        None => vec![Track::Fr(1.0); grid.area_columns().max(1)],
     };
+    let rows_given = grid.rows.as_ref().map_or(&[][..], Tracks::list);
     let slots = place(&flow, grid, cols.len());
     let n_cols = slots.iter().map(|s| s.1 + s.3).max().unwrap_or(0);
     cols.resize(cols.len().max(n_cols), Track::Auto);
     let n_rows = slots
         .iter()
         .map(|s| s.0 + s.2)
-        .chain([grid.rows.list().len(), grid.areas.len()])
+        .chain([rows_given.len(), grid.areas.len()])
         .max()
         .unwrap_or(0);
-    let mut rows = grid.rows.list().to_vec();
+    let mut rows = rows_given.to_vec();
     rows.resize(n_rows, Track::Auto);
     let parent = (inner.0.unwrap_or(0.0), inner.1.unwrap_or(0.0));
     let col_w = sizes(&cols, inner.0, col_gap, k, |i| {
@@ -93,9 +92,9 @@ pub(super) fn arrange<'a>(
 
 /// Each child's slot: named areas and explicit cells first, then the rest
 /// in order into the first free cells, row by row.
-fn place(flow: &[&Layer], grid: &Grid, n_cols: usize) -> Vec<Slot> {
+fn place(flow: &[&Layer], grid: &Grid, n_cols: usize) -> Vec<Area> {
     let spans = |l: &Layer| l.span.unwrap_or([1, 1]).map(|n| usize::from(n.max(1)));
-    let fixed: Vec<Option<Slot>> = flow
+    let fixed: Vec<Option<Area>> = flow
         .iter()
         .map(|l| {
             let [rs, cs] = spans(l);
@@ -133,7 +132,7 @@ fn place(flow: &[&Layer], grid: &Grid, n_cols: usize) -> Vec<Slot> {
 struct Taken(Vec<Vec<bool>>);
 
 impl Taken {
-    fn take(&mut self, (r, c, rs, cs): Slot) {
+    fn take(&mut self, (r, c, rs, cs): Area) {
         if self.0.len() < r + rs {
             self.0.resize(r + rs, Vec::new());
         }
@@ -145,7 +144,7 @@ impl Taken {
         }
     }
 
-    fn free(&self, (r, c, rs, cs): Slot) -> bool {
+    fn free(&self, (r, c, rs, cs): Area) -> bool {
         (r..r + rs).all(|row| {
             (c..c + cs).all(|col| {
                 !self

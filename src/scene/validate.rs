@@ -1,7 +1,7 @@
 //! Scene invariants serde can't express, checked after every mutation.
 
 use super::resolve::{ASPECT_CLASSES, UNSTYLABLE, patched};
-use super::{Kind, Layer, Length, Resize, Scene};
+use super::{Kind, Layer, Length, MAX_TRACKS, Resize, Scene};
 
 impl Scene {
     /// Checks invariants serde can't express. Called after every mutation.
@@ -121,18 +121,24 @@ impl Scene {
             }
             if let Some(g) = grid {
                 g.check()?;
-                for c in children {
-                    if let Some(a) = c.area.as_deref().filter(|a| g.area(a).is_none()) {
+                for child in children {
+                    if let Some(a) = child.area.as_deref().filter(|a| g.area(a).is_none()) {
                         return Err(format!(
                             "{}: no grid area {a}; areas: {}",
-                            c.id,
+                            child.id,
                             g.areas.join(" / ")
                         ));
                     }
-                    if c.cell.is_some_and(|[r, c]| r == 0 || c == 0)
-                        || c.span.is_some_and(|[r, c]| r == 0 || c == 0)
-                    {
-                        return Err(format!("{}: cell and span count from 1", c.id));
+                    let out_of_range = |v: Option<[u16; 2]>| {
+                        v.is_some_and(|pair| {
+                            pair.iter().any(|n| *n == 0 || usize::from(*n) > MAX_TRACKS)
+                        })
+                    };
+                    if out_of_range(child.cell) || out_of_range(child.span) {
+                        return Err(format!(
+                            "{}: cell and span count from 1, up to {MAX_TRACKS}",
+                            child.id
+                        ));
                     }
                 }
             }

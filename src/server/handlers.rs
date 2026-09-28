@@ -1,6 +1,7 @@
 //! The work behind the tools that need more than a line: creating scenes,
 //! adding assets, rendering, fetching fonts and locked edits.
 
+use std::fmt::Write as _;
 use std::sync::Arc;
 
 use base64::Engine;
@@ -128,10 +129,8 @@ impl Server {
                                 note = format!(" quality {q}");
                             }
                             if e.too_big {
-                                note.push_str(&format!(
-                                    " !too-big {} KB",
-                                    e.bytes.len().div_ceil(1024)
-                                ));
+                                let kb = e.bytes.len().div_ceil(1024);
+                                let _ = write!(note, " !too-big {kb} KB");
                             }
                             e.bytes
                         }

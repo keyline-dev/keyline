@@ -154,8 +154,7 @@ pub fn rebind(scene: &mut Scene, changed: &[String]) -> Result<(), String> {
         }
         Ok(())
     }
-    let tokens = scene.tokens.clone();
-    go(&mut scene.layers, &tokens, changed)
+    go(&mut scene.layers, &scene.tokens, changed)
 }
 
 #[cfg(test)]

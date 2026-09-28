@@ -160,3 +160,27 @@ fn unknown_tokens_and_components_say_what_exists() {
     .unwrap_err();
     assert!(e.contains("unknown component ghost"), "{e}");
 }
+
+#[test]
+fn deleting_by_role_removes_inner_layers_or_the_whole_component() {
+    let mut s = scene();
+    let card = json!({"card": {"type": "frame", "role": "box", "children": [
+        {"type": "rect", "role": "dot"}, {"type": "rect", "role": "bar"}]}});
+    add_layers(&mut s, with(json!({}), card), vec![]).unwrap();
+    let delete = |role: &str| -> Op {
+        serde_json::from_value(
+            json!({"target": {"component": "card", "role": role}, "delete": true}),
+        )
+        .unwrap()
+    };
+    update_layers(&mut s, Shared::default(), &[delete("dot")]).unwrap();
+    assert_eq!(
+        s.components["card"]["children"].as_array().unwrap().len(),
+        1
+    );
+    // The root's own role: the component goes, not a null left behind.
+    update_layers(&mut s, Shared::default(), &[delete("box")]).unwrap();
+    assert!(s.components.is_empty());
+    let e = update_layers(&mut s, Shared::default(), &[delete("box")]).unwrap_err();
+    assert!(e.ends_with("no component card; components: "), "{e}");
+}

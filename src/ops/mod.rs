@@ -214,8 +214,7 @@ pub fn update_layers(scene: &mut Scene, shared: Shared, ops: &[Op]) -> Result<Ve
             continue;
         }
         let before = changed.len();
-        let tokens = next.tokens.clone();
-        apply(&mut next.layers, op, &tokens, &mut changed).map_err(at)?;
+        apply(&mut next.layers, op, &next.tokens, &mut changed).map_err(at)?;
         if changed.len() == before {
             return Err(at(format!("no layer with {}", op.target)));
         }
@@ -229,23 +228,20 @@ pub fn update_layers(scene: &mut Scene, shared: Shared, ops: &[Op]) -> Result<Ve
 /// Changes (merge patch) or deletes component `name`, or with `role` the
 /// layer inside it that has that role.
 fn recompose(scene: &mut Scene, name: &str, role: Option<&str>, op: &Op) -> Result<(), String> {
-    let known = scene
-        .components
-        .keys()
-        .cloned()
-        .collect::<Vec<_>>()
-        .join(", ");
-    if op.delete && role.is_none() {
-        return scene
-            .components
-            .remove(name)
-            .map(drop)
-            .ok_or_else(|| format!("no component {name}; components: {known}"));
+    let unknown = |scene: &Scene| {
+        let known: Vec<&str> = scene.components.keys().map(String::as_str).collect();
+        format!("no component {name}; components: {}", known.join(", "))
+    };
+    if !scene.components.contains_key(name) {
+        return Err(unknown(scene));
     }
-    let root = scene
-        .components
-        .get_mut(name)
-        .ok_or_else(|| format!("no component {name}; components: {known}"))?;
+    if op.delete && role.is_none() {
+        scene.components.remove(name);
+        return Ok(());
+    }
+    let Some(root) = scene.components.get_mut(name) else {
+        return Err(unknown(scene));
+    };
     fn find<'v>(v: &'v mut Value, role: &str) -> Option<&'v mut Value> {
         if v.get("role").and_then(Value::as_str) == Some(role) {
             return Some(v);
@@ -270,15 +266,14 @@ fn recompose(scene: &mut Scene, name: &str, role: Option<&str>, op: &Op) -> Resu
             c.iter_mut().for_each(prune);
         }
     }
-    prune(root_of(scene, name));
+    if let Some(root) = scene.components.get_mut(name) {
+        prune(root);
+        // Deleting the root by its role deletes the component.
+        if root.is_null() {
+            scene.components.remove(name);
+        }
+    }
     Ok(())
-}
-
-fn root_of<'s>(scene: &'s mut Scene, name: &str) -> &'s mut Value {
-    scene
-        .components
-        .entry(name.to_owned())
-        .or_insert(Value::Null)
 }
 
 /// Creates, changes (merge patch) or deletes the text style `name`.

@@ -34,7 +34,7 @@ pub use fill::{
     Adjust, Common, GradientFill, ImagePaint, NoisePaint, Paint, PatternKind, PatternPaint, Solid,
 };
 pub use gradient::{Gradient, GradientKind, Stop};
-pub use grid::{Area, Grid, Track, Tracks};
+pub use grid::{Area, Grid, MAX_TRACKS, Track, Tracks};
 pub use keys::check_keys;
 pub use kind::{Arc, FillRule, FitPath, IconSet, Kind};
 pub use layer::{Layer, StyleRef};
