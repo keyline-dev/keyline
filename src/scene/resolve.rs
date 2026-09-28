@@ -157,19 +157,22 @@ impl Scene {
                 if let Some(s) = styled(l, scene).map_err(|e| format!("{}: {e}", l.id))? {
                     *l = s;
                 }
-                // Style-name tags in markup become spans with the style's fields.
+                // Style-name tags in markup become spans with the style's
+                // fields, and tokens in span attributes take their values.
                 if let Kind::Text { text, .. } = &mut l.kind
                     && text.contains('<')
-                    && !scene.styles.is_empty()
                 {
-                    *text = crate::text::markup::expand_styles(text, &scene.styles);
+                    if !scene.styles.is_empty() {
+                        *text = crate::text::markup::expand_styles(text, &scene.styles);
+                    }
+                    crate::reuse::tokens::in_markup(text, &scene.tokens);
                 }
             }
             Ok(())
         }
         let mut any = false;
         self.walk(&mut |l| any |= l.style.is_some() || matches!(l.kind, Kind::Use { .. }));
-        if !any && self.styles.is_empty() {
+        if !any && self.styles.is_empty() && self.tokens.is_empty() {
             return Ok(None);
         }
         // Styles with their tokens in place, for layers and markup tags alike.

@@ -176,3 +176,39 @@ async fn components_are_edited_once_for_every_instance() {
     .await;
     mcp.stop().await;
 }
+
+#[tokio::test]
+async fn flat_gradients_and_tokens_in_spans_work_as_agents_write_them() {
+    let mcp = Mcp::start("reuse-guesses").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 400, "height": 200, "sizes": ["400x200"]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    // The first call of every P2 benchmark run, which used to fail whole.
+    let reply = mcp
+        .ok(
+            "layer_add",
+            json!({"sceneId": id, "tokens": {"red": "#D0202E"}, "layers": [
+            {"type": "rect", "width": 400, "height": 80, "fills": [{"type": "linear", "angle": 180,
+             "stops": [{"color": "#FFFFFF", "pos": 0}, {"color": "#FFFFFF00", "pos": 1}]}]},
+            {"id": "t", "type": "text", "text": "Proven <span color=\"$red\">RESULTS</span>"}]}),
+        )
+        .await;
+    assert!(reply.starts_with("added rect1,t v1 ok"), "{reply}");
+    let e = mcp
+        .call(
+            "layer_add",
+            json!({"sceneId": id, "layers": [
+            {"type": "text", "text": "<span color=\"$blue\">x</span>"}]}),
+        )
+        .await
+        .unwrap_err();
+    assert!(e.contains("<span color=\"$blue\">: "), "{e}");
+    mcp.stop().await;
+}

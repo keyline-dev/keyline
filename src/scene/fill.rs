@@ -3,7 +3,7 @@
 //! `{pattern}` or `{noise}`, each with `opacity` and `blendMode`.
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use super::defaults::{center, is_center, is_default, is_one, is_zero, one};
 use super::{BlendMode, Color, Crop, Fit, Gradient};
@@ -266,6 +266,19 @@ impl<'de> Deserialize<'de> for Paint {
             Value::String(s) => Color::parse(s)
                 .map(Paint::color)
                 .ok_or_else(|| D::Error::custom(format!("bad color {s}"))),
+            // A gradient written flat, `{type, angle, stops}`, as CSS and
+            // Figma put it: every run of the benchmark guessed this first.
+            Value::Object(o) if o.contains_key("stops") && !o.contains_key("gradient") => {
+                let (common, gradient): (Map<String, Value>, Map<String, Value>) = o
+                    .clone()
+                    .into_iter()
+                    .partition(|(k, _)| k == "opacity" || k == "blendMode");
+                let mut wrapped = common;
+                wrapped.insert("gradient".into(), Value::Object(gradient));
+                serde_json::from_value(Value::Object(wrapped))
+                    .map(Paint::Gradient)
+                    .map_err(|e| D::Error::custom(format!("gradient fill: {e}")))
+            }
             // `color` last: patterns carry a color too.
             Value::Object(o) => match ["gradient", "image", "pattern", "noise", "color"]
                 .into_iter()
@@ -285,6 +298,23 @@ impl<'de> Deserialize<'de> for Paint {
 mod tests {
     use super::{Paint, PatternKind};
     use serde_json::json;
+
+    #[test]
+    fn flat_gradients_as_agents_write_them_are_gradients() {
+        // The fill every benchmark run guessed first (with `pos` stops).
+        let p: Paint =
+            serde_json::from_value(json!({"type": "linear", "angle": 180, "opacity": 0.5,
+            "stops": [{"color": "#F4F5F4", "pos": 0}, {"color": "#F4F5F400", "pos": 1}]}))
+            .unwrap();
+        let Paint::Gradient(g) = p else {
+            panic!("not a gradient")
+        };
+        assert_eq!(g.opacity, 0.5);
+        assert_eq!(g.gradient.stops.len(), 2);
+        let e = serde_json::from_value::<Paint>(json!({"type": "linear", "stops": [], "bogus": 1}))
+            .unwrap_err();
+        assert!(e.to_string().starts_with("gradient fill:"), "{e}");
+    }
 
     #[test]
     fn paints_are_known_by_their_key() {

@@ -81,7 +81,7 @@ fn stops<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Stop>, D::Error> 
             serde_json::Value::Object(o) => {
                 if let Some(k) = o
                     .keys()
-                    .find(|k| !["at", "offset", "position", "color"].contains(&k.as_str()))
+                    .find(|k| !["at", "offset", "position", "pos", "color"].contains(&k.as_str()))
                 {
                     return Err(D::Error::custom(format!(
                         "stop {i}: unknown field {k}; use {{at, color}}"
@@ -92,7 +92,10 @@ fn stops<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Stop>, D::Error> 
                     .and_then(|c| c.as_str())
                     .and_then(Color::parse)
                     .ok_or_else(|| D::Error::custom(format!("stop {i}: needs a color")))?;
-                let at = match ["at", "offset", "position"].iter().find_map(|k| o.get(*k)) {
+                let at = match ["at", "offset", "position", "pos"]
+                    .iter()
+                    .find_map(|k| o.get(*k))
+                {
                     None => even(i),
                     Some(p) => super::de::float(p)
                         .or_else(|| {
@@ -142,12 +145,12 @@ mod tests {
             [0.0, 0.55, 1.0]
         );
         let e = serde_json::from_value::<Gradient>(
-            json!({"stops": [{"pos": 0, "color": "#000"}, "#FFF"]}),
+            json!({"stops": [{"stop": 0, "color": "#000"}, "#FFF"]}),
         )
         .unwrap_err();
         assert!(
             e.to_string()
-                .contains("stop 0: unknown field pos; use {at, color}"),
+                .contains("stop 0: unknown field stop; use {at, color}"),
             "{e}"
         );
     }

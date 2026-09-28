@@ -223,6 +223,7 @@ impl Scene {
                 {
                     return Err("fit, fixed and truncate text need width and height".into());
                 }
+                crate::text::markup::check(text)?;
                 // Ranges count characters of the text as displayed: markup removed.
                 let n = crate::text::markup::parse(text).0.chars().count();
                 if let Some(r) = ranges.iter().find(|r| r.weight.is_some_and(|w| !(100..=900).contains(&w) || w % 100 != 0)) {

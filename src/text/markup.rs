@@ -126,7 +126,7 @@ fn tag(s: &str) -> Option<(usize, Tag)> {
         "s" => style.decoration = Some(crate::scene::Decoration::Strike),
         "sup" => style.shift = Some(crate::scene::Shift::Sup),
         "sub" => style.shift = Some(crate::scene::Shift::Sub),
-        _ => style = span_style(attrs)?,
+        _ => style = span_style(attrs).ok()?,
     }
     Some((end + 1, Tag::Open(name.to_owned(), style)))
 }
@@ -135,19 +135,45 @@ fn known(name: &str) -> bool {
     matches!(name, "b" | "i" | "u" | "s" | "sup" | "sub" | "span")
 }
 
+/// Checks every `<span>` in `text`, so one with bad attributes is an error
+/// rather than drawn as literal text.
+///
+/// # Errors
+/// The first bad span, with what's wrong.
+pub fn check(text: &str) -> Result<(), String> {
+    let mut rest = text;
+    while let Some(i) = rest.find("<span") {
+        rest = &rest[i + 5..];
+        // `<spanish>` is text, not a span.
+        if !rest.starts_with(|c: char| c.is_whitespace() || c == '>' || c == '/') {
+            continue;
+        }
+        let Some(end) = rest.find('>') else { break };
+        let attrs = rest[..end].trim().trim_end_matches('/').trim();
+        span_style(attrs).map_err(|e| format!("<span {attrs}>: {e}"))?;
+        rest = &rest[end..];
+    }
+    Ok(())
+}
+
 /// A `<span>`'s attributes as a styled range: any range field by its JSON
 /// name, values quoted or not.
-fn span_style(attrs: &str) -> Option<Range> {
+fn span_style(attrs: &str) -> Result<Range, String> {
     let mut obj = Map::new();
     obj.insert("start".into(), 0.into());
     obj.insert("end".into(), 0.into());
     let mut rest = attrs.trim();
     while !rest.is_empty() {
-        let (key, after) = rest.split_once('=')?;
+        let (key, after) = rest
+            .split_once('=')
+            .ok_or_else(|| format!("{rest}: attributes are name=value"))?;
         let after = after.trim_start();
-        let (value, next) = match after.chars().next()? {
+        let (value, next) = match after.chars().next().ok_or("an attribute has no value")? {
             q @ ('"' | '\'') => {
-                let close = after[1..].find(q)? + 1;
+                let close = after[1..]
+                    .find(q)
+                    .ok_or("an attribute's quote isn't closed")?
+                    + 1;
                 (&after[1..close], &after[close + 1..])
             }
             _ => after.split_once(char::is_whitespace).unwrap_or((after, "")),
@@ -155,7 +181,7 @@ fn span_style(attrs: &str) -> Option<Range> {
         obj.insert(key.trim().to_owned(), json_value(value));
         rest = next.trim_start();
     }
-    serde_json::from_value(Value::Object(obj)).ok()
+    serde_json::from_value(Value::Object(obj)).map_err(|e| e.to_string())
 }
 
 /// An attribute's text as JSON: numbers and booleans as such, else a string.
@@ -219,6 +245,20 @@ const SPAN_FIELDS: &[&str] = &[
 mod tests {
     use super::{expand_styles, parse};
     use crate::scene::{Decoration, Shift};
+
+    #[test]
+    fn bad_spans_are_errors_and_other_angle_text_is_fine() {
+        use super::check;
+        check(r##"Proven <span color="#D0202E" weight=800>RESULTS</span>"##).unwrap();
+        check("a <spanish> b < c <span>x</span>").unwrap();
+        let e = check(r#"Proven <span color="$red">RESULTS</span>"#).unwrap_err();
+        assert!(e.starts_with(r#"<span color="$red">: "#), "{e}");
+        assert!(
+            check("<span weight>x</span>")
+                .unwrap_err()
+                .contains("name=value")
+        );
+    }
 
     #[test]
     fn tags_become_spans_over_the_displayed_text() {

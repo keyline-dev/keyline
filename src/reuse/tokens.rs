@@ -109,6 +109,24 @@ fn unknown(name: &str, tokens: &BTreeMap<String, Value>) -> String {
     }
 }
 
+/// Replaces tokens used as markup attribute values in text, as in
+/// `<span color="$red">`; the rest of the text is never scanned.
+pub fn in_markup(text: &mut String, tokens: &BTreeMap<String, Value>) {
+    if !text.contains("=\"$") && !text.contains("='$") {
+        return;
+    }
+    for (name, v) in tokens {
+        let value = match v {
+            Value::String(s) => s.clone(),
+            Value::Number(n) => n.to_string(),
+            _ => continue,
+        };
+        for q in ['"', '\''] {
+            *text = text.replace(&format!("={q}${name}{q}"), &format!("={q}{value}{q}"));
+        }
+    }
+}
+
 /// JSON-pointer escaping of one key.
 fn escape(k: &str) -> String {
     k.replace('~', "~0").replace('/', "~1")
@@ -159,7 +177,7 @@ pub fn rebind(scene: &mut Scene, changed: &[String]) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{bind, reference};
+    use super::{bind, in_markup, reference};
     use serde_json::json;
 
     #[test]
@@ -186,5 +204,16 @@ mod tests {
         assert_eq!(v["children"][0]["$tokens"], json!({"/color": "red"}));
         let e = bind(&mut json!({"type": "rect", "color": "$blue"}), &tokens).unwrap_err();
         assert_eq!(e, "unknown token $blue; tokens: pad, red");
+    }
+
+    #[test]
+    fn tokens_fill_markup_attributes_only() {
+        let tokens = serde_json::from_value(json!({"red": "#D0202E", "big": 60})).unwrap();
+        let mut t = r#"Pay $red <span color="$red" fontSize='$big'>now</span>"#.to_owned();
+        in_markup(&mut t, &tokens);
+        assert_eq!(
+            t,
+            r##"Pay $red <span color="#D0202E" fontSize='60'>now</span>"##
+        );
     }
 }
