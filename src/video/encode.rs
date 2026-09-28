@@ -91,8 +91,19 @@ pub fn render_video(
             }
         }
         Container::Webm => {
-            cmd.args(["-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "32"])
-                .args(["-row-mt", "1", "-deadline", "good", "-cpu-used", "4"]);
+            // yuv420p plays everywhere; left to ffmpeg, RGBA frames pick a
+            // format some libvpx builds won't open.
+            cmd.args([
+                "-c:v",
+                "libvpx-vp9",
+                "-pix_fmt",
+                "yuv420p",
+                "-b:v",
+                "0",
+                "-crf",
+                "32",
+            ])
+            .args(["-row-mt", "1", "-deadline", "good", "-cpu-used", "4"]);
         }
     }
     let mut child = cmd
