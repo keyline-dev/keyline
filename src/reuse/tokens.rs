@@ -112,7 +112,7 @@ fn unknown(name: &str, tokens: &BTreeMap<String, Value>) -> String {
 /// Replaces tokens used as markup attribute values in text, as in
 /// `<span color="$red">`; the rest of the text is never scanned.
 pub fn in_markup(text: &mut String, tokens: &BTreeMap<String, Value>) {
-    if !text.contains("=\"$") && !text.contains("='$") {
+    if !text.contains("=$") && !text.contains("=\"$") && !text.contains("='$") {
         return;
     }
     for (name, v) in tokens {
@@ -123,6 +123,10 @@ pub fn in_markup(text: &mut String, tokens: &BTreeMap<String, Value>) {
         };
         for q in ['"', '\''] {
             *text = text.replace(&format!("={q}${name}{q}"), &format!("={q}{value}{q}"));
+        }
+        // Unquoted, ended by a space or the tag's end.
+        for end in [' ', '>', '/'] {
+            *text = text.replace(&format!("=${name}{end}"), &format!("=\"{value}\"{end}"));
         }
     }
 }
@@ -214,6 +218,12 @@ mod tests {
         assert_eq!(
             t,
             r##"Pay $red <span color="#D0202E" fontSize='60'>now</span>"##
+        );
+        let mut t = "<span color=$red>A</span> <span weight=700 color=$red>B</span>".to_owned();
+        in_markup(&mut t, &tokens);
+        assert_eq!(
+            t,
+            r##"<span color="#D0202E">A</span> <span weight=700 color="#D0202E">B</span>"##
         );
     }
 }

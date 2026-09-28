@@ -1,6 +1,7 @@
 //! Scene edits behind the MCP tools. Each applies to a copy of the scene and
 //! is committed only if the whole batch validates, so batches are atomic.
 
+mod guesses;
 #[cfg(test)]
 mod reuse_tests;
 #[cfg(test)]
@@ -12,6 +13,8 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scene::{Layer, Scene, check_keys};
+
+pub(crate) use guesses::normalize;
 
 /// `{ id }` or `{ role }`. A role may match several layers.
 #[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
@@ -376,35 +379,6 @@ fn resolve_assets(
     }
     for c in layer.kind.children_mut().into_iter().flatten() {
         resolve_assets(c, assets);
-    }
-}
-
-/// Accepts the names agents reach for first: on shapes, `fill` and
-/// `shadow` mean `fills` and `shadows` (text keeps its own `fill`, an image
-/// in the letters, and `shadow`). A rejected guess costs the agent a
-/// resend of its whole batch, so these are cheaper to accept than to refuse.
-pub(crate) fn normalize(v: &mut Value) {
-    let Some(o) = v.as_object_mut() else { return };
-    // A generic "shape" is a path when it names one, else a rect.
-    if o.get("type").and_then(Value::as_str) == Some("shape") {
-        let kind = if o.contains_key("d") || o.contains_key("shape") {
-            "path"
-        } else {
-            "rect"
-        };
-        o.insert("type".into(), kind.into());
-    }
-    if o.get("type").and_then(Value::as_str) != Some("text") {
-        for (short, full) in [("fill", "fills"), ("shadow", "shadows")] {
-            if !o.contains_key(full)
-                && let Some(x) = o.remove(short)
-            {
-                o.insert(full.into(), x);
-            }
-        }
-    }
-    if let Some(Value::Array(children)) = o.get_mut("children") {
-        children.iter_mut().for_each(normalize);
     }
 }
 

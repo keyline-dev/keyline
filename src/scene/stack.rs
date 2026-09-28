@@ -12,7 +12,9 @@ use super::defaults::{is_default, is_false};
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Stack {
     /// Main axis; a list is tried in order and the first that fits is used,
-    /// e.g. `["row", "column"]`: a row where it fits, else a column.
+    /// e.g. `["row", "column"]`: a row where it fits, else a column
+    /// (default row, as in CSS).
+    #[serde(default)]
     pub dir: Dirs,
     /// Space between children, px; `[rowGap, columnGap]` for wrapped stacks
     /// (default 0).
@@ -62,6 +64,12 @@ impl Dirs {
             Dirs::One(d) => std::slice::from_ref(d),
             Dirs::FirstFit(ds) => ds,
         }
+    }
+}
+
+impl Default for Dirs {
+    fn default() -> Self {
+        Dirs::One(Dir::Row)
     }
 }
 
@@ -266,6 +274,12 @@ mod tests {
             [1.0, 2.0, 3.0, 4.0]
         );
         assert_eq!(Gap::Both(5.0).main_cross(Dir::ColumnReverse), (5.0, 5.0));
+    }
+
+    #[test]
+    fn a_stack_without_dir_is_a_row() {
+        let s: Stack = serde_json::from_value(json!({"gap": 8})).unwrap();
+        assert_eq!(s.dir, Dirs::One(Dir::Row));
     }
 
     #[test]

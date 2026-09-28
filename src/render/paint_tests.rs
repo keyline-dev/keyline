@@ -363,3 +363,16 @@ fn halftone_redraws_images_as_dots_sized_by_darkness() {
     // White has no dots at all.
     assert_eq!(dots(75, 45), (255, 255, 255));
 }
+
+#[test]
+fn a_line_written_by_its_ends_runs_between_them() {
+    // Down-left from (90, 10) to (10, 90), as agents write it: read as a
+    // box plus a mirror, it must still ink the top-right, not the top-left.
+    let mut line = json!({"type": "line", "x1": 90, "y1": 10, "x2": 10, "y2": 90,
+        "strokes": {"width": 6, "color": "#000000", "align": "center"}});
+    crate::ops::normalize(&mut line);
+    let px = pixels(json!([line]));
+    assert_eq!(px(88, 12), (0, 0, 0), "starts top-right");
+    assert_eq!(px(12, 88), (0, 0, 0), "ends bottom-left");
+    assert_eq!(px(12, 12), (255, 255, 255), "not the other diagonal");
+}
