@@ -7,3 +7,6 @@ bench/recreate/local/
 
 # Competitive research stays local.
 /docs/competitive-analysis.md
+
+# Design proposals under review stay local until built.
+/docs/design/
