@@ -166,7 +166,7 @@ Children in a stack may set `alignSelf`, `grow`, `priority` and `position: "abso
 "grid": {"columns": "1fr 1fr 1fr", "rows": "auto 1fr", "gap": 16, "areas": ["hero hero side", "cta cta side"]}
 ```
 
-`columns` and `rows` use CSS track syntax (`px`, `fr`, `auto`, `%`, `repeat(3, 1fr)`); `columns: {"min": 160}` fits as many columns as the width allows (CSS `auto-fit, minmax`; SwiftUI adaptive grid). Children take `area: "hero"` or `cell: [row, column]` with `span: [rows, columns]`, else auto-flow in order. A size can re-arrange the whole grid by overriding only `columns` and `areas` in `at`: a banner and a square become the same children with two short templates.
+`columns` and `rows` use CSS track syntax (`px`, `fr`, `auto`, `%`, `repeat(3, 1fr)`), or a count (`3` is `repeat(3, 1fr)`); `columns: {"min": 160}` fits as many columns as the width allows (CSS `auto-fit, minmax`; SwiftUI adaptive grid). Children take `area: "hero"` or `cell: [row, column]` (counted from 1, as in CSS) with `span: [rows, columns]`, else fill the first free cell in order (CSS `dense`). Children stretch to their cell, except on a side with a px size, where they sit at the cell's start. A size can re-arrange the whole grid by overriding only `columns` and `areas` in `at`: a banner and a square become the same children with two short templates.
 
 ### Layouts that pick what fits
 
@@ -196,7 +196,7 @@ Every paint takes `opacity` (1) and `blendMode` (`normal`). An image fill works 
 
 Gradients: `type` `linear` (default), `radial`, `conic`. Linear takes the MVP's `from`/`to` (0–1 of the box) or a CSS `angle` in degrees (0 = up, 90 = right). Radial takes `center` ([0.5, 0.5]) and `radius` ([0.5, 0.5] of width and height, so it stretches to the box like Figma's). Conic takes `center` and `angle`. `stops` is a list of colors (evenly spaced) or `{at, color}`.
 
-Image adjustments (`adjust`, 0 = unchanged, CSS filter names): `brightness`, `contrast`, `saturate` (−1…1), `grayscale`, `sepia` (0…1), `hue` (degrees), `duotone: [dark, light]`, `tint` (recolor an SVG or logo, e.g. white), `halftone` (dot spacing, px: the image redrawn as dots sized by brightness; a small SkSL shader).
+Image adjustments (`adjust`, 0 = unchanged, CSS filter names): `brightness`, `contrast`, `saturate` (−1…1), `grayscale`, `sepia` (0…1), `hue` (degrees), `duotone: [dark, light]`, `tint` (recolor an SVG or logo, e.g. white), `halftone` (dot spacing, px: the image redrawn as black dots sized by darkness on transparent, which `tint` recolors; a small SkSL shader).
 
 ### Strokes
 
@@ -225,7 +225,7 @@ Add `"mode": "luminance"` to use brightness instead of alpha, `"invert": true` t
 
 ### Edges
 
-`edges: {"style": "torn", "sides": ["top", "bottom"], "depth": 12, "seed": 1}` roughens the chosen sides of any shape, image or frame (torn paper, ragged label strips, panel splits). `sides` defaults to all; `depth` is px. It's Skia's `PathEffect::discrete` on the box outline, so it costs a few lines and stays deterministic through `seed`.
+`edges: {"style": "torn", "sides": ["top", "bottom"], "depth": 12, "seed": 1}` roughens the chosen sides of any shape, image or frame (torn paper, ragged label strips, panel splits). `sides` defaults to all; `depth` is px. Built as a clip: each torn side is a zigzag of seeded random steps that only cut into the box (our own tiny xorshift, identical on every platform). `rough` strokes use Skia's `PathEffect::discrete`, smoothed by a corner path effect.
 
 ## Text
 
@@ -551,7 +551,7 @@ This example gives text layers `padding`, which the tables above don't define ye
 7. **QR codes** stay an SVG asset in v2. A built-in `qr` type (`{"type": "qr", "data": "{url}"}`) waits for the templates milestone, where `render_batch` needs a different code per row; it will need the `qrcode` crate (MIT/Apache), which needs owner approval.
 8. Carried from graphic-layer.md: `path` scaling (`contain` proposed), per-side strokes on rounded corners, `diamond` gradients (dropped here: rare, and Skia has no native shader).
 9. **Spec doc upkeep:** the spec's open questions still list PolyForm Noncommercial and the name "scene-mcp"; update them when this doc is accepted.
-10. **Skia build features:** WebP encoding and PDF output are skia-safe build features (`webp`, `pdf`) we don't enable today. Before building them, check that prebuilt Skia binaries exist for our feature set on all release targets; otherwise the build compiles Skia from source.
+10. **Skia build features:** decided while building: JPEG and PDF were already in skia-safe's default features. WebP adds `webp`, plus `svg`, because every prebuilt Skia binary with WebP also has SVG (checked for macOS arm64 and x64, and Linux amd64 and arm64 against the 0.153.3 binaries). So release builds still download Skia; `svg` adds one small crate from rust-skia (`skia-svg-macros`, MIT). PDFs set variable fonts such as Inter as Type3 outlines: still vector text.
 11. **File-size rule:** put the 400-line rule for source files into CLAUDE.md, so it applies to every change, not just v2?
 
 ## Sources
