@@ -47,7 +47,10 @@ async fn claude_recreates_a_reference_design() {
     let run = dir.join("runs").join(&label);
     let _ = std::fs::remove_dir_all(&run);
     std::fs::create_dir_all(&run).unwrap();
-    let ref_img = decode(&std::fs::read(&reference).unwrap());
+    let ref_bytes = std::fs::read(&reference).unwrap();
+    // Kept with the run, so it can be re-scored against what it was shown.
+    std::fs::write(run.join(reference.file_name().unwrap()), &ref_bytes).unwrap();
+    let ref_img = decode(&ref_bytes);
     let (w, h) = (ref_img.width(), ref_img.height());
 
     let mcp = Mcp::start("recreate").await;
@@ -188,12 +191,19 @@ fn decode(bytes: &[u8]) -> Image {
     Image::from_encoded(Data::new_copy(bytes)).expect("decodable image")
 }
 
-/// Mean absolute difference, 0–255, between two images after averaging
-/// 8×8 blocks at the reference's size, so small offsets and antialiasing
-/// don't dominate. Lower is closer.
+/// How far apart two images look, 0–255, lower is closer. Both are
+/// averaged into 8 px blocks at the reference's size, then compared in
+/// 64 px tiles, each tile at its best offset within ±64 px: a region that
+/// sits a little off (a photo cropped 50 px higher) still matches, while
+/// wrong colors, missing text or a misplaced block still count, since a
+/// tile moves as one piece.
 fn likeness(reference: &Image, img: &Image) -> f32 {
+    const BLOCK: i32 = 8;
+    const TILE: i32 = 8; // blocks per tile side: 64 px
+    const SHIFT: i32 = 8; // blocks either way: 64 px
     let (w, h) = (reference.width(), reference.height());
-    let pixels = |i: &Image| {
+    let (bw, bh) = (w / BLOCK, h / BLOCK);
+    let grid = |i: &Image| {
         let mut s = surfaces::raster_n32_premul((w, h)).unwrap();
         s.canvas().draw_image_rect(
             i,
@@ -203,36 +213,91 @@ fn likeness(reference: &Image, img: &Image) -> f32 {
         );
         let snap = s.image_snapshot();
         let px = snap.peek_pixels().unwrap();
-        (0..h)
-            .flat_map(|y| (0..w).map(move |x| (x, y)))
-            .map(|(x, y)| {
-                let c = px.get_color((x, y));
-                [c.r(), c.g(), c.b()]
-            })
-            .collect::<Vec<_>>()
-    };
-    let (a, b) = (pixels(reference), pixels(img));
-    let block = |p: &[[u8; 3]], bx: i32, by: i32| {
-        let mut sum = [0.0_f32; 3];
-        for y in by * 8..by * 8 + 8 {
-            for x in bx * 8..bx * 8 + 8 {
-                let c = p[(y * w + x) as usize];
-                for (s, v) in sum.iter_mut().zip(c) {
-                    *s += f32::from(v);
+        let mut g = vec![[0.0_f32; 3]; (bw * bh) as usize];
+        for by in 0..bh {
+            for bx in 0..bw {
+                let mut sum = [0.0_f32; 3];
+                for y in by * BLOCK..(by + 1) * BLOCK {
+                    for x in bx * BLOCK..(bx + 1) * BLOCK {
+                        let c = px.get_color((x, y));
+                        for (s, v) in sum.iter_mut().zip([c.r(), c.g(), c.b()]) {
+                            *s += f32::from(v);
+                        }
+                    }
                 }
+                g[(by * bw + bx) as usize] = sum.map(|s| s / (BLOCK * BLOCK) as f32);
             }
         }
-        sum.map(|s| s / 64.0)
+        g
     };
-    let (bw, bh) = (w / 8, h / 8);
-    let mut total = 0.0;
-    for by in 0..bh {
-        for bx in 0..bw {
-            let (p, q) = (block(&a, bx, by), block(&b, bx, by));
-            total += p.iter().zip(q).map(|(x, y)| (x - y).abs()).sum::<f32>() / 3.0;
+    let (a, b) = (grid(reference), grid(img));
+    let diff =
+        |p: [f32; 3], q: [f32; 3]| p.iter().zip(q).map(|(x, y)| (x - y).abs()).sum::<f32>() / 3.0;
+    let (mut total, mut blocks) = (0.0, 0);
+    for ty in (0..bh).step_by(TILE as usize) {
+        for tx in (0..bw).step_by(TILE as usize) {
+            let (tw, th) = (TILE.min(bw - tx), TILE.min(bh - ty));
+            let tile_cost = |dx: i32, dy: i32| {
+                let mut sum = 0.0;
+                for y in ty..ty + th {
+                    for x in tx..tx + tw {
+                        let (sx, sy) = ((x + dx).clamp(0, bw - 1), (y + dy).clamp(0, bh - 1));
+                        sum += diff(a[(y * bw + x) as usize], b[(sy * bw + sx) as usize]);
+                    }
+                }
+                sum
+            };
+            let best = (-SHIFT..=SHIFT)
+                .flat_map(|dy| (-SHIFT..=SHIFT).map(move |dx| (dx, dy)))
+                .map(|(dx, dy)| tile_cost(dx, dy))
+                .fold(f32::INFINITY, f32::min);
+            total += best;
+            blocks += tw * th;
         }
     }
-    total / (bw * bh) as f32
+    total / blocks as f32
+}
+
+/// Re-scores every run in `results.tsv` from its saved `final.png`, against
+/// the reference kept with it (or the current one), after a scoring change.
+#[test]
+#[ignore = "rewrites the local bench results; run with --ignored"]
+fn rescore_runs() {
+    let dir = std::env::var_os("KEYLINE_MCP_RECREATE_DIR").map_or_else(
+        || Path::new(env!("CARGO_MANIFEST_DIR")).join("bench/recreate/local"),
+        PathBuf::from,
+    );
+    let tsv = dir.join("results.tsv");
+    let Ok(text) = std::fs::read_to_string(&tsv) else {
+        return;
+    };
+    let names = ["reference.png", "reference.jpg", "reference.jpeg"];
+    let current = names
+        .iter()
+        .map(|f| dir.join(f))
+        .find(|p| p.exists())
+        .unwrap();
+    let mut out = String::new();
+    for (i, line) in text.lines().enumerate() {
+        let mut cols: Vec<String> = line.split('\t').map(str::to_owned).collect();
+        let run = dir.join("runs").join(&cols[0]);
+        if i > 0 && run.join("final.png").exists() {
+            let reference = names
+                .iter()
+                .map(|f| run.join(f))
+                .find(|p| p.exists())
+                .unwrap_or_else(|| current.clone());
+            let score = likeness(
+                &decode(&std::fs::read(reference).unwrap()),
+                &decode(&std::fs::read(run.join("final.png")).unwrap()),
+            );
+            cols[10] = format!("{score:.2}");
+        }
+        out.push_str(&cols.join("\t"));
+        out.push('\n');
+    }
+    std::fs::write(&tsv, out).unwrap();
+    print!("{}", std::fs::read_to_string(&tsv).unwrap());
 }
 
 fn commit() -> String {
