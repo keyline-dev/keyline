@@ -120,14 +120,16 @@ Then ask your agent for a design: *"Make a vote-by-mail flyer with this photo, i
 
 ## The tools
 
+Every input and reply format is in [docs/tools.md](docs/tools.md).
+
 | Tool | Does | Replies |
 |---|---|---|
 | `scene_create` | New scene: master size, target sizes, background | `s5b0a42a5e v0` |
 | `asset_add` | Adds an image from a URL or base64 | `photo 1600×900 v1` |
-| `layer_add` | Adds layers, optionally into a `parent` frame, and named text `styles` | `added headline,cta v2 ok` and facts |
-| `layer_update` | Changes (`set`) or deletes layers by id or role, or text styles by name | `changed … v3`, then problems or `ok` |
+| `layer_add` | Adds layers, optionally into a `parent` frame, and shared `styles`, `tokens` and `components` | `added headline,cta v2 ok` and facts |
+| `layer_update` | Changes (`set`), deletes or detaches layers, styles and components; changes tokens | `changed … v3`, then problems or `ok` |
 | `scene_describe` | Problems per size, or `ok`; `full` lists every layer's box | text |
-| `render` | PNGs for all or some sizes; `preview` adds a contact sheet | paths and how text was drawn |
+| `render` | PNG, JPEG, WebP or PDF for all or some sizes; `maxKB` caps file size; `preview` adds a contact sheet | paths and how text was drawn |
 
 A typical call:
 
