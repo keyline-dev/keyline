@@ -89,6 +89,7 @@ impl Server {
 
     pub(super) async fn render_impl(&self, a: RenderArgs) -> Result<Vec<ContentBlock>, String> {
         let scene = self.store.load(&a.scene_id).map_err(err)?;
+        let fetched = self.scene_fonts(&scene).await?;
         let scene = Arc::new(scene.resolved().into_owned());
         let sizes: Vec<Size> = match &a.sizes {
             None => scene.sizes.clone(),
@@ -151,7 +152,7 @@ impl Server {
             std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
             text.push_str(&format!("{size_id} {}{note}\n{report}", path.display()));
         }
-        let mut content = vec![ContentBlock::text(text.trim_end())];
+        let mut content = vec![ContentBlock::text(format!("{fetched}{}", text.trim_end()))];
         if a.preview {
             let assets = self.store.assets_dir();
             let sheet = tokio::task::spawn_blocking(move || {
@@ -166,6 +167,13 @@ impl Server {
             ));
         }
         Ok(content)
+    }
+
+    /// Makes every family `scene` uses available before it's measured or
+    /// drawn: a render must never quietly fall back to Inter.
+    pub(super) async fn scene_fonts(&self, scene: &Scene) -> Result<String, String> {
+        let v = serde_json::to_value(scene).map_err(|e| e.to_string())?;
+        self.fetch_fonts(&[v]).await
     }
 
     /// Makes every `fontFamily` in `values` available, downloading missing

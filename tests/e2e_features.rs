@@ -51,6 +51,51 @@ async fn web_fonts_download_once_and_survive_a_restart() {
     mcp.stop().await;
 }
 
+/// Two servers on one data dir (two agent sessions, or a benchmark that
+/// renders the agent's scene itself): a font one fetched after the other
+/// started is used by both, not silently replaced by Inter.
+#[tokio::test]
+#[ignore = "downloads from Google Fonts; run with --ignored"]
+async fn a_font_fetched_by_another_server_is_used_not_replaced() {
+    let early = Mcp::start("shared-fonts").await;
+    let late_data = early.data.clone();
+    let id = early
+        .ok("scene_create", json!({"width": 600, "height": 200, "sizes": [{"id": "a", "width": 600, "height": 200}]}))
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    // `early` started before the font existed; `other` fetches it.
+    let other = Mcp::start_in(late_data).await;
+    let fetched = other
+        .ok("layer_add", json!({"sceneId": id, "layers": [
+            {"id": "t", "type": "text", "text": "GLIDDEN", "fontFamily": "Montserrat", "weight": 900, "fontSize": 60}]}))
+        .await;
+    assert!(fetched.starts_with("fetched font Montserrat"), "{fetched}");
+    let width = |d: &str| {
+        d.lines()
+            .find(|l| l.trim_start().starts_with("t text"))
+            .and_then(|l| l.split_whitespace().nth(3))
+            .map(str::to_owned)
+            .unwrap_or_default()
+    };
+    let theirs = width(
+        &other
+            .ok("scene_describe", json!({"sceneId": id, "full": true}))
+            .await,
+    );
+    let ours = width(
+        &early
+            .ok("scene_describe", json!({"sceneId": id, "full": true}))
+            .await,
+    );
+    assert_eq!(ours, theirs, "the early server measured another font");
+    early.ok("render", json!({"sceneId": id})).await;
+    other.stop().await;
+    early.stop().await;
+}
+
 /// Text painted with images: a word in a flag, a word in a repeating pattern,
 /// outlined and tilted, over a tiled background.
 #[tokio::test]

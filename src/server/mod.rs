@@ -171,7 +171,13 @@ tokens. null resets a field."
 Advisory: warn contrast. full: one line per layer per size: id type x,y w×h, font px, lines, image crop, upscale."
     )]
     async fn scene_describe(&self, Parameters(a): Parameters<SceneDescribeArgs>) -> CallToolResult {
-        reply(self.store.load(&a.scene_id).map_err(err).and_then(|s| {
+        let scene = self.store.load(&a.scene_id).map_err(err);
+        // Text is measured in its real font, even one another process fetched.
+        let fonts = match &scene {
+            Ok(s) => self.scene_fonts(s).await,
+            Err(_) => Ok(String::new()),
+        };
+        reply(fonts.and(scene).and_then(|s| {
             describe(
                 &s.resolved(),
                 a.size.as_deref(),
