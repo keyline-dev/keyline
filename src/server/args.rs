@@ -84,4 +84,11 @@ pub struct RenderArgs {
     /// Also return one small image of all sizes side by side.
     #[serde(default)]
     pub(super) preview: bool,
+    /// png|jpeg|webp|pdf
+    #[serde(default)]
+    pub(super) format: crate::render::Format,
+    /// 0–100 (90)
+    pub(super) quality: Option<u32>,
+    #[serde(rename = "maxKB")]
+    pub(super) max_kb: Option<u32>,
 }

@@ -36,7 +36,7 @@ use output::encode_png;
 use paint::{sk_blend, sk_color, sk_rect};
 
 pub use image::{image_crop, image_scale, raster_size, svg_size};
-pub use output::contact_sheet;
+pub use output::{Encoded, Format, contact_sheet, encode, render_pdf};
 pub use text_extras::curve_sagitta;
 
 /// Largest side, in pixels, an SVG is rasterized at.

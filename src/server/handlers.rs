@@ -11,7 +11,9 @@ use super::{AssetAddArgs, PREVIEW_HEIGHT, RenderArgs, SceneCreateArgs, Server, e
 use crate::describe::text_report;
 use crate::fetch::{MAX_ASSET_BYTES, fetch};
 use crate::fonts::{Outcome, ensure as ensure_font};
-use crate::render::{contact_sheet, raster_size, render_png_on, svg_size};
+use crate::render::{
+    Format, contact_sheet, encode, raster_size, render_image, render_pdf, render_png_on, svg_size,
+};
 use crate::scene::{Asset, Color, SCHEMA_VERSION, Scene, Size, SizeSpec};
 
 impl Server {
@@ -110,22 +112,45 @@ impl Server {
                 let scene = Arc::clone(&scene);
                 let assets = self.store.assets_dir();
                 let backend = self.backend;
+                let (format, quality, max_kb) = (a.format, a.quality.unwrap_or(90), a.max_kb);
                 tokio::task::spawn_blocking(move || {
-                    let png = render_png_on(&scene, &size, &assets, backend)?;
-                    anyhow::Ok((text_report(&scene, &size), size.id, png))
+                    let mut note = String::new();
+                    let bytes = match format {
+                        Format::Png if max_kb.is_none() => {
+                            render_png_on(&scene, &size, &assets, backend)?
+                        }
+                        Format::Pdf => render_pdf(&scene, &size, &assets)?,
+                        // ponytail: lossy formats render on the CPU; add a GPU readback if they get hot.
+                        _ => {
+                            let image = render_image(&scene, &size, 1.0, &assets, false)?;
+                            let e = encode(&image, format, quality, max_kb)?;
+                            if let Some(q) = e.lowered {
+                                note = format!(" quality {q}");
+                            }
+                            if e.too_big {
+                                note.push_str(&format!(
+                                    " !too-big {} KB",
+                                    e.bytes.len().div_ceil(1024)
+                                ));
+                            }
+                            e.bytes
+                        }
+                    };
+                    anyhow::Ok((text_report(&scene, &size), size.id, bytes, note))
                 })
             })
             .collect();
 
         let mut text = String::new();
         for job in jobs {
-            let (report, size_id, png) = job.await.map_err(|e| e.to_string())?.map_err(err)?;
+            let (report, size_id, bytes, note) =
+                job.await.map_err(|e| e.to_string())?.map_err(err)?;
             let path = self
                 .store
-                .render_path(&a.scene_id, scene.version, &size_id)
+                .render_path(&a.scene_id, scene.version, &size_id, a.format.ext())
                 .map_err(err)?;
-            std::fs::write(&path, png).map_err(|e| e.to_string())?;
-            text.push_str(&format!("{size_id} {}\n{report}", path.display()));
+            std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
+            text.push_str(&format!("{size_id} {}{note}\n{report}", path.display()));
         }
         let mut content = vec![ContentBlock::text(text.trim_end())];
         if a.preview {

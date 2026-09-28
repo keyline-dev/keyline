@@ -85,12 +85,18 @@ impl Store {
     }
 
     /// Where a render of `size_id` at scene `version` is written.
-    pub fn render_path(&self, scene_id: &str, version: u64, size_id: &str) -> Result<PathBuf> {
+    pub fn render_path(
+        &self,
+        scene_id: &str,
+        version: u64,
+        size_id: &str,
+        ext: &str,
+    ) -> Result<PathBuf> {
         check_id(scene_id)?;
         check_id(size_id)?;
         let dir = self.root.join("renders").join(scene_id);
         std::fs::create_dir_all(&dir)?;
-        Ok(dir.join(format!("{size_id}-v{version}.png")))
+        Ok(dir.join(format!("{size_id}-v{version}.{ext}")))
     }
 
     fn scene_path(&self, id: &str) -> Result<PathBuf> {
@@ -140,7 +146,7 @@ mod tests {
     fn ids_cannot_escape_the_store() {
         let s = temp_store("ids");
         assert!(s.load("../etc/passwd").is_err());
-        assert!(s.render_path("ok", 1, "a/b").is_err());
+        assert!(s.render_path("ok", 1, "a/b", "png").is_err());
         assert!(check_id("portrait_2-x").is_ok());
     }
 

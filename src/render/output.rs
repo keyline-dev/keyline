@@ -1,11 +1,12 @@
-//! Encoded output: PNG bytes and the preview contact sheet.
+//! Encoded output: PNG, JPEG, WebP or PDF files, a file-size target, and
+//! the preview contact sheet.
 
 use std::path::Path;
 
 use anyhow::{Result, anyhow};
 use skia_safe::{EncodedImageFormat, Image, surfaces};
 
-use super::render_image;
+use super::{draw_scene, render_image};
 use crate::scene::{Scene, Size};
 
 /// One preview PNG with every size side by side, each scaled to `height`
@@ -41,4 +42,168 @@ pub(super) fn encode_png(image: &Image) -> Result<Vec<u8>> {
         .encode(None, EncodedImageFormat::PNG, None)
         .ok_or_else(|| anyhow!("PNG encoding failed"))?;
     Ok(png.as_bytes().to_vec())
+}
+
+/// A rendered file's format. Its schema is a plain string: the variants'
+/// docs would cost the agent tokens on every `tools/list`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Format {
+    /// Lossless, with transparency (default).
+    #[default]
+    Png,
+    /// Lossy, smallest for photos.
+    Jpeg,
+    /// Lossy, smaller than JPEG at the same quality.
+    Webp,
+    /// Vector PDF, one page at the size in points (1 px = 1 pt).
+    Pdf,
+}
+
+impl schemars::JsonSchema for Format {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "Format".into()
+    }
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({"type": "string"})
+    }
+    fn inline_schema() -> bool {
+        true
+    }
+}
+
+impl Format {
+    /// The file extension.
+    pub fn ext(self) -> &'static str {
+        match self {
+            Format::Png => "png",
+            Format::Jpeg => "jpg",
+            Format::Webp => "webp",
+            Format::Pdf => "pdf",
+        }
+    }
+}
+
+/// An encoded file and how it came out.
+pub struct Encoded {
+    /// The file's bytes.
+    pub bytes: Vec<u8>,
+    /// The quality used, when `maxKB` made it lower than asked.
+    pub lowered: Option<u32>,
+    /// Still over `maxKB` at the lowest quality (or lossless).
+    pub too_big: bool,
+}
+
+/// Encodes `image` as `format` at `quality` (0–100, lossy formats only).
+/// With `max_kb`, JPEG and WebP take the highest quality that fits.
+///
+/// # Errors
+/// The encoder fails, or `format` is PDF (see [`render_pdf`]).
+pub fn encode(image: &Image, format: Format, quality: u32, max_kb: Option<u32>) -> Result<Encoded> {
+    let sk = match format {
+        Format::Png => EncodedImageFormat::PNG,
+        Format::Jpeg => EncodedImageFormat::JPEG,
+        Format::Webp => EncodedImageFormat::WEBP,
+        Format::Pdf => return Err(anyhow!("PDF isn't a raster format")),
+    };
+    let at = |q: u32| {
+        image
+            .encode(None, sk, q)
+            .map(|d| d.as_bytes().to_vec())
+            .ok_or_else(|| anyhow!("{} encoding failed", format.ext()))
+    };
+    let quality = quality.min(100);
+    let bytes = at(quality)?;
+    let limit = max_kb.map(|kb| kb as usize * 1024);
+    let fits = |b: &[u8]| limit.is_none_or(|l| b.len() <= l);
+    if fits(&bytes) || format == Format::Png {
+        let too_big = !fits(&bytes);
+        return Ok(Encoded {
+            bytes,
+            lowered: None,
+            too_big,
+        });
+    }
+    // Binary search for the highest quality that fits.
+    let (mut lo, mut hi, mut best) = (1, quality, None);
+    while lo < hi {
+        let mid = u32::midpoint(lo, hi);
+        let b = at(mid)?;
+        if fits(&b) {
+            best = Some((mid, b));
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    Ok(match best {
+        Some((q, bytes)) => Encoded {
+            bytes,
+            lowered: Some(q),
+            too_big: false,
+        },
+        None => {
+            let bytes = at(1)?;
+            let too_big = !fits(&bytes);
+            Encoded {
+                bytes,
+                lowered: Some(1),
+                too_big,
+            }
+        }
+    })
+}
+
+/// Renders `size` as a one-page vector PDF (1 px = 1 pt). Blurs and
+/// shaders Skia can't express in PDF are rasterized inside it.
+///
+/// # Errors
+/// Missing assets.
+pub fn render_pdf(scene: &Scene, size: &Size, assets_dir: &Path) -> Result<Vec<u8>> {
+    let mut out = Vec::new();
+    let mut page =
+        skia_safe::pdf::new_document(&mut out, None).begin_page((size.width, size.height), None);
+    draw_scene(page.canvas(), scene, size, 1.0, assets_dir, false)?;
+    page.end_page().close();
+    Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Format, encode};
+
+    /// A noisy image, so lossy encoders can't make it tiny.
+    fn noisy() -> skia_safe::Image {
+        let mut s = skia_safe::surfaces::raster_n32_premul((200, 200)).unwrap();
+        let mut v: u32 = 7;
+        for y in 0..200 {
+            for x in 0..200 {
+                v ^= v << 13;
+                v ^= v >> 17;
+                v ^= v << 5;
+                let mut p = skia_safe::Paint::default();
+                p.set_color(skia_safe::Color::new(v | 0xFF00_0000));
+                s.canvas().draw_point((x as f32, y as f32), &p);
+            }
+        }
+        s.image_snapshot()
+    }
+
+    #[test]
+    fn max_kb_lowers_lossy_quality_until_the_file_fits() {
+        let img = noisy();
+        let full = encode(&img, Format::Jpeg, 90, None).unwrap();
+        assert!(full.bytes.starts_with(&[0xFF, 0xD8]) && full.lowered.is_none());
+        let cap = (full.bytes.len() / 1024 / 2) as u32;
+        let fit = encode(&img, Format::Jpeg, 90, Some(cap)).unwrap();
+        assert!(fit.bytes.len() <= cap as usize * 1024 && !fit.too_big);
+        assert!(fit.lowered.is_some_and(|q| q < 90));
+        let webp = encode(&img, Format::Webp, 80, None).unwrap();
+        assert_eq!(&webp.bytes[8..12], b"WEBP");
+        // Lossless PNG can't shrink: it's flagged instead.
+        let png = encode(&img, Format::Png, 90, Some(1)).unwrap();
+        assert!(png.too_big && png.lowered.is_none());
+        let never = encode(&img, Format::Jpeg, 90, Some(0)).unwrap();
+        assert!(never.too_big && never.lowered == Some(1));
+    }
 }

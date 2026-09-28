@@ -279,3 +279,71 @@ async fn at_adapts_one_size_without_touching_the_others() {
     assert!(err.contains("no size or aspect class tiny"), "{err}");
     mcp.stop().await;
 }
+
+#[tokio::test]
+async fn renders_jpeg_webp_and_pdf_and_fit_a_file_size_cap() {
+    let mcp = Mcp::start("formats").await;
+    let id = build_reference_ad(&mcp).await;
+    let paths = |reply: &str| -> Vec<(String, String)> {
+        reply
+            .lines()
+            .filter(|l| !l.starts_with(' '))
+            .map(|l| {
+                let mut w = l.splitn(3, ' ');
+                let size = w.next().unwrap().to_owned();
+                let path = w.next().unwrap().to_owned();
+                (size, format!("{path} {}", w.next().unwrap_or("")))
+            })
+            .collect()
+    };
+    let file = |p: &str| std::fs::read(p.split(' ').next().unwrap()).unwrap();
+
+    let jpeg = mcp
+        .ok(
+            "render",
+            json!({"sceneId": id, "format": "jpeg", "sizes": ["portrait"]}),
+        )
+        .await;
+    let (_, p) = &paths(&jpeg)[0];
+    assert!(p.contains(".jpg"), "{jpeg}");
+    let full = file(p);
+    assert!(full.starts_with(&[0xFF, 0xD8]));
+
+    // A cap below the quality-90 size lowers the quality and says so.
+    let cap = full.len() / 1024 * 2 / 3;
+    let capped = mcp
+        .ok(
+            "render",
+            json!({"sceneId": id, "format": "jpeg", "maxKB": cap, "sizes": ["portrait"]}),
+        )
+        .await;
+    let (_, p) = &paths(&capped)[0];
+    assert!(p.contains(" quality "), "{capped}");
+    assert!(file(p).len() <= cap * 1024);
+
+    let webp = mcp
+        .ok(
+            "render",
+            json!({"sceneId": id, "format": "webp", "sizes": ["portrait"]}),
+        )
+        .await;
+    assert_eq!(&file(&paths(&webp)[0].1)[8..12], b"WEBP");
+
+    let pdf = mcp
+        .ok("render", json!({"sceneId": id, "format": "pdf"}))
+        .await;
+    for (size, p) in paths(&pdf) {
+        let bytes = file(&p);
+        assert!(bytes.starts_with(b"%PDF"), "{size}");
+        // Vector: the text is set in fonts (Type3 outlines for variable
+        // fonts), not painted as pixels.
+        assert!(bytes.windows(11).any(|w| w == b"/Type /Font"), "{size}");
+    }
+
+    let e = mcp
+        .call("render", json!({"sceneId": id, "format": "gif"}))
+        .await
+        .unwrap_err();
+    assert!(e.contains("unknown variant `gif`"), "{e}");
+    mcp.stop().await;
+}

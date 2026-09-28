@@ -182,8 +182,8 @@ Advisory: warn contrast. full: one line per layer per size: id type x,y w×h, fo
     }
 
     #[tool(
-        description = "Render PNGs. Returns each size's path and how wrapped, shrunk or cut text was drawn. \
-preview adds one small image of all sizes."
+        description = "Render each size (PNG, or format jpeg|webp|pdf). Returns each size's path and how wrapped, \
+shrunk or cut text was drawn; maxKB lowers quality to fit and says so. preview adds one small image of all sizes."
     )]
     async fn render(&self, Parameters(a): Parameters<RenderArgs>) -> CallToolResult {
         match self.render_impl(a).await {
