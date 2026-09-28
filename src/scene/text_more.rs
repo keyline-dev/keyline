@@ -1,6 +1,6 @@
-//! v2 text settings: italic, decoration, wrapping, vertical alignment,
+//! Text settings beyond the basics: italic, decoration, wrapping, vertical alignment,
 //! cap-height trim, highlights, direction, OpenType features, padding, and
-//! the P2 extras (curve, leader, knockout). Flattened into the text type.
+//! curve, leader and knockout. Flattened into the text type.
 
 use std::collections::BTreeMap;
 
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::defaults::{is_default, is_false};
 use super::{Color, Padding};
 
-/// Text settings beyond the MVP's.
+/// Text settings beyond the basic ones.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TextMore {
@@ -24,7 +24,7 @@ pub struct TextMore {
     #[serde(default, skip_serializing_if = "is_default")]
     pub text_wrap: TextWrap,
     /// Where text sits vertically in a box taller than it: `top`, `center`
-    /// or `bottom` (center for fit/fixed/truncate boxes, as the MVP; top otherwise).
+    /// or `bottom` (center for fit/fixed/truncate boxes; top otherwise).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vertical_align: Option<VAlign>,
     /// `"cap"` trims the space above cap height and below the baseline, so

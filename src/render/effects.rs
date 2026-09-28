@@ -16,7 +16,7 @@ pub(super) fn sigma(blur: f32) -> f32 {
 }
 
 /// Applies rotation, skew, scale, flips and offset about the box center.
-/// Rotation alone keeps the MVP's single call.
+/// Rotation alone is a single rotate call.
 pub(super) fn transform(canvas: &skia_safe::Canvas, p: &Placed) {
     let l = p.layer;
     let c = sk_rect(p.rect).center();

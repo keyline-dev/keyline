@@ -259,7 +259,7 @@ mod tests {
     }
 
     #[test]
-    fn mvp_strokes_round_trip_unchanged() {
+    fn short_form_strokes_round_trip_unchanged() {
         let v = json!({"width": 2.0, "color": "#D0202E", "align": "outside"});
         let s: Stroke = serde_json::from_value(v.clone()).unwrap();
         assert_eq!(serde_json::to_value(&s).unwrap(), v);

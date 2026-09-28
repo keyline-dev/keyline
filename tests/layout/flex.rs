@@ -1,4 +1,4 @@
-//! v2 stacks: fill and grow, spacers, stretch and alignSelf, around,
+//! Stacks: fill and grow, spacers, stretch and alignSelf, around,
 //! padding and gap shorthands, wrap, reverse, absolute children, priority,
 //! and baselines.
 

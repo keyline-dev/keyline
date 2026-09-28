@@ -1,4 +1,4 @@
-//! v2 layouts that adapt by themselves: direction lists, `firstFit`, and
+//! Layouts that adapt by themselves: direction lists, `firstFit`, and
 //! per-size changes by aspect class.
 
 use crate::*;

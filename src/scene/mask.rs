@@ -1,5 +1,5 @@
-//! Masks: what part of a layer shows. A gradient (the MVP form, whose alpha
-//! fades the layer), a shape name, `{path}`, `{layer}` or `{image}`, each
+//! Masks: what part of a layer shows. A gradient (whose alpha fades
+//! the layer), a shape name, `{path}`, `{layer}` or `{image}`, each
 //! with `mode` (alpha or luminance) and `invert`.
 
 use serde::{Deserialize, Serialize};

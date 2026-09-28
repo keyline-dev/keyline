@@ -269,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn mvp_stacks_round_trip_unchanged() {
+    fn short_form_stacks_round_trip_unchanged() {
         let v = json!({"dir": "row", "gap": 10.0, "padding": 20.0, "justify": "evenly"});
         let s: Stack = serde_json::from_value(v.clone()).unwrap();
         assert_eq!(serde_json::to_value(&s).unwrap(), v);

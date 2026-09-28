@@ -79,10 +79,10 @@ impl Shape {
 pub(super) fn shape_of(p: &Placed) -> Option<Shape> {
     let l = p.layer;
     let r = super::paint::sk_rect(p.rect);
-    let rounded = |mvp: f32| {
+    let rounded = |corner_radius: f32| {
         let corners = match l.look.radius {
             Some(radius) => radius.corners(r.width(), r.height(), p.k),
-            None => [mvp * p.k; 4],
+            None => [corner_radius * p.k; 4],
         };
         rrect_corners(r, corners)
     };

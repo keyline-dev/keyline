@@ -194,7 +194,7 @@ mod tests {
     }
 
     #[test]
-    fn mvp_gradients_round_trip_unchanged() {
+    fn short_form_gradients_round_trip_unchanged() {
         let v = json!({"from": [0.0, 0.0], "to": [1.0, 1.0], "stops": [{"at": 0.0, "color": "#000000"}, {"at": 1.0, "color": "#FFFFFF"}]});
         let g: Gradient = serde_json::from_value(v.clone()).unwrap();
         assert_eq!(serde_json::to_value(&g).unwrap(), v);

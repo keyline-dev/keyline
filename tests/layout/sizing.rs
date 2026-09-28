@@ -1,4 +1,4 @@
-//! v2 sizing in free layout: `fill`, percentages, min/max, aspect ratio,
+//! Sizing in free layout: `fill`, percentages, min/max, aspect ratio,
 //! `place`, `hidden`, and frames that hug their children.
 
 use crate::*;

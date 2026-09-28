@@ -1,4 +1,4 @@
-//! End-to-end tests of the MVP's features through MCP: web fonts, text
+//! End-to-end tests of core features through MCP: web fonts, text
 //! fills and outlines, stacks, styles, icons, shapes, masks and per-size
 //! changes, with golden renders.
 

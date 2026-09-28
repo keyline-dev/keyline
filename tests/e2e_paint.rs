@@ -1,4 +1,4 @@
-//! End-to-end: an agent paints with the v2 model through MCP — fill stacks,
+//! End-to-end: an agent paints through MCP — fill stacks,
 //! gradients, image fills in shapes, patterns, grain, shadows, backdrop
 //! blur, radii, dashed strokes with markers, polygons, named shapes, arcs,
 //! masks, adjustments and transforms — and the renders match golden PNGs.

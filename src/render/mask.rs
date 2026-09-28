@@ -35,7 +35,7 @@ impl Ctx<'_> {
         }
         match &m.source {
             MaskSource::Gradient(g) => {
-                // Alpha mode keeps the stops' alpha only, as in the MVP.
+                // Alpha mode keeps the stops' alpha only.
                 let mut g = g.clone();
                 if m.mode == MaskMode::Alpha {
                     for s in &mut g.stops {

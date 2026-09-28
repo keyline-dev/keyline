@@ -1,6 +1,6 @@
 # MCP tools reference
 
-keyline-mcp exposes six tools. This page lists each tool's inputs and the exact shape of its replies. The fields of a layer (text, image, frame, fills and so on) are the scene format, described in [scene-v2.md](scene-v2.md); the `layer_add` tool description carries a compact version of them for the agent.
+keyline-mcp exposes six tools. This page lists each tool's inputs and the exact shape of its replies. The fields of a layer (text, image, frame, fills and so on) are the scene format, described in [scene.md](scene.md); the `layer_add` tool description carries a compact version of them for the agent.
 
 Conventions for every tool:
 

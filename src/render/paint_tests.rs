@@ -1,4 +1,4 @@
-//! Pixel tests of the v2 paint model: fill stacks, gradient kinds, image
+//! Pixel tests of the paint model: fill stacks, gradient kinds, image
 //! fills in shapes, patterns, grain, shadows, blur, radii, strokes, shapes,
 //! transforms, masks and image adjustments.
 

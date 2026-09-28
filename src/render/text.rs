@@ -14,7 +14,7 @@ use crate::text::{Fit, Text};
 
 impl Ctx<'_> {
     /// Draws text layer `p` (box `r`): its letters filled by `fills` (or the
-    /// MVP `fill`/`gradient`/`color`), then its strokes (or `outline`).
+    /// short-form `fill`/`gradient`/`color`), then its strokes (or `outline`).
     pub(super) fn draw_text(
         &mut self,
         canvas: &skia_safe::Canvas,

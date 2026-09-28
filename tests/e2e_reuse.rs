@@ -1,7 +1,8 @@
-//! End-to-end: the spec's reference ad written the v2 way — tokens,
+//! End-to-end: the spec's reference ad written with reuse — tokens,
 //! styles, components placed with `each`, an adaptive layout — in one
 //! `layer_add`, with a token changed afterwards. Checks the layout and the
-//! renders, and compares the tool traffic with the MVP reference ad.
+//! renders, and compares the tool traffic with the same ad written out
+//! layer by layer.
 
 // Test support: a panic is how a test reports failure.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -12,8 +13,8 @@ use common::golden::check_golden;
 use common::{CHECK_SVG, Mcp, ad_sizes, b64, build_reference_ad, photo_png};
 use serde_json::json;
 
-/// The v2 reference ad: the same content as `build_reference_ad`.
-async fn build_v2_ad(mcp: &Mcp) -> String {
+/// The reference ad with reuse: the same content as `build_reference_ad`.
+async fn build_reused_ad(mcp: &Mcp) -> String {
     let id = mcp
         .ok(
             "scene_create",
@@ -91,8 +92,8 @@ fn line<'a>(d: &'a str, size: &str, id: &str) -> &'a str {
 #[tokio::test]
 async fn the_reference_ad_with_components_tokens_and_adaptive_layout() {
     let mcp = Mcp::start("reuse").await;
-    let id = build_v2_ad(&mcp).await;
-    let v2_traffic = mcp.traffic.get();
+    let id = build_reused_ad(&mcp).await;
+    let reused_traffic = mcp.traffic.get();
     let d = format!(
         "\n{}",
         mcp.ok("scene_describe", json!({"sceneId": id, "full": true}))
@@ -126,22 +127,24 @@ async fn the_reference_ad_with_components_tokens_and_adaptive_layout() {
     }
     mcp.stop().await;
 
-    // The same ad the MVP way, for scale: v2 should cost no more.
-    let mvp = Mcp::start("reuse-mvp").await;
-    build_reference_ad(&mvp).await;
-    let mvp_traffic = mvp.traffic.get();
-    mvp.stop().await;
-    println!("tool traffic: v2 {v2_traffic} chars, MVP {mvp_traffic} chars");
+    // The same ad written out layer by layer, for scale: reuse should cost no more.
+    let plain = Mcp::start("reuse-plain").await;
+    build_reference_ad(&plain).await;
+    let plain_traffic = plain.traffic.get();
+    plain.stop().await;
+    println!(
+        "tool traffic: with reuse {reused_traffic} chars, layer by layer {plain_traffic} chars"
+    );
     assert!(
-        v2_traffic <= mvp_traffic * 11 / 10,
-        "v2 {v2_traffic} vs MVP {mvp_traffic}"
+        reused_traffic <= plain_traffic * 11 / 10,
+        "with reuse {reused_traffic} vs layer by layer {plain_traffic}"
     );
 }
 
 #[tokio::test]
 async fn components_are_edited_once_for_every_instance() {
     let mcp = Mcp::start("reuse-edit").await;
-    let id = build_v2_ad(&mcp).await;
+    let id = build_reused_ad(&mcp).await;
     // Bigger names everywhere, through the component's style.
     mcp.ok(
         "layer_update",
@@ -190,7 +193,7 @@ async fn flat_gradients_and_tokens_in_spans_work_as_agents_write_them() {
         .next()
         .unwrap()
         .to_owned();
-    // The first call of every P2 benchmark run, which used to fail whole.
+    // The first call of every benchmark run in one batch, which used to fail whole.
     let reply = mcp
         .ok(
             "layer_add",

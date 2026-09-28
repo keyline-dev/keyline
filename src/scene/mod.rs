@@ -1,4 +1,4 @@
-//! MVP scene document: the JSON the agent edits and the renderer draws.
+//! The scene document: the JSON the agent edits and the renderer draws.
 //!
 //! Every field has a default and defaults are omitted when serialized, so the
 //! stored JSON stays as small as what the agent wrote.

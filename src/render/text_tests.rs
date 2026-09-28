@@ -1,4 +1,4 @@
-//! Pixel tests of v2 text: markup, highlights, decoration, vertical
+//! Pixel tests of text: markup, highlights, decoration, vertical
 //! alignment, knockout, leaders and curves.
 
 use serde_json::json;
