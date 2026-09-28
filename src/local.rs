@@ -26,7 +26,7 @@ impl AllowedDirs {
             let dir = match arg.strip_prefix("--allow-read") {
                 Some("") => args.next().context("--allow-read needs a folder")?,
                 Some(rest) if rest.starts_with('=') => rest[1..].to_owned(),
-                _ => bail!("unknown argument {arg}; usage: keyline-mcp [--allow-read <folder>]…"),
+                _ => bail!("unknown argument {arg}; see keyline-mcp --help"),
             };
             dirs.push(
                 std::fs::canonicalize(&dir)

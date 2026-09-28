@@ -3,10 +3,33 @@
 use keyline_mcp::{fonts, gpu::Backend, local::AllowedDirs, server::Server, store::Store, text};
 use rmcp::ServiceExt;
 
+/// What `--help` prints: every option and environment variable.
+const HELP: &str = "keyline-mcp: an AI-native design engine, an MCP server over stdio.
+
+Usage: keyline-mcp [--allow-read <folder>]...
+
+Options:
+  --allow-read <folder>   Let asset_add read local files by path inside this folder
+                          (repeatable). Without it, paths are refused. Paths are
+                          resolved through symlinks before the check.
+  -h, --help              Print this help
+
+Environment:
+  KEYLINE_MCP_DATA        Scenes, assets, renders and the web-font cache (~/.keyline-mcp)
+  KEYLINE_MCP_FONTS       Extra folder of .ttf and .otf fonts
+  KEYLINE_MCP_RENDERER    gpu (default: GPU with CPU fallback) or cpu
+
+Docs: https://github.com/yuvalt/keyline";
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.iter().any(|a| a == "-h" || a == "--help") {
+        println!("{HELP}");
+        return Ok(());
+    }
     // Local paths are read only inside folders named with --allow-read.
-    let reads = AllowedDirs::from_args(std::env::args().skip(1))?;
+    let reads = AllowedDirs::from_args(args)?;
     let store = Store::open_default()?;
     // Web fonts cached in the data dir, plus fonts dropped there or in a dir
     // named by $KEYLINE_MCP_FONTS, join the bundled Inter.

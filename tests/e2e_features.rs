@@ -457,3 +457,22 @@ async fn assets_come_from_local_paths_only_where_allowed() {
     }
     on.stop().await;
 }
+
+#[test]
+fn the_command_line_explains_itself() {
+    let run = |arg: &str| {
+        std::process::Command::new(env!("CARGO_BIN_EXE_keyline-mcp"))
+            .arg(arg)
+            .output()
+            .unwrap()
+    };
+    let help = run("--help");
+    let text = String::from_utf8_lossy(&help.stdout);
+    assert!(help.status.success(), "{text}");
+    for word in ["--allow-read", "KEYLINE_MCP_DATA", "KEYLINE_MCP_RENDERER"] {
+        assert!(text.contains(word), "{word} missing from --help");
+    }
+    let bad = run("--bogus");
+    assert!(!bad.status.success());
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("see keyline-mcp --help"));
+}

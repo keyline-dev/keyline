@@ -116,6 +116,11 @@ The server speaks MCP over stdio, so it runs where your MCP client runs. To rend
 
 Then ask your agent for a design: *"Make a vote-by-mail flyer with this photo, in 1080×1350, 1200×1000 and a 300×600 skyscraper."*
 
+| Command-line option | Purpose |
+|---|---|
+| `--allow-read <folder>` | Lets `asset_add` read local files by path inside this folder (repeatable); without it, paths are refused |
+| `-h`, `--help` | Prints the options and environment variables |
+
 | Environment variable | Default | Purpose |
 |---|---|---|
 | `KEYLINE_MCP_DATA` | `~/.keyline-mcp` | Scenes, assets, renders and the web-font cache |
