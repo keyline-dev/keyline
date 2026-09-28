@@ -17,7 +17,7 @@ Conventions for every tool:
 | [`layer_add`](#layer_add) | Adds layers, and shared styles, tokens and components |
 | [`layer_update`](#layer_update) | Changes, deletes or detaches layers, styles and components; changes tokens |
 | [`scene_describe`](#scene_describe) | Checks the design at every size, or lists every layer's box |
-| [`render`](#render) | Writes PNG, JPEG, WebP or PDF files, optionally with a preview image |
+| [`render`](#render) | Writes PNG, JPEG, WebP, PDF, animated PNG or GIF files, or a still of a moment, optionally with a preview image |
 
 ## scene_create
 
@@ -26,6 +26,9 @@ Conventions for every tool:
 | `sizes` | array, required | | Target sizes. Each is `{id, width, height, scale, safe}`, a preset name, or `"WxH"` |
 | `width`, `height` | number | the first size's | The master size, px: the size the design is written at |
 | `background` | color | `#FFFFFF` | Canvas color |
+| `duration` | number | none | Seconds: makes the scene move ([Motion](scene.md#motion)) |
+| `fps` | number | 30 | Frames per second of animated output |
+| `loop` | boolean | false | The animation repeats forever |
 
 A size's `scale` (default 1) shrinks everything, fonts included, before the layout adapts to the size. `safe` is `[top, right, bottom, left]` px that the platform covers (a story's UI, for example); text under it is reported as `!unsafe`.
 
@@ -165,10 +168,13 @@ A layer's line is `id type x,y w×h`, in px at that size, then:
 |---|---|---|---|
 | `sceneId` | string, required | | The scene |
 | `sizes` | array of strings | all sizes | Size ids to render |
-| `format` | `png` \| `jpeg` \| `webp` \| `pdf` | `png` | File format; PDF is vector, one page per size (1 px = 1 pt) |
+| `format` | `png` \| `jpeg` \| `webp` \| `pdf` \| `apng` \| `gif` | `png` | File format; PDF is vector, one page per size (1 px = 1 pt); `apng` and `gif` animate a moving scene |
 | `quality` | 0–100 | 90 | JPEG and WebP quality |
 | `maxKB` | number | | File-size cap: JPEG and WebP lower their quality until the file fits |
 | `preview` | boolean | false | Also returns one small image (384 px tall) of all sizes side by side |
+| `time` | number | | Seconds into a moving scene: a still at that moment, saved as `<size>-v<n>.at<time>s.<ext>` |
+
+`format: "apng"` renders a moving scene as an animated PNG (`<size>-v<n>.anim.png`: lossless, fully transparent, plays in browsers), and `format: "gif"` as an animated GIF (plays everywhere, including email and chat, in 256 colors per frame). Frames are drawn in memory, several at once, and each stores only the part that changed; `maxKB` halves the frame rate until it fits. Scenes without a `duration` refuse both. `--no-motion` leaves `duration`, `fps`, `loop`, `time` and the motion fields out of the tools.
 
 Reply: per size, the size id and the file's path. With `maxKB`, the path is followed by `quality N` when the quality was lowered, or `!too-big N KB` when even the lowest quality (or a lossless format) doesn't fit. Under each size, every text that wrapped, shrank or was cut, as actually drawn, so wording and line breaks can be checked without looking at the image:
 

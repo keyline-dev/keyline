@@ -56,10 +56,16 @@ pub struct Server {
 #[tool_router]
 impl Server {
     /// A server over `store`, rendering final PNGs on `backend`, reading
-    /// local asset paths only inside `reads`.
-    pub fn new(store: Store, backend: Backend, reads: crate::local::AllowedDirs) -> Self {
+    /// local asset paths only inside `reads`; without `motion`, time is
+    /// left out of the tools.
+    pub fn new(
+        store: Store,
+        backend: Backend,
+        reads: crate::local::AllowedDirs,
+        motion: bool,
+    ) -> Self {
         let mut tool_router = Self::tool_router();
-        schema::compact_all(&mut tool_router);
+        schema::compact_all(&mut tool_router, motion);
         Server {
             store: Arc::new(store),
             lock: Arc::new(Mutex::new(())),

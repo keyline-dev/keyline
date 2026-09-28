@@ -13,7 +13,8 @@ use crate::describe::text_report;
 use crate::fetch::{MAX_ASSET_BYTES, fetch};
 use crate::fonts::{Outcome, ensure as ensure_font};
 use crate::render::{
-    Format, contact_sheet, encode, raster_size, render_image, render_pdf, render_png_on, svg_size,
+    Format, contact_sheet, encode, raster_size, render_apng, render_gif, render_image, render_pdf,
+    render_png_on, svg_size,
 };
 use crate::scene::{Asset, Color, SCHEMA_VERSION, Scene, Size, SizeSpec};
 
@@ -39,6 +40,9 @@ impl Server {
             styles: Default::default(),
             tokens: Default::default(),
             components: Default::default(),
+            duration: a.duration,
+            fps: a.fps.unwrap_or(30.0),
+            looping: a.looping,
             layers: Vec::new(),
             version: 0,
         };
@@ -91,7 +95,14 @@ impl Server {
     pub(super) async fn render_impl(&self, a: RenderArgs) -> Result<Vec<ContentBlock>, String> {
         let scene = self.store.load(&a.scene_id).map_err(err)?;
         let fetched = self.scene_fonts(&scene).await?;
-        let scene = Arc::new(scene.resolved().into_owned());
+        let mut scene = scene.resolved().into_owned();
+        if let Some(t) = a.time {
+            if matches!(a.format, Format::Apng | Format::Gif) {
+                return Err("time renders a still; leave it out for apng and gif".into());
+            }
+            scene = crate::anim::at_time(&scene, t);
+        }
+        let scene = Arc::new(scene);
         let sizes: Vec<Size> = match &a.sizes {
             None => scene.sizes.clone(),
             Some(ids) => ids
@@ -123,6 +134,31 @@ impl Server {
                             render_png_on(&scene, &size, &assets, backend)?
                         }
                         Format::Pdf => render_pdf(&scene, &size, &assets)?,
+                        Format::Apng | Format::Gif => {
+                            // maxKB: halve the frame rate until it fits.
+                            let mut fps = scene.fps;
+                            loop {
+                                let bytes = if format == Format::Gif {
+                                    render_gif(&scene, &size, fps, &assets)?
+                                } else {
+                                    render_apng(&scene, &size, fps, &assets)?
+                                };
+                                let over =
+                                    max_kb.is_some_and(|kb| bytes.len() > kb as usize * 1024);
+                                if !over {
+                                    if fps < scene.fps {
+                                        note = format!(" fps {fps}");
+                                    }
+                                    break bytes;
+                                }
+                                if fps / 2.0 < 5.0 {
+                                    let kb = bytes.len().div_ceil(1024);
+                                    note = format!(" !too-big {kb} KB at {fps} fps");
+                                    break bytes;
+                                }
+                                fps /= 2.0;
+                            }
+                        }
                         // ponytail: lossy formats render on the CPU; add a GPU readback if they get hot.
                         _ => {
                             let image = render_image(&scene, &size, 1.0, &assets, false)?;
@@ -148,7 +184,16 @@ impl Server {
                 job.await.map_err(|e| e.to_string())?.map_err(err)?;
             let path = self
                 .store
-                .render_path(&a.scene_id, scene.version, &size_id, a.format.ext())
+                .render_path(
+                    &a.scene_id,
+                    scene.version,
+                    &size_id,
+                    // A still at a moment gets its own file: `main-v3.at2.5s.png`.
+                    &a.time.map_or_else(
+                        || a.format.ext().to_owned(),
+                        |t| format!("at{t}s.{}", a.format.ext()),
+                    ),
+                )
                 .map_err(err)?;
             std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
             text.push_str(&format!("{size_id} {}{note}\n{report}", path.display()));

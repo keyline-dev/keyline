@@ -386,10 +386,16 @@ async fn renders_jpeg_webp_and_pdf_and_fit_a_file_size_cap() {
     }
 
     let e = mcp
+        .call("render", json!({"sceneId": id, "format": "bmp"}))
+        .await
+        .unwrap_err();
+    assert!(e.contains("unknown variant `bmp`"), "{e}");
+    // Animated formats need a scene that moves.
+    let e = mcp
         .call("render", json!({"sceneId": id, "format": "gif"}))
         .await
         .unwrap_err();
-    assert!(e.contains("unknown variant `gif`"), "{e}");
+    assert!(e.contains("gif needs an animated scene"), "{e}");
     mcp.stop().await;
 }
 

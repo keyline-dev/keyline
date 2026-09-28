@@ -86,6 +86,17 @@ pub struct Scene {
     /// is filled from each instance's props.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub components: BTreeMap<String, serde_json::Value>,
+    /// Length, seconds: its presence makes the scene animated (none: a
+    /// still).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration: Option<f32>,
+    /// Frames per second of animated output (30).
+    #[serde(default = "thirty", skip_serializing_if = "is_thirty")]
+    pub fps: f32,
+    /// The animation is meant to loop: an animated PNG repeats forever
+    /// (false: it plays once).
+    #[serde(rename = "loop", default, skip_serializing_if = "is_false")]
+    pub looping: bool,
     /// Top-level layers, drawn bottom to top.
     #[serde(default)]
     pub layers: Vec<Layer>,
@@ -145,4 +156,12 @@ impl Scene {
         }
         go(&self.layers, f);
     }
+}
+
+fn thirty() -> f32 {
+    30.0
+}
+
+fn is_thirty(v: &f32) -> bool {
+    *v == 30.0
 }

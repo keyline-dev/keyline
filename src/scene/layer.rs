@@ -113,6 +113,10 @@ pub struct Layer {
         skip_serializing_if = "BTreeMap::is_empty"
     )]
     pub token_refs: BTreeMap<String, String>,
+    /// How it enters, leaves and moves over time (`in`, `out`, `animate`,
+    /// `stagger`); nothing moves when absent.
+    #[serde(flatten)]
+    pub time: crate::anim::LayerTime,
     /// Per-size changes, by size id: fields merged over this layer's own
     /// for that size only, e.g. `{"sky": {"fontSize": 20}}`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]

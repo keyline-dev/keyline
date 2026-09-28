@@ -19,6 +19,12 @@ pub struct SceneCreateArgs {
     pub(super) sizes: Vec<SizeSpec>,
     /// Hex color, default #FFFFFF.
     pub(super) background: Option<String>,
+    /// Seconds: makes it move
+    pub(super) duration: Option<f32>,
+    /// (30)
+    pub(super) fps: Option<f32>,
+    #[serde(default, rename = "loop")]
+    pub(super) looping: bool,
 }
 
 #[derive(Deserialize, schemars::JsonSchema)]
@@ -86,7 +92,8 @@ pub struct RenderArgs {
     /// Also return one small image of all sizes side by side.
     #[serde(default)]
     pub(super) preview: bool,
-    /// png|jpeg|webp|pdf
+    pub(super) time: Option<f32>,
+    /// png|jpeg|webp|pdf|apng|gif
     #[serde(default)]
     pub(super) format: crate::render::Format,
     /// 0–100 (90)

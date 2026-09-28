@@ -302,6 +302,74 @@ Models miscount character offsets, so text takes a small HTML subset instead:
 - Instances stay linked: changing the component changes every instance. Their layers are named by the `use` id, the instance number and the inner layer's id or role, e.g. `c.1.name`. `layer_update` with `detach: true` turns a `use` into plain layers that no longer follow the component.
 - Components may place other components, up to 8 levels deep.
 
+## Motion
+
+A scene with a `duration` moves. Only fields that don't change layout animate, so the layout is the same at every moment and every check about it holds throughout; a scene without motion fields is drawn at rest. `render` makes an animated PNG (`format: "apng"`) or GIF (`format: "gif"`), or a still at any moment (`time`).
+
+| Scene field | Meaning | Default |
+|---|---|---|
+| `duration` | Length, seconds; its presence makes the scene move | none (a still) |
+| `fps` | Frames per second | 30 |
+| `loop` | The animation repeats forever | false (plays once) |
+
+### Enter and exit
+
+```json
+{"type": "text", "text": "…", "in": "fade-up"}
+{"type": "frame", "in": {"effect": "pop", "at": 1.2, "ease": "back.out"}, "out": {"effect": "fade", "at": 7}}
+```
+
+`in` and `out` take an effect name, or `{effect, at, duration, ease, distance}`. A layer is hidden before its `in` and gone after its `out`.
+
+| Field | Meaning | Default |
+|---|---|---|
+| `effect` | `fade`, `fade-up`, `fade-down`, `fade-left`, `fade-right` (fade while moving `distance` into place), `pop` (grow from 0.6 with an overshoot), `zoom-in` (grow from 0.85), `zoom-out` (shrink from 1.15), `blur-in` (sharpen from a 12 px blur) | required |
+| `at` | Start, seconds | `in`: 0; `out`: so it ends with the scene |
+| `duration` | Seconds | 0.6 |
+| `ease` | See [Easing](#easing) | `power2.out` entering (`back.out` for `pop`), `power2.in` leaving |
+| `distance` | How far a directional fade travels, px | 40 |
+
+### Keyframes
+
+`animate` sets values over time, GSAP-style: one track or a list of them.
+
+```json
+"animate": {"scale": [1, 1.06, 1], "duration": 1.6, "repeat": -1, "ease": "sine.inOut"}
+"animate": {"rotation": {"from": "random(-90, 90)"}, "offset": {"from": [0, -80]}, "duration": 0.8, "ease": "back.out"}
+```
+
+| Field | Meaning | Default |
+|---|---|---|
+| `opacity`, `scale`, `rotation`, `blur` | A list of numbers spread over `duration`, or `{from, to}` (a missing end is the layer's own value) | |
+| `offset`, `skew` | The same, with `[x, y]` pairs | |
+| `color` | The same, with colors: the layer's own color | |
+| `times` | Where each listed value falls, 0–1 of `duration` | evenly spaced |
+| `at` | Start, seconds | 0 |
+| `duration` | One play, seconds | 1 |
+| `ease` | Between each pair of values | `power1.inOut` |
+| `repeat` | Extra plays; −1 repeats to the end | 0 |
+| `yoyo` | Every other play runs backwards | false |
+
+A number may be `"random(lo, hi)"`, as in GSAP: each target gets its own value (each layer, or each piece of split text), the same on every render. Values hold before a track starts and after it ends. Layout fields (`width`, `fontSize`, `text`, `padding`…) can't animate; to make something grow, animate `scale`.
+
+### Easing
+
+GSAP's names: `none`, `power1` … `power4`, `sine`, `expo`, `circ`, `back`, `elastic`, `bounce`, each with `.in`, `.out` or `.inOut` (a family alone is `.out`), and `steps(n)`. CSS's `ease`, `ease-in`, `ease-out` and `ease-in-out`, and `smooth`, `snappy` and `bouncy`, read as the nearest of those.
+
+### Stagger and split text
+
+`stagger` (seconds) on a frame or a `use` layer gives its `in` to its children or instances one after another instead of entering whole.
+
+`split: "chars"` or `"words"` on a text layer makes its `in`, `out`, `animate` and `stagger` apply to each letter or word, GSAP's SplitText. The text is laid out once; each piece moves as a rigid part of it.
+
+```json
+{"type": "text", "text": "Animate Anything", "fontSize": 96, "split": "chars", "stagger": 0.05,
+ "animate": {"offset": {"from": ["random(-400, 400)", "random(-250, 250)"]}, "rotation": {"from": "random(-180, 180)"},
+             "opacity": {"from": 0}, "duration": 1.1, "ease": "back.out"}}
+```
+
+Frames clip their children, animated ones included: give a frame `clip: false` when its children move beyond its edges.
+
 ## Example
 
 The reference ad from the end-to-end tests, in one `layer_add`: tokens, styles, two components placed with `each`, and a layout that adapts to a portrait post, a wide banner and a skyscraper without per-size positions.

@@ -18,13 +18,46 @@ const DROP: &[&str] = &[
     "maxItems",
 ];
 
-/// Trims every tool's input schema in place.
-pub(super) fn compact_all<S>(router: &mut ToolRouter<S>) {
+/// What `layer_add` adds to its description when motion is on.
+const LAYER_ADD_MOTION: &str = " Motion (scene duration): in/out fade|fade-up|-down|-left|-right|pop|zoom-in|zoom-out|blur-in \
+or {effect, at, duration, ease, distance}; animate {opacity|scale|rotation|blur|offset|skew|color: [values] or {from,to}, \
+at, duration, ease, repeat (-1), yoyo, times} or a list; values may be \"random(a,b)\"; ease: GSAP names (power2.out, \
+back.out, elastic.inOut, steps(n), none); stagger (s) on frame, use or split text; split chars|words.";
+
+/// What `render` adds to its description when motion is on.
+const RENDER_MOTION: &str = " apng or gif renders the motion; time (s) a still of it.";
+
+/// Arguments that exist only for motion, by tool.
+const MOTION_ARGS: &[(&str, &[&str])] = &[
+    ("scene_create", &["duration", "fps", "loop"]),
+    ("render", &["time"]),
+];
+
+/// Trims every tool's input schema in place, and adds motion's words to the
+/// tools, or takes its arguments out (`--no-motion`).
+pub(super) fn compact_all<S>(router: &mut ToolRouter<S>, motion: bool) {
     for route in router.map.values_mut() {
         let mut schema = Value::Object(route.attr.input_schema.as_ref().clone());
         compact(&mut schema, true);
+        if !motion
+            && let Some((_, args)) = MOTION_ARGS.iter().find(|(t, _)| *t == route.attr.name)
+            && let Some(Value::Object(props)) = schema.get_mut("properties")
+        {
+            for a in *args {
+                props.remove(*a);
+            }
+        }
         if let Value::Object(o) = schema {
             route.attr.input_schema = Arc::new(o);
+        }
+        let extra = match route.attr.name.as_ref() {
+            "layer_add" => LAYER_ADD_MOTION,
+            "render" => RENDER_MOTION,
+            _ => "",
+        };
+        if motion && !extra.is_empty() {
+            let base = route.attr.description.clone().unwrap_or_default();
+            route.attr.description = Some(format!("{base}{extra}").into());
         }
     }
 }

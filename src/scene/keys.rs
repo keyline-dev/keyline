@@ -107,6 +107,11 @@ const COMMON_KEYS: &[&str] = &[
     "edges",
     "style",
     "$tokens",
+    "in",
+    "out",
+    "animate",
+    "stagger",
+    "split",
 ];
 
 /// Rejects keys that don't belong to the layer's type, so a typo like

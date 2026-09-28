@@ -1,5 +1,6 @@
 //! keyline-mcp: a server-side image composition engine driven over MCP.
 
+pub mod anim;
 pub mod describe;
 pub mod fetch;
 pub mod fonts;

@@ -58,6 +58,11 @@ pub enum Format {
     Webp,
     /// Vector PDF, one page at the size in points (1 px = 1 pt).
     Pdf,
+    /// Animated PNG of an animated scene: lossless, transparent, plays in
+    /// browsers.
+    Apng,
+    /// Animated GIF of an animated scene: plays everywhere, 256 colors.
+    Gif,
 }
 
 impl schemars::JsonSchema for Format {
@@ -80,6 +85,8 @@ impl Format {
             Format::Jpeg => "jpg",
             Format::Webp => "webp",
             Format::Pdf => "pdf",
+            Format::Apng => "anim.png",
+            Format::Gif => "gif",
         }
     }
 }
@@ -104,7 +111,9 @@ pub fn encode(image: &Image, format: Format, quality: u32, max_kb: Option<u32>) 
         Format::Png => EncodedImageFormat::PNG,
         Format::Jpeg => EncodedImageFormat::JPEG,
         Format::Webp => EncodedImageFormat::WEBP,
-        Format::Pdf => return Err(anyhow!("PDF isn't a raster format")),
+        Format::Pdf | Format::Apng | Format::Gif => {
+            return Err(anyhow!("{} isn't a still format", format.ext()));
+        }
     };
     let at = |q: u32| {
         image

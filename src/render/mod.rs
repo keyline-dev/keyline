@@ -1,5 +1,6 @@
 //! Draws a laid-out scene with Skia on the CPU and encodes it as PNG.
 
+mod animated;
 mod effects;
 mod fills;
 mod image;
@@ -10,6 +11,7 @@ mod paint;
 mod paint_tests;
 mod rough;
 mod shape;
+mod split;
 mod stroke;
 #[cfg(test)]
 mod tests;
@@ -35,6 +37,7 @@ use image::{CENTER, image_rect, svg_image};
 use output::encode_png;
 use paint::{sk_blend, sk_color, sk_rect};
 
+pub use animated::{render_apng, render_gif};
 pub use image::{image_crop, image_scale, raster_size, svg_size};
 pub use output::{Encoded, Format, contact_sheet, encode, render_pdf};
 pub use text_extras::curve_sagitta;
@@ -260,7 +263,10 @@ impl Ctx<'_> {
         let r = sk_rect(p.rect);
         match &l.kind {
             Kind::Text { .. } if self.hide_text => {}
-            Kind::Text { .. } => self.draw_text(canvas, p, r)?,
+            Kind::Text { .. } => match l.time.moment {
+                Some(moment) if l.time.split.is_some() => self.draw_split(canvas, p, r, moment)?,
+                _ => self.draw_text(canvas, p, r)?,
+            },
             Kind::Icon {
                 name,
                 set,

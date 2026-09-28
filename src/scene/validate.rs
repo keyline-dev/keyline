@@ -12,6 +12,11 @@ impl Scene {
             }
         }
         // Components expand and styles apply, or say why not.
+        let valid = |v: f32, lo: f32, hi: f32| (lo..=hi).contains(&v);
+        if self.duration.is_some_and(|d| !valid(d, 0.001, 86_400.0)) || !valid(self.fps, 1.0, 120.0)
+        {
+            return Err("duration must be > 0 and fps between 1 and 120".into());
+        }
         let resolved = self.try_resolved()?;
         let resolved = resolved.as_ref().unwrap_or(self);
         let mut result = Ok(());
@@ -142,6 +147,9 @@ impl Scene {
                     }
                 }
             }
+        }
+        if l.time.split.is_some() && !matches!(l.kind, Kind::Text { .. }) {
+            return Err("split works on text layers".into());
         }
         check_lengths(l)?;
         super::check::look(self, l)?;

@@ -71,6 +71,11 @@ fn instances(scene: &Scene, u: &Layer, depth: usize) -> Result<Vec<Layer>, Strin
     for k in ["id", "type", "component", "props", "each", "$tokens"] {
         own.remove(k);
     }
+    // `stagger` on a use: its instances enter one after another.
+    let stagger = own
+        .remove("stagger")
+        .and_then(|v| v.as_f64())
+        .map(|g| g as f32);
     let entries: Vec<Map<String, Value>> = if each.is_empty() {
         vec![props.clone()]
     } else {
@@ -98,6 +103,13 @@ fn instances(scene: &Scene, u: &Layer, depth: usize) -> Result<Vec<Layer>, Strin
             if let Value::Object(o) = &mut v {
                 for (k, x) in &own {
                     o.insert(k.clone(), x.clone());
+                }
+                if let (Some(gap), Some(enter)) = (stagger, o.get("in")) {
+                    let m: crate::anim::motion::Motion = serde_json::from_value(enter.clone())
+                        .map_err(|e| format!("{}: in: {e}", u.id))?;
+                    let delayed = serde_json::to_value(m.delayed(n as f32 * gap))
+                        .map_err(|e| e.to_string())?;
+                    o.insert("in".into(), delayed);
                 }
             }
             name(&mut v, &root);

@@ -1,14 +1,24 @@
 # keyline-mcp
 
-**An AI-native design engine: agents design, keyline renders. No Chrome, no browser.** An AI agent (Claude Code, Cursor, Cline or any [MCP](https://modelcontextprotocol.io) client) describes a design once as a small JSON scene. A Rust renderer built on [Skia](https://skia.org) turns it into PNG, JPEG, WebP or vector PDF at every size you need: portrait post, landscape banner and skyscraper ad from one master layout. Output is deterministic: no model generates pixels, so the same scene always renders the same design. There's no browser anywhere in the pipeline: no headless Chrome, Puppeteer or Playwright to install, run or keep patched on the server, just one native binary.
+**An AI-native design engine: agents design, keyline renders. No Chrome, no browser.** An AI agent (Claude Code, Cursor, Cline or any [MCP](https://modelcontextprotocol.io) client) describes a design once as a small JSON scene. A Rust renderer built on [Skia](https://skia.org) turns it into PNG, JPEG, WebP, vector PDF, animated PNG or GIF at every size you need: portrait post, landscape banner and skyscraper ad from one master layout. Output is deterministic: no model generates pixels, so the same scene always renders the same design. There's no browser anywhere in the pipeline: no headless Chrome, Puppeteer or Playwright to install, run or keep patched on the server, just one native binary.
 
 Think of it as Figma or Canva for AI agents: a design tool whose only user is a language model, for social posts, display ads, flyers, banners and other marketing images.
 
 > Status: early development. The scene format and the tools still change.
 
-![One master layout, three sizes](tests/golden/macos/reference-portrait.png)
+<p align="center">
+  <img src="tests/golden/macos/showcase-square.png" height="240" alt="A square post: Cold Brew Season, a summer promo">
+  <img src="tests/golden/macos/showcase-banner.png" height="240" alt="The same design as a wide banner, with a drink graphic beside the text">
+  <img src="tests/golden/macos/showcase-story.png" height="240" alt="The same design as a tall story, the graphic above the text">
+</p>
 
-<sub>A test ad built through the tools and rendered by the engine. Same scene, [wide](tests/golden/macos/reference-wide.png) and [skyscraper](tests/golden/macos/reference-sky.png) sizes.</sub>
+<sub>One scene, three sizes: a square post, a wide banner and a story, each laid out by the engine from a single design (<a href="tests/fixtures/showcase.json">the scene</a>).</sub>
+
+<p align="center">
+  <img src="docs/media/showcase-motion.png" width="400" alt="The same design animated: the headline assembles letter by letter, the button pops in and pulses">
+</p>
+
+<sub>The same design with motion, rendered as an animated PNG with no browser and no video tool (<a href="tests/fixtures/showcase-motion.json">the scene</a>).</sub>
 
 ---
 
@@ -30,7 +40,7 @@ flowchart LR
     L --> C["Checks<br/>defects · advisories · facts"]
     C -- "ok, or what to fix" --> A
     L --> R["Skia renderer<br/>GPU, CPU fallback"]
-    R --> P["PNG, JPEG, WebP or PDF per size"]
+    R --> P["PNG, JPEG, WebP, PDF, animated PNG or GIF per size"]
 ```
 
 1. **One master layout.** The scene is designed once, at a master size (say 1080×1350), and lists the target sizes.
@@ -69,8 +79,9 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 - **Images:** fill, fit, crop or tile, with a focus point that stays in view; adjustments (brightness, contrast, saturation, grayscale, sepia, hue, duotone, tint, halftone)
 - **Icons:** about 5,000 built in, by name: [Lucide](https://lucide.dev) outline icons and [Font Awesome Free](https://fontawesome.com) solid, regular and brand icons, in any color
 - **Reuse:** named styles on any layer, tokens (`"$brand"`) that update every field using them, and components placed once or once per data row
+- **Motion:** GSAP-style animation: enter and exit effects (fade, fade-up, pop, zoom, blur-in), keyframes on opacity, scale, rotation, offset, skew, blur and color with GSAP's eases, `random()` starts, staggered children, and text split into letters or words that move on their own
 - **Assets:** stored under content hashes. URLs are fetched only over http(s), and private and local addresses are refused.
-- **Output:** PNG, JPEG, WebP or vector PDF per size, with a file-size cap for ad networks, plus an optional contact-sheet preview; rendered on the GPU when available
+- **Output:** PNG, JPEG, WebP, vector PDF, animated PNG or animated GIF per size, a still of any moment, with a file-size cap for ad networks, plus an optional contact-sheet preview; rendered on the GPU when available
 
 ## Quick start
 
@@ -119,6 +130,7 @@ Then ask your agent for a design: *"Make a vote-by-mail flyer with this photo, i
 | Command-line option | Purpose |
 |---|---|
 | `--allow-read <folder>` | Lets `asset_add` read local files by path inside this folder (repeatable); without it, paths are refused |
+| `--no-motion` | Leaves animation out of the tools, for stills-only use (fewer tokens per turn) |
 | `-h`, `--help` | Prints the options and environment variables |
 
 | Environment variable | Default | Purpose |
