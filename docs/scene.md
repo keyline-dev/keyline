@@ -35,8 +35,9 @@ Field names follow what models already know:
 | `tokens` | Named values used as `"$name"` in any field | none |
 | `styles` | Named sets of layer fields, applied by `style` | none |
 | `components` | Named layer trees, placed by `use` layers | none |
-| `assets` | Images and SVGs added by `asset_add`, stored by content hash | none |
+| `assets` | Images, SVGs and video clips added by `asset_add`, stored by content hash | none |
 | `layers` | The layer tree, bottom to top | none |
+| `duration`, `fps`, `loop` | Motion: see [Motion](#motion) | a still |
 
 A size's `scale` (1) shrinks everything, fonts included, before the layout adapts to the size, like a design tool's Scale tool. `safe` (`[top, right, bottom, left]` px) is the part a platform covers, such as a story's UI bars; text there is reported as `!unsafe`.
 
@@ -89,6 +90,8 @@ Icons: about 5,000 by name, [Lucide](https://lucide.dev) outline icons and [Font
 | `scale`, `offset`, `skew`, `flipX`, `flipY` | Visual transforms after layout, about the box center; they never move other layers | 1, [0, 0], [0, 0], false, false |
 | `style` | A style name, or a list applied in order; the layer's own fields win | none |
 | `at` | Changes for one size or aspect class, see [Per size](#per-size) | none |
+| `in`, `out`, `animate`, `stagger`, `split` | Motion, see [Motion](#motion) | none |
+| `shot` | Makes a top-level frame a shot, see [Shots and transitions](#shots-and-transitions) | none |
 
 In a stack, children also take `alignSelf`, `grow`, `priority` and `position`; in a grid, `area`, `cell` and `span` (below).
 

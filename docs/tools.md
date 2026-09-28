@@ -13,11 +13,11 @@ Conventions for every tool:
 | Tool | Does |
 |---|---|
 | [`scene_create`](#scene_create) | Starts a scene: master size, target sizes, background |
-| [`asset_add`](#asset_add) | Adds an image from a URL or base64 |
+| [`asset_add`](#asset_add) | Adds an image or video clip from a URL, a local path or base64 |
 | [`layer_add`](#layer_add) | Adds layers, and shared styles, tokens and components |
 | [`layer_update`](#layer_update) | Changes, deletes or detaches layers, styles and components; changes tokens |
 | [`scene_describe`](#scene_describe) | Checks the design at every size, or lists every layer's box |
-| [`render`](#render) | Writes PNG, JPEG, WebP, PDF, animated PNG or GIF files, or a still of a moment, optionally with a preview image |
+| [`render`](#render) | Writes PNG, JPEG, WebP, PDF, animated PNG, GIF, MP4 or WebM files, or a still of a moment, optionally with a preview image |
 
 ## scene_create
 
@@ -26,8 +26,8 @@ Conventions for every tool:
 | `sizes` | array, required | | Target sizes. Each is `{id, width, height, scale, safe}`, a preset name, or `"WxH"` |
 | `width`, `height` | number | the first size's | The master size, px: the size the design is written at |
 | `background` | color | `#FFFFFF` | Canvas color |
-| `duration` | number | none | Seconds: makes the scene move ([Motion](scene.md#motion)) |
-| `fps` | number | 30 | Frames per second of animated output |
+| `duration` | number | none, or where the last shot ends | Seconds: makes the scene move ([Motion](scene.md#motion)) |
+| `fps` | number | 30 | Frames per second of animated and video output |
 | `loop` | boolean | false | The animation repeats forever |
 
 A size's `scale` (default 1) shrinks everything, fonts included, before the layout adapts to the size. `safe` is `[top, right, bottom, left]` px that the platform covers (a story's UI, for example); text under it is reported as `!unsafe`.
