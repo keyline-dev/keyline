@@ -90,7 +90,8 @@ pub enum TextWrap {
 pub enum VAlign {
     /// At the top.
     Top,
-    /// Centered.
+    /// Centered; `middle` (CSS `vertical-align`) is read as this.
+    #[serde(alias = "middle")]
     Center,
     /// At the bottom.
     Bottom,
@@ -193,8 +194,15 @@ impl<'de> Deserialize<'de> for Highlight {
 
 #[cfg(test)]
 mod tests {
-    use super::{Highlight, HighlightStyle, TextMore};
+    use super::{Highlight, HighlightStyle, TextMore, VAlign};
     use serde_json::json;
+
+    #[test]
+    fn vertical_align_reads_css_middle_as_center() {
+        let v: VAlign = serde_json::from_value(json!("middle")).unwrap();
+        assert_eq!(v, VAlign::Center);
+        assert_eq!(serde_json::to_value(v).unwrap(), "center");
+    }
 
     #[test]
     fn text_settings_read_their_short_forms() {
