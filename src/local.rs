@@ -54,11 +54,13 @@ impl AllowedDirs {
         }
         // ponytail: a folder swapped for a symlink between the check and the
         // open could still redirect it; O_NOFOLLOW per component if that matters.
-        let file = std::fs::File::open(&real).map_err(|e| format!("{path}: {e}"))?;
-        let meta = file.metadata().map_err(|e| format!("{path}: {e}"))?;
-        if !meta.is_file() {
+        // Checked before opening: Windows refuses to open a folder at all,
+        // which would hide this clearer answer.
+        if !std::fs::metadata(&real).is_ok_and(|m| m.is_file()) {
             return Err(format!("{path} isn't a file"));
         }
+        let file = std::fs::File::open(&real).map_err(|e| format!("{path}: {e}"))?;
+        let meta = file.metadata().map_err(|e| format!("{path}: {e}"))?;
         let max64 = u64::try_from(max).unwrap_or(u64::MAX);
         if meta.len() > max64 {
             return Err(format!("{path} is larger than {} MB", max >> 20));
