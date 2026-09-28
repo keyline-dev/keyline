@@ -62,6 +62,18 @@ pub async fn ensure(family: &str, dir: &Path) -> Result<Outcome> {
     if text::families().iter().any(|f| f == family) {
         return Ok(Outcome::Available);
     }
+    // Another server process on the same data dir may have fetched it
+    // since this one started: load it from the cache instead.
+    let cached: Vec<_> = index(dir)
+        .into_iter()
+        .filter(|(_, e)| e.family == family)
+        .filter_map(|(name, _)| std::fs::read(dir.join(name)).ok())
+        .map(|bytes| (bytes, Some(family.to_owned())))
+        .collect();
+    if !cached.is_empty() {
+        text::add_fonts(cached)?;
+        return Ok(Outcome::Available);
+    }
     if family.is_empty()
         || family.len() > 64
         || !family
@@ -215,6 +227,34 @@ mod tests {
 
         load_cache(&dir).unwrap();
         assert!(text::families().contains(&"Cached Sans".to_string()));
+    }
+
+    #[tokio::test]
+    async fn a_family_another_process_cached_loads_without_a_download() {
+        // As if a second server on the same data dir fetched it after this
+        // one started: in the index, not yet registered here.
+        let dir = std::env::temp_dir().join(format!("keyline-mcp-shared-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let bytes = include_bytes!("../fonts/InterVariable.ttf");
+        let name = format!("{}.ttf", sha256_hex(bytes));
+        std::fs::write(dir.join(&name), bytes).unwrap();
+        let entry = Entry {
+            family: "Shared Sans".into(),
+            url: "https://fonts.gstatic.com/y.ttf".into(),
+            fetched: 1,
+        };
+        std::fs::write(
+            dir.join(INDEX),
+            serde_json::to_vec(&Index::from([(name, entry)])).unwrap(),
+        )
+        .unwrap();
+        assert!(!text::families().contains(&"Shared Sans".to_string()));
+        assert_eq!(
+            ensure("Shared Sans", &dir).await.unwrap(),
+            Outcome::Available
+        );
+        assert!(text::families().contains(&"Shared Sans".to_string()));
     }
 
     /// Needs the network: the first request downloads, the second is served

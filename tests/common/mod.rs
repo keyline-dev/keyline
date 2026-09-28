@@ -5,6 +5,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 #![allow(dead_code)] // each test binary uses a different subset
 
+pub mod golden;
+
 use std::path::PathBuf;
 
 use base64::Engine;
