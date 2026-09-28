@@ -37,7 +37,20 @@ impl Mcp {
 
     /// Starts the server on an existing data directory, as after a restart.
     pub async fn start_in(data: PathBuf) -> Mcp {
+        Self::start_with(data, &[]).await
+    }
+
+    /// Starts the server with a fresh data directory and command-line `args`.
+    pub async fn start_args(name: &str, args: &[&str]) -> Mcp {
+        let data =
+            std::env::temp_dir().join(format!("keyline-mcp-e2e-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&data);
+        Self::start_with(data, args).await
+    }
+
+    async fn start_with(data: PathBuf, args: &[&str]) -> Mcp {
         let mut cmd = tokio::process::Command::new(env!("CARGO_BIN_EXE_keyline-mcp"));
+        cmd.args(args);
         cmd.env("KEYLINE_MCP_DATA", &data);
         // Reference images are CPU renders, deterministic on each OS version.
         cmd.env("KEYLINE_MCP_RENDERER", "cpu");

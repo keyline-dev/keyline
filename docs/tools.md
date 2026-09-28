@@ -4,7 +4,7 @@ keyline-mcp exposes six tools. This page lists each tool's inputs and the exact 
 
 Conventions for every tool:
 
-- **Scenes are addressed by id.** `sceneId` comes from `scene_create`. Scenes, assets and renders live in the data directory (`KEYLINE_MCP_DATA`, default `~/.keyline-mcp`); no argument is ever a file path.
+- **Scenes are addressed by id.** `sceneId` comes from `scene_create`. Scenes, assets and renders live in the data directory (`KEYLINE_MCP_DATA`, default `~/.keyline-mcp`). The only argument that can be a file path is `asset_add`'s `path`, and only in folders the server was started with (`--allow-read`).
 - **Replies are compact text, not JSON.** Every change bumps the scene's version, shown as `v3`.
 - **Defaults are omitted** in both directions: leave a field out to get its default.
 - **Errors are one line** that names what failed and how to fix it, and change nothing: a batch is applied whole or not at all.
@@ -43,10 +43,11 @@ sfc5e3bbb5b v0
 |---|---|---|---|
 | `sceneId` | string, required | | The scene |
 | `url` | string | | Public http(s) URL of a PNG, JPEG or SVG |
-| `base64` | string | | Or the file's bytes, base64 |
+| `path` | string | | Or a local file, inside a folder the server was started with (`--allow-read <folder>`) |
+| `base64` | string | | Or the file's bytes, base64. They pass through the model, so keep this for small files |
 | `id` | string | generated | The id layers use to refer to it |
 
-Give exactly one of `url` or `base64`. The limit is 50 MB. SVGs are rasterized at their drawn size, so they stay sharp.
+Give exactly one of `url`, `path` or `base64`. The limit is 50 MB. A `path` is resolved through every symlink and `..` first, then must lie inside an allowed folder and be a regular file; without `--allow-read`, paths are refused. SVGs are rasterized at their drawn size, so they stay sharp.
 
 Reply: the asset's id, its intrinsic size and the scene version.
 
@@ -183,6 +184,7 @@ With `preview`, the reply also carries the preview as an image.
 Errors are one line and leave the scene unchanged. A batch error names the item that failed:
 
 ```text
+/Users/me/secret.png is outside the folders the server may read (--allow-read)
 layers[0]: unknown field(s) fontsize for text layer; did you mean fontsize → fontSize
 ops[0]: no layer with id nope
 text1: <span color="$blue">: bad color "$blue", want #RRGGBB

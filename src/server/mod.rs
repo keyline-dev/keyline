@@ -48,19 +48,23 @@ pub struct Server {
     lock: Arc<Mutex<()>>,
     /// Final renders: GPU (default) or CPU.
     backend: Backend,
+    /// Folders `asset_add` may read local paths from.
+    reads: Arc<crate::local::AllowedDirs>,
     tool_router: ToolRouter<Self>,
 }
 
 #[tool_router]
 impl Server {
-    /// A server over `store`, rendering final PNGs on `backend`.
-    pub fn new(store: Store, backend: Backend) -> Self {
+    /// A server over `store`, rendering final PNGs on `backend`, reading
+    /// local asset paths only inside `reads`.
+    pub fn new(store: Store, backend: Backend, reads: crate::local::AllowedDirs) -> Self {
         let mut tool_router = Self::tool_router();
         schema::compact_all(&mut tool_router);
         Server {
             store: Arc::new(store),
             lock: Arc::new(Mutex::new(())),
             backend,
+            reads: Arc::new(reads),
             tool_router,
         }
     }
@@ -70,7 +74,9 @@ impl Server {
         reply(self.scene_create_impl(a).await)
     }
 
-    #[tool(description = "Add an image to a scene's assets. Returns id and size.")]
+    #[tool(
+        description = "Add an image (PNG, JPEG, SVG) to a scene's assets from url, path or base64. Returns id and size."
+    )]
     async fn asset_add(&self, Parameters(a): Parameters<AssetAddArgs>) -> CallToolResult {
         reply(self.asset_add_impl(a).await)
     }

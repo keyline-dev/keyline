@@ -6,6 +6,7 @@ pub mod fonts;
 pub mod gpu;
 pub mod icons;
 pub mod layout;
+pub mod local;
 pub mod ops;
 pub mod render;
 pub mod reuse;

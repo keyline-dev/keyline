@@ -112,11 +112,13 @@ claude mcp add keyline-mcp -- keyline-mcp   # or the path to target/release/keyl
 
 The server speaks MCP over stdio, so it runs where your MCP client runs. To render on another machine, make the command `ssh that-machine keyline-mcp`.
 
+**Local files:** to let the agent add images by path (so their bytes never pass through the model, which is far cheaper than base64), start the server with `--allow-read <folder>`, once per folder: `claude mcp add keyline-mcp -- keyline-mcp --allow-read ~/projects/ads`. Without it, paths are refused. A path is resolved through every symlink before the check, so a link inside the folder can't lead outside it.
+
 Then ask your agent for a design: *"Make a vote-by-mail flyer with this photo, in 1080×1350, 1200×1000 and a 300×600 skyscraper."*
 
 | Environment variable | Default | Purpose |
 |---|---|---|
-| `KEYLINE_MCP_DATA` | `~/.keyline-mcp` | Scenes, assets, renders and the web-font cache. Tool arguments are never file paths. |
+| `KEYLINE_MCP_DATA` | `~/.keyline-mcp` | Scenes, assets, renders and the web-font cache |
 | `KEYLINE_MCP_FONTS` | none | Extra folder of `.ttf` and `.otf` fonts; `<data>/fonts` is loaded too |
 | `KEYLINE_MCP_RENDERER` | `gpu` | `gpu` renders on the GPU and falls back to the CPU; `cpu` always uses the CPU |
 

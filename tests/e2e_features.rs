@@ -392,3 +392,68 @@ async fn renders_jpeg_webp_and_pdf_and_fit_a_file_size_cap() {
     assert!(e.contains("unknown variant `gif`"), "{e}");
     mcp.stop().await;
 }
+
+/// A new 400×300 scene's id.
+async fn new_scene(mcp: &Mcp) -> String {
+    mcp.ok("scene_create", json!({"sizes": ["400x300"]}))
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned()
+}
+
+/// The error `asset_add` gives for a local path.
+async fn path_refused(mcp: &Mcp, id: &str, path: &std::path::Path) -> String {
+    mcp.call(
+        "asset_add",
+        json!({"sceneId": id, "path": path.display().to_string()}),
+    )
+    .await
+    .unwrap_err()
+}
+
+/// Local paths: read only inside a folder the server was started with,
+/// and never through a symlink that leads outside it.
+#[tokio::test]
+async fn assets_come_from_local_paths_only_where_allowed() {
+    let base = std::env::temp_dir().join(format!("keyline-mcp-e2e-paths-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    let (allowed, outside) = (base.join("allowed"), base.join("outside"));
+    std::fs::create_dir_all(&allowed).unwrap();
+    std::fs::create_dir_all(&outside).unwrap();
+    std::fs::write(allowed.join("photo.png"), photo_png()).unwrap();
+    std::fs::write(outside.join("photo.png"), photo_png()).unwrap();
+
+    // Off unless a folder is allowed.
+    let off = Mcp::start("paths-off").await;
+    let id = new_scene(&off).await;
+    let e = path_refused(&off, &id, &allowed.join("photo.png")).await;
+    assert!(e.contains("start the server with --allow-read"), "{e}");
+    off.stop().await;
+
+    let dir = allowed.display().to_string();
+    let on = Mcp::start_args("paths-on", &["--allow-read", &dir]).await;
+    let id = new_scene(&on).await;
+    let reply = on
+        .ok(
+            "asset_add",
+            json!({"sceneId": id, "id": "photo", "path": allowed.join("photo.png").display().to_string()}),
+        )
+        .await;
+    assert!(reply.starts_with("photo "), "{reply}");
+    for p in [
+        outside.join("photo.png"),
+        allowed.join("../outside/photo.png"),
+    ] {
+        let e = path_refused(&on, &id, &p).await;
+        assert!(e.contains("outside the folders"), "{p:?}: {e}");
+    }
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(&outside, allowed.join("door")).unwrap();
+        let e = path_refused(&on, &id, &allowed.join("door/photo.png")).await;
+        assert!(e.contains("outside the folders"), "{e}");
+    }
+    on.stop().await;
+}

@@ -28,7 +28,9 @@ pub struct AssetAddArgs {
     pub(super) scene_id: String,
     /// Public http(s) URL of a PNG, JPEG or SVG.
     pub(super) url: Option<String>,
-    /// Or the file bytes, base64.
+    /// Or a local file, in a folder the server allows (--allow-read).
+    pub(super) path: Option<String>,
+    /// Or the file bytes, base64 (small files only: they pass through the model).
     pub(super) base64: Option<String>,
     /// Asset id to use in layers; generated if omitted.
     pub(super) id: Option<String>,

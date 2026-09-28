@@ -49,9 +49,10 @@ impl Server {
     }
 
     pub(super) async fn asset_add_impl(&self, a: AssetAddArgs) -> Result<String, String> {
-        let bytes = match (&a.url, &a.base64) {
-            (Some(url), None) => fetch(url).await.map_err(err)?,
-            (None, Some(b64)) => {
+        let bytes = match (&a.url, &a.path, &a.base64) {
+            (Some(url), None, None) => fetch(url).await.map_err(err)?,
+            (None, Some(path), None) => self.reads.read(path, MAX_ASSET_BYTES)?,
+            (None, None, Some(b64)) => {
                 let bytes = base64::engine::general_purpose::STANDARD
                     .decode(b64.trim())
                     .map_err(|e| format!("bad base64: {e}"))?;
@@ -60,7 +61,7 @@ impl Server {
                 }
                 bytes
             }
-            _ => return Err("give exactly one of url or base64".into()),
+            _ => return Err("give exactly one of url, path or base64".into()),
         };
         let (width, height, svg) = match raster_size(&bytes) {
             Some((w, h)) => (w, h, false),
