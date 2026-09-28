@@ -36,6 +36,9 @@ impl Ctx<'_> {
                     i.tile_scale * k,
                     i.focus,
                 )?;
+                if i.adjust.halftone > 0.0 {
+                    super::effects::halftone(&mut p, i.adjust.halftone * k, (bx.x, bx.y));
+                }
                 if let Some(cf) = adjust_filter(&i.adjust) {
                     p.set_color_filter(cf);
                 }

@@ -72,6 +72,15 @@ pub struct Layer {
     /// In a stack: `absolute` takes the child out of the flow (default `auto`).
     #[serde(default, skip_serializing_if = "is_default")]
     pub position: Position,
+    /// In a grid: the named area it fills.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub area: Option<String>,
+    /// In a grid: `[row, column]`, from 1 (default: the next free cell).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cell: Option<[u16; 2]>,
+    /// In a grid: `[rows, columns]` the child covers (default `[1, 1]`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub span: Option<[u16; 2]>,
     /// How the layer follows its parent when the parent resizes.
     #[serde(default, skip_serializing_if = "Constraints::is_default")]
     pub constraints: Constraints,

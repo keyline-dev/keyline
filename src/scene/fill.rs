@@ -178,6 +178,10 @@ pub struct Adjust {
     /// Recolors every visible pixel, keeping its alpha (a logo in white).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tint: Option<Color>,
+    /// Halftone dot spacing, px: the image redrawn as black dots, bigger
+    /// where it's darker, on transparent (0: off). `tint` recolors the dots.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub halftone: f32,
 }
 
 impl Adjust {

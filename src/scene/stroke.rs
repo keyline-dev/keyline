@@ -36,6 +36,16 @@ pub struct Stroke {
     /// Marker at the end of a line or path.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub end: Option<Marker>,
+    /// Hand-drawn jitter, px: the path wobbles this far off its line (0).
+    #[serde(skip_serializing_if = "is_zero")]
+    pub rough: f32,
+    /// Varies the `rough` jitter; the same seed draws the same wobble (0).
+    #[serde(skip_serializing_if = "is_zero_u32")]
+    pub seed: u32,
+}
+
+fn is_zero_u32(v: &u32) -> bool {
+    *v == 0
 }
 
 /// One stroke width, or one per side of a rect.
@@ -88,6 +98,10 @@ struct StrokeFields {
     start: Option<Marker>,
     #[serde(default)]
     end: Option<Marker>,
+    #[serde(default)]
+    rough: f32,
+    #[serde(default)]
+    seed: u32,
 }
 
 impl<'de> Deserialize<'de> for Stroke {
@@ -111,6 +125,8 @@ impl<'de> Deserialize<'de> for Stroke {
             join: f.join,
             start: f.start,
             end: f.end,
+            rough: f.rough,
+            seed: f.seed,
         })
     }
 }
@@ -128,6 +144,8 @@ impl Stroke {
             join: Join::default(),
             start: None,
             end: None,
+            rough: 0.0,
+            seed: 0,
         }
     }
 }

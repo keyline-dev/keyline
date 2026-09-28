@@ -8,6 +8,7 @@ mod output;
 mod paint;
 #[cfg(test)]
 mod paint_tests;
+mod rough;
 mod shape;
 mod stroke;
 #[cfg(test)]
@@ -182,6 +183,13 @@ impl Ctx<'_> {
             canvas.save();
         }
         effects::transform(canvas, p);
+        if let Some(e) = &l.look.edges {
+            canvas.clip_path(
+                &rough::torn(sk_rect(p.rect), e, p.k),
+                ClipOp::Intersect,
+                true,
+            );
+        }
         let shape = shape::shape_of(p);
         if let (Some(sh), true) = (&shape, l.look.backdrop_blur > 0.0) {
             effects::backdrop_blur(canvas, sh, l.look.backdrop_blur * p.k);
@@ -288,6 +296,9 @@ impl Ctx<'_> {
             } => {
                 let mut paint =
                     self.image_paint(asset, p.rect, *fit, crop.as_ref(), tile_scale * p.k, *focus)?;
+                if adjust.halftone > 0.0 {
+                    effects::halftone(&mut paint, adjust.halftone * p.k, (r.left, r.top));
+                }
                 if let Some(cf) = fills::adjust_filter(adjust) {
                     paint.set_color_filter(cf);
                 }

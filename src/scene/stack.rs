@@ -148,7 +148,7 @@ impl Gap {
         }
     }
 
-    fn is_zero(&self) -> bool {
+    pub(super) fn is_zero(&self) -> bool {
         *self == Gap::Both(0.0)
     }
 
@@ -203,7 +203,7 @@ impl Padding {
         }
     }
 
-    fn is_zero(&self) -> bool {
+    pub(super) fn is_zero(&self) -> bool {
         self.sides() == [0.0; 4]
     }
 }

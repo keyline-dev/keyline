@@ -6,6 +6,7 @@
 
 mod first_fit;
 mod flex;
+mod grid;
 mod measure;
 mod stack;
 #[cfg(test)]
@@ -263,14 +264,30 @@ fn finish<'a>(
     let (children, chosen) = match &layer.kind {
         Kind::Frame {
             children,
-            stack: Some(s),
+            stack,
+            grid,
             ..
-        } => {
-            let [t, r, b, l] = s.padding.sides().map(|p| p * k);
+        } if stack.is_some() || grid.is_some() => {
+            let padding = stack.as_ref().map_or_else(
+                || grid.as_ref().map(|g| g.padding).unwrap_or_default(),
+                |s| s.padding,
+            );
+            let [t, r, b, l] = padding.sides().map(|p| p * k);
             let inner = (rect.w - l - r, rect.h - t - b);
-            let a = stack::choose(scene, children, s, k, (Some(inner.0), Some(inner.1)));
-            let mut placed: Vec<Placed> = a
-                .items
+            let (items, chosen) = match (stack, grid) {
+                (Some(s), _) => {
+                    let a = stack::choose(scene, children, s, k, (Some(inner.0), Some(inner.1)));
+                    let chosen =
+                        matches!(s.dir, Dirs::FirstFit(_)).then(|| a.dir.name().to_owned());
+                    (a.items, chosen)
+                }
+                (None, Some(g)) => (
+                    grid::arrange(scene, children, g, k, (Some(inner.0), Some(inner.1))).0,
+                    None,
+                ),
+                (None, None) => (Vec::new(), None),
+            };
+            let mut placed: Vec<Placed> = items
                 .iter()
                 .map(|it| {
                     let r = Rect {
@@ -299,7 +316,6 @@ fn finish<'a>(
                         )
                     }),
             );
-            let chosen = matches!(s.dir, Dirs::FirstFit(_)).then(|| a.dir.name().to_owned());
             (placed, chosen)
         }
         Kind::Frame { children, .. } => (

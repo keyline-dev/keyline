@@ -87,6 +87,58 @@ pub struct Look {
     /// Mirror vertically (false).
     #[serde(default, skip_serializing_if = "is_false")]
     pub flip_y: bool,
+    /// Torn or ragged sides: `{sides, depth, seed}`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub edges: Option<Edges>,
+}
+
+/// Torn edges: the chosen sides of the layer's box, ripped like paper.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Edges {
+    /// The only style so far: `torn` (default).
+    #[serde(default, skip_serializing_if = "is_torn")]
+    pub style: EdgeStyle,
+    /// Which sides tear: `top`, `right`, `bottom`, `left` (default all).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sides: Vec<Side>,
+    /// How deep the tears cut in, px (12).
+    #[serde(default = "twelve")]
+    pub depth: f32,
+    /// Varies the tear; the same seed tears the same way (0).
+    #[serde(default)]
+    pub seed: u32,
+}
+
+/// How edges are roughened.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EdgeStyle {
+    /// Irregular tears, like ripped paper.
+    #[default]
+    Torn,
+}
+
+fn is_torn(s: &EdgeStyle) -> bool {
+    *s == EdgeStyle::Torn
+}
+
+fn twelve() -> f32 {
+    12.0
+}
+
+/// A side of a box.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Side {
+    /// The top edge.
+    Top,
+    /// The right edge.
+    Right,
+    /// The bottom edge.
+    Bottom,
+    /// The left edge.
+    Left,
 }
 
 fn is_origin(v: &[f32; 2]) -> bool {

@@ -97,9 +97,23 @@ fn stroke_paint(s: &Stroke, r: skia_safe::Rect, width: f32, k: f32) -> skia_safe
             Join::Bevel | Join::Miter => PaintJoin::Bevel,
         });
     }
-    if s.dash.len() >= 2 {
-        let intervals: Vec<f32> = s.dash.iter().map(|d| d * k).collect();
-        p.set_path_effect(PathEffect::dash(&intervals, 0.0));
+    let rough = (s.rough > 0.0)
+        .then(|| super::rough::rough_effect(s.rough * k, s.seed))
+        .flatten();
+    let dash = (s.dash.len() >= 2)
+        .then(|| {
+            let intervals: Vec<f32> = s.dash.iter().map(|d| d * k).collect();
+            PathEffect::dash(&intervals, 0.0)
+        })
+        .flatten();
+    match (dash, rough) {
+        (Some(d), Some(r)) => {
+            p.set_path_effect(PathEffect::compose(d, r));
+        }
+        (Some(e), None) | (None, Some(e)) => {
+            p.set_path_effect(e);
+        }
+        (None, None) => {}
     }
     p
 }

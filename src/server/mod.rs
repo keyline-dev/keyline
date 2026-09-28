@@ -81,9 +81,10 @@ impl Server {
 top-left…bottom-right + inset, constraints {h: left|right|center|stretch|scale, v: top|bottom|center|stretch|scale}, \
 hidden, opacity, rotation, blendMode, style (name or list), at {sizeId or landscape|square|portrait|wide|tall: \
 {fields}}, fills, strokes, shadows, blur, backdropBlur, radius (px, [tl,tr,br,bl], \"full\"), mask, scale, offset \
-[x,y], skew, flipX, flipY}. frame: children, clip (true), stack {dir row|column|row-reverse|column-reverse or a list \
+[x,y], skew, flipX, flipY, edges {sides, depth, seed} (torn)}. frame: children, clip (true), stack {dir row|column|row-reverse|column-reverse or a list \
 tried in order, gap, padding (1, 2 or 4 values), align start|center|end|stretch|baseline, justify \
-start|center|end|between|around|evenly, wrap}; its children flow in order and may set alignSelf, grow, priority (low \
+start|center|end|between|around|evenly, wrap} or grid {columns \"1fr 200px auto\" | 3 | {min}, rows, gap, \
+padding, areas [\"hero hero side\", …]} (children: area, or cell [r,c] + span [rows,cols], from 1); stack children flow in order and may set alignSelf, grow, priority (low \
 gives way first), position absolute; unsized, it hugs them. spacer: free space in a stack. firstFit: children, draws \
 the first that fits. text: text (markup <b> <i> <u> <s> <sup> <br>, <span color=… weight=…>, style names as tags), \
 fontSize (the max when fitting), weight, color, fontFamily (Inter or any Google Font), align left|center|right|justify, \
@@ -92,14 +93,14 @@ textWrap balance|pretty, verticalAlign, trim \"cap\", highlight (color or {color
 padding, curve (radius), leader (\".\" fills a tab gap, right part flush right), knockout, ranges [{start, end, \
 …fields}]. Box: width+height → shrinks to fit (minFontScale 0.5) then ellipsis; width → wraps down; neither → one line; resize \
 fixed|truncate keeps the size. image: asset, fit fill|fit|tile, focus [x,y], crop {x,y,width,height} 0–1, adjust \
-{brightness, contrast, saturate, grayscale, sepia, hue, duotone [dark, light], tint}. icon: name, set \
+{brightness, contrast, saturate, grayscale, sepia, hue, duotone [dark, light], tint, halftone (dot px)}. icon: name, set \
 lucide|solid|regular|brands, color (24px tall unless sized). rect, ellipse (arc {start, end, inner}), polygon \
 (sides, innerRadius → star), path (d, or shape: ribbon, bubble, arrow, chevron, tag, arch, shield, heart, cloud, wave, \
 burst, blob-1…6, brush-stroke): color, gradient, stroke. line: from x,y by width,height; color, strokeWidth. Fill: a \
 color or {color|gradient|image|pattern|noise, opacity, blendMode}; a list stacks, [] none. gradient {type \
 linear|radial|conic, angle or from/to [x,y], stops [colors] or [{at, color}]}. pattern \
 dots|stripes|grid|checker|zigzag|rays, color, size. Stroke: \"#000\" or {width or [t,r,b,l], color|gradient, align \
-inside|center|outside, dash [on, off], cap, start|end arrow|triangle|circle|diamond}. Shadow {x, y, blur, spread, \
+inside|center|outside, dash [on, off], cap, start|end arrow|triangle|circle|diamond, rough px + seed (hand-drawn)}. Shadow {x, y, blur, spread, \
 color, inset} (follows text's or a cutout's alpha). Mask: a gradient, a shape name, {path}, {layer: id} or {image}; \
 mode luminance, invert. Shared: styles {name: {fields}} (a later style wins; own fields win); tokens {name: value} \
 used as \"$name\"; components {name: layer tree with {prop}} placed by {type: use, component, props, each: [props…]} \

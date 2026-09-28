@@ -127,3 +127,48 @@ async fn bad_paint_gets_one_line_errors() {
     assert!(e.contains("\"full\""), "{e}");
     mcp.stop().await;
 }
+
+#[tokio::test]
+async fn torn_edges_rough_strokes_and_halftone_look_hand_made() {
+    let mcp = Mcp::start("hand").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 600, "height": 400, "sizes": [{"id": "card", "width": 600, "height": 400}]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    mcp.ok(
+        "asset_add",
+        json!({"sceneId": id, "id": "photo", "base64": b64(&photo_png())}),
+    )
+    .await;
+    mcp.ok("layer_add", json!({"sceneId": id, "layers": [
+        {"type": "rect", "width": "fill", "height": "fill", "color": "#F4F1EA"},
+        {"id": "photo", "type": "image", "asset": "photo", "x": 40, "y": 40, "width": 320, "height": 220,
+         "edges": {"sides": ["bottom", "right"], "depth": 14, "seed": 2}},
+        {"id": "label", "type": "rect", "x": 60, "y": 290, "width": 280, "height": 60, "color": "#D0202E",
+         "edges": {"depth": 6, "seed": 5}},
+        {"id": "ring", "type": "ellipse", "x": 400, "y": 60, "width": 160, "height": 120,
+         "strokes": {"width": 5, "color": "#1B2A5C", "rough": 3, "seed": 1, "align": "center"}},
+        {"id": "arrow", "type": "line", "x": 400, "y": 240, "width": 150, "height": 80,
+         "strokes": {"width": 4, "color": "#1B2A5C", "rough": 2, "cap": "round", "end": "arrow"}},
+        {"id": "dots", "type": "image", "asset": "photo", "x": 400, "y": 200, "width": 60, "height": 40,
+         "adjust": {"halftone": 5, "tint": "#D0202E"}}]}))
+        .await;
+    let rendered = mcp.ok("render", json!({"sceneId": id})).await;
+    let path = rendered.lines().next().unwrap().split_once(' ').unwrap().1;
+    check_golden("hand-card.png", &std::fs::read(path).unwrap());
+    let e = mcp
+        .call(
+            "layer_update",
+            json!({"sceneId": id, "ops": [{"target": {"id": "label"}, "set": {"edges": {"sides": ["up"]}}}]}),
+        )
+        .await
+        .unwrap_err();
+    assert!(e.contains("unknown variant `up`"), "{e}");
+    mcp.stop().await;
+}

@@ -109,6 +109,34 @@ impl Scene {
                 return Err("stack dir list needs at least one direction".into());
             }
         }
+        if let Kind::Frame {
+            stack,
+            grid,
+            children,
+            ..
+        } = &l.kind
+        {
+            if stack.is_some() && grid.is_some() {
+                return Err("a frame takes stack or grid, not both".into());
+            }
+            if let Some(g) = grid {
+                g.check()?;
+                for c in children {
+                    if let Some(a) = c.area.as_deref().filter(|a| g.area(a).is_none()) {
+                        return Err(format!(
+                            "{}: no grid area {a}; areas: {}",
+                            c.id,
+                            g.areas.join(" / ")
+                        ));
+                    }
+                    if c.cell.is_some_and(|[r, c]| r == 0 || c == 0)
+                        || c.span.is_some_and(|[r, c]| r == 0 || c == 0)
+                    {
+                        return Err(format!("{}: cell and span count from 1", c.id));
+                    }
+                }
+            }
+        }
         check_lengths(l)?;
         super::check::look(self, l)?;
         super::check::mask(self, l)?;

@@ -163,3 +163,36 @@ fn grow(shape: &Shape, by: f32) -> Shape {
         }
     }
 }
+
+/// Dots on a `spacing` px grid from `origin`, each as big as its cell is
+/// dark, sampling the child image at the cell's center.
+const HALFTONE: &str = "
+uniform shader image;
+uniform float spacing;
+uniform float2 origin;
+half4 main(float2 p) {
+    float2 center = (floor((p - origin) / spacing) + 0.5) * spacing + origin;
+    half4 c = image.eval(center);
+    float lum = c.a > 0 ? dot(c.rgb / c.a, half3(0.299, 0.587, 0.114)) : 1;
+    float r = spacing * 0.71 * sqrt(1 - lum);
+    float a = clamp(r - distance(p, center) + 0.5, 0, 1) * c.a;
+    return half4(0, 0, 0, a);
+}";
+
+/// Replaces `paint`'s image shader with its halftone.
+pub(super) fn halftone(paint: &mut skia_safe::Paint, spacing: f32, origin: (f32, f32)) {
+    let Some(image) = paint.shader() else { return };
+    // ponytail: compiled per draw; cache the effect if halftones get common.
+    let Ok(effect) = skia_safe::RuntimeEffect::make_for_shader(HALFTONE, None) else {
+        return;
+    };
+    let uniforms: Vec<u8> = [spacing.max(1.0), origin.0, origin.1]
+        .iter()
+        .flat_map(|f| f.to_ne_bytes())
+        .collect();
+    if let Some(sh) =
+        effect.make_shader(skia_safe::Data::new_copy(&uniforms), &[image.into()], None)
+    {
+        paint.set_shader(sh);
+    }
+}

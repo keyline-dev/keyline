@@ -7,8 +7,8 @@ use super::defaults::{
     is_sixteen, is_true, is_w400, is_zero, one, sixteen, w400, yes,
 };
 use super::{
-    Adjust, Align, Color, Crop, Fit, Gradient, ImageFill, Layer, Outline, Range, Resize, Shadow,
-    Stack, Stroke, TextCase, TextMore,
+    Adjust, Align, Color, Crop, Fit, Gradient, Grid, ImageFill, Layer, Outline, Range, Resize,
+    Shadow, Stack, Stroke, TextCase, TextMore,
 };
 
 // ponytail: serde can't combine `deny_unknown_fields` with `flatten`, so
@@ -229,6 +229,9 @@ pub enum Kind {
         /// Lay children out in a row or column instead of by their x and y.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         stack: Option<Stack>,
+        /// Lay children out in rows and columns, like CSS grid.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        grid: Option<Grid>,
     },
     /// Flexible empty space in a stack: it takes the free space, like
     /// SwiftUI's `Spacer`. Outside a stack it's an empty box.

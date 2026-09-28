@@ -349,3 +349,17 @@ fn text_takes_paint_stacks_and_stroke_lists() {
         "a filled O has more ink than its outline"
     );
 }
+
+#[test]
+fn halftone_redraws_images_as_dots_sized_by_darkness() {
+    let img = two_tone(100, 100, C::RED, C::WHITE);
+    let dots = pixels_with(
+        json!([{"type": "image", "asset": "img", "width": 100, "height": 100, "adjust": {"halftone": 10}}]),
+        &[("img", img)],
+    );
+    // Red is fairly dark: a black dot at each cell's center, gaps at its corners.
+    assert_eq!(dots(25, 45), (0, 0, 0));
+    assert!(dots(20, 40).0 > 200, "{:?}", dots(20, 40));
+    // White has no dots at all.
+    assert_eq!(dots(75, 45), (255, 255, 255));
+}

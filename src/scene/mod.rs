@@ -9,6 +9,7 @@ mod de;
 mod defaults;
 mod fill;
 mod gradient;
+mod grid;
 mod keys;
 mod kind;
 mod layer;
@@ -33,11 +34,12 @@ pub use fill::{
     Adjust, Common, GradientFill, ImagePaint, NoisePaint, Paint, PatternKind, PatternPaint, Solid,
 };
 pub use gradient::{Gradient, GradientKind, Stop};
+pub use grid::{Area, Grid, Track, Tracks};
 pub use keys::check_keys;
 pub use kind::{Arc, FillRule, FitPath, IconSet, Kind};
 pub use layer::{Layer, StyleRef};
 pub use length::{Inset, Length, Place, Position, Spot};
-pub use look::{Look, OneOrMany, Radius};
+pub use look::{EdgeStyle, Edges, Look, OneOrMany, Radius, Side};
 pub use mask::{Mask, MaskMode, MaskSource};
 pub use paint::{BlendMode, Color, Crop, Fit, ImageFill, Outline};
 pub use presets::{PRESETS, SizeSpec};

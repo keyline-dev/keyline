@@ -5,7 +5,7 @@
 use crate::scene::{Kind, Layer, Length, Resize, Scene};
 use crate::text::Text;
 
-use super::{first_fit, stack};
+use super::{first_fit, grid, stack};
 
 /// Frames, rects and ellipses without a size are 100 × 100.
 pub(super) const DEFAULT_BOX: f32 = 100.0;
@@ -97,6 +97,19 @@ fn content(scene: &Scene, layer: &Layer, k: f32, parent: (f32, f32), known: Forc
             stack: Some(s),
             ..
         } => stack::hug(scene, children, s, k, known),
+        Kind::Frame {
+            children,
+            grid: Some(g),
+            ..
+        } => {
+            let [t, r, b, l] = g.padding.sides().map(|p| p * k);
+            let inner = (known.0.map(|w| w - l - r), known.1.map(|h| h - t - b));
+            let c = grid::arrange(scene, children, g, k, inner).1;
+            (
+                known.0.unwrap_or(c.0 + l + r),
+                known.1.unwrap_or(c.1 + t + b),
+            )
+        }
         Kind::Frame { children, .. } if hug(layer.width) || hug(layer.height) => {
             let b = bounds(scene, children, k, (w.unwrap_or(0.0), h.unwrap_or(0.0)));
             (

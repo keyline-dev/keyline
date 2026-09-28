@@ -7,6 +7,7 @@
 
 mod common;
 
+use common::golden::check_golden;
 use common::{Mcp, b64, photo_png};
 use serde_json::json;
 
@@ -188,5 +189,67 @@ async fn presets_name_sizes_and_story_safe_zones_are_checked() {
         .await
         .unwrap_err();
     assert!(e.contains("unknown size tiktok"), "{e}");
+    mcp.stop().await;
+}
+
+#[tokio::test]
+async fn a_grid_collage_rearranges_per_aspect_with_one_at() {
+    let mcp = Mcp::start("grid").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 1080, "height": 1080, "sizes": [
+                {"id": "square", "width": 1080, "height": 1080, "scale": 0.5},
+                {"id": "banner", "width": 1200, "height": 400, "scale": 0.4}
+            ]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    mcp.ok(
+        "asset_add",
+        json!({"sceneId": id, "id": "photo", "base64": b64(&photo_png())}),
+    )
+    .await;
+    let tile = |area: &str, color: &str| {
+        json!({"id": area, "type": "frame", "area": area, "color": color, "radius": 16,
+        "stack": {"dir": "column", "justify": "center", "align": "center"},
+        "children": [{"type": "text", "text": area.to_uppercase(), "fontSize": 56, "weight": 800, "color": "#FFFFFF"}]})
+    };
+    mcp.ok(
+        "layer_add",
+        json!({"sceneId": id, "layers": [
+        {"id": "grid", "type": "frame", "width": "fill", "height": "fill", "color": "#F4F1EA",
+         "grid": {"columns": "2fr 1fr", "rows": "2fr 1fr", "gap": 24, "padding": 24,
+                  "areas": ["photo side", "cta side"]},
+         "at": {"wide": {"grid": {"columns": "2fr 1fr 1fr", "rows": "1fr", "gap": 24, "padding": 24,
+                                  "areas": ["photo cta side"]}}},
+         "children": [
+            {"id": "photo", "type": "image", "asset": "photo", "area": "photo", "radius": 16},
+            tile("cta", "#D0202E"), tile("side", "#1B2A5C")]}]}),
+    )
+    .await;
+    let d = format!(
+        "\n{}",
+        mcp.ok("scene_describe", json!({"sceneId": id, "full": true}))
+            .await
+    );
+    // Square: photo top-left over the CTA, side column on the right.
+    // Padding and gap scale to 12: 1080 - 36 = 1044 → 696 + 348 both ways.
+    assert_eq!(bbox(line(&d, "square", "photo")), (12, 12, 696, 696));
+    assert_eq!(bbox(line(&d, "square", "side")), (720, 12, 348, 1056));
+    // Banner (wide): the same children in one row.
+    let (_, py, _, ph) = bbox(line(&d, "banner", "photo"));
+    let (cx, cy, _, ch) = bbox(line(&d, "banner", "cta"));
+    assert_eq!((py, cy, ph, ch), (10, 10, 381, 381), "{d}");
+    // 1200 - 2 × 9.6 - 2 × 9.6 = 1161.6 → 580.8 + 290.4 + 290.4.
+    assert_eq!(cx, 600, "{d}");
+    let rendered = mcp.ok("render", json!({"sceneId": id})).await;
+    for l in rendered.lines().filter(|l| !l.starts_with(' ')) {
+        let (size, path) = l.split_once(' ').unwrap();
+        check_golden(&format!("grid-{size}.png"), &std::fs::read(path).unwrap());
+    }
     mcp.stop().await;
 }
