@@ -1,6 +1,8 @@
 # keyline-mcp
 
-**An image composition engine that only an AI agent drives.** The agent describes a design once as a small JSON scene through [MCP](https://modelcontextprotocol.io) tools. A Rust renderer built on [Skia](https://skia.org) turns it into images at every size you need: portrait post, landscape banner and skyscraper ad from one master layout. There's no browser anywhere in the pipeline.
+**An AI-native design engine: agents design, keyline renders.** An AI agent (Claude Code, Cursor, Cline or any [MCP](https://modelcontextprotocol.io) client) describes a design once as a small JSON scene. A Rust renderer built on [Skia](https://skia.org) turns it into PNG, JPEG, WebP or vector PDF at every size you need: portrait post, landscape banner and skyscraper ad from one master layout. Output is deterministic: no model generates pixels, so the same scene always renders the same design. There's no browser anywhere in the pipeline.
+
+Think of it as Figma or Canva for AI agents: a design tool whose only user is a language model, for social posts, display ads, flyers, banners and other marketing images.
 
 > Status: early development. The scene format and the tools still change.
 
@@ -17,7 +19,7 @@ Most designs people ship today (sale posts, event flyers, ad sets) are made in t
 - **Canva and Adobe Express** keep their scene graph private: you can export pixels, not the design.
 - **Browser-based renderers** such as Polotno need headless Chrome on the server.
 
-keyline-mcp is the missing piece: a design format and renderer built from the ground up for a language model to author, check and export, cheaply and reproducibly.
+keyline-mcp is the missing piece: an agent-first design tool, with a design format and renderer built from the ground up for a language model to author, check and export, cheaply and reproducibly. The design stays structured data (a typed layer tree with layout, tokens, styles and components), not pixels, so an agent edits it precisely instead of regenerating an image.
 
 ## How it works
 
