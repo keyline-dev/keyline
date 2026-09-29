@@ -16,6 +16,14 @@ sha256sum --check --ignore-missing SHA256SUMS      # macOS: shasum -a 256 --chec
 gh attestation verify keyline-mcp_<version>-1_amd64.deb --repo keyline-dev/keyline
 ```
 
+**Docker** (Linux amd64 or arm64, nothing else to install): the image runs the server over stdio, keeping its data in a volume. Use it as the command in any client below:
+
+```sh
+docker run -i --rm -v keyline:/data ghcr.io/keyline-dev/keyline-mcp
+```
+
+`:latest` includes ffmpeg for video; `:stills` leaves it out and is about a third the size. For local images, mount the folder and allow it: `-v ~/brand:/brand ghcr.io/keyline-dev/keyline-mcp --allow-read /brand`. A GPU needs passing through (the [README](../README.md#quick-start) says how); without one, renders use the CPU.
+
 Check that it runs: `keyline-mcp --help`. If your client can't find it, use its full path (`which keyline-mcp`) as the command below.
 
 ## Clients
