@@ -278,11 +278,29 @@ Models miscount character offsets, so text takes a small HTML subset instead:
 
 ### Tokens
 
-`tokens` holds named values, and any field takes `"$name"` (letters, digits, `_`, `.` and `-`). The server remembers which fields came from which token, so changing a token in `layer_update` changes every field bound to it. Setting such a field to a value of its own unbinds it. `text` is never scanned, so `"$29"` stays text.
+`tokens` holds named values, and any field takes `"$name"` (letters, digits, `_`, `.` and `-`). The server remembers which fields came from which token, so changing a token in `layer_update` changes every field bound to it. Setting such a field to a value of its own unbinds it. `text` is a token only when it is wholly the name of one (`"text": "$headline"`, the way a template names its variables); otherwise it is never scanned, so `"$29"` stays text.
 
 ### Styles
 
 `styles` hold any layer fields: a `card` style can carry fills, radius and shadows. A layer's `style` takes one name or a list; a later style wins where they overlap, and the layer's own fields win over all of them. Changing a style through `layer_update` changes every layer that uses it.
+
+### Templates
+
+A template is a scene file that `scene_create` loads by `url` or `path` ([tools.md](tools.md#scene_create)). It has a scene's fields (`sizes`, `background`, `tokens`, `styles`, `components`, `layers`, `duration` …), and its `assets` name files instead of hashes: a URL, or a path relative to the template.
+
+```json
+{
+  "sizes": ["instagram-square", "iab-medium-rectangle"],
+  "tokens": {"headline": "Spring sale", "price": "$29", "accent": "#D0202E"},
+  "assets": {"photo": "photo.jpg", "logo": "https://example.com/logo.svg"},
+  "layers": [
+    {"type": "image", "asset": "photo", "width": "fill", "height": "fill"},
+    {"type": "text", "text": "$headline", "fontSize": 64, "weight": 800, "color": "$accent", "place": "center"}
+  ]
+}
+```
+
+Its tokens are its variables: `scene_create` sets them with `tokens`, and `render` makes one file per row of them with `rows`. A layer whose `text` is exactly `"$name"` of a token takes the token's value; other text is never scanned. A template from a URL reads its images from the web only, never from local files; one from a path reads only inside the allowed folders. A scene keyline saved (its `assets` by `sha256`) loads as a template too.
 
 ### Components
 

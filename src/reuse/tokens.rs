@@ -43,7 +43,18 @@ pub fn bind(layer: &mut Value, tokens: &BTreeMap<String, Value>) -> Result<(), S
                     }
                 }
             }
-            "text" | "id" | "type" | "$tokens" => {}
+            // Text is a token only when it's wholly the name of one: a
+            // template's "$headline". "$29", or "$SALE" with no such
+            // token, stays text.
+            "text" => {
+                if let Some(name) = val.as_str().and_then(reference)
+                    && let Some(value) = tokens.get(name)
+                {
+                    refs.insert("/text".into(), name.to_owned());
+                    *val = value.clone();
+                }
+            }
+            "id" | "type" | "$tokens" => {}
             _ => replace(val, &format!("/{}", escape(key)), tokens, &mut refs)?,
         }
     }
@@ -131,6 +142,28 @@ pub fn in_markup(text: &mut String, tokens: &BTreeMap<String, Value>) {
     }
 }
 
+/// Puts `value` at JSON pointer `ptr` in `v`, adding missing object keys
+/// on the way: a field whose first token value was its default isn't
+/// saved, so it's absent when the token changes.
+fn set_at(v: &mut Value, ptr: &str, value: Value) {
+    let mut at = v;
+    for key in ptr.split('/').skip(1) {
+        let key = key.replace("~1", "/").replace("~0", "~");
+        if at.is_null() {
+            *at = Value::Object(Map::new());
+        }
+        at = match at {
+            Value::Object(o) => o.entry(key).or_insert(Value::Null),
+            Value::Array(a) => match key.parse::<usize>().ok().and_then(|i| a.get_mut(i)) {
+                Some(x) => x,
+                None => return,
+            },
+            _ => return,
+        };
+    }
+    *at = value;
+}
+
 /// JSON-pointer escaping of one key.
 fn escape(k: &str) -> String {
     k.replace('~', "~0").replace('/', "~1")
@@ -163,9 +196,9 @@ pub fn rebind(scene: &mut Scene, changed: &[String]) -> Result<(), String> {
                 let mut v = serde_json::to_value(&*l).map_err(|e| e.to_string())?;
                 for (ptr, name) in &l.token_refs {
                     if changed.contains(name)
-                        && let (Some(slot), Some(value)) = (v.pointer_mut(ptr), tokens.get(name))
+                        && let Some(value) = tokens.get(name)
                     {
-                        *slot = value.clone();
+                        set_at(&mut v, ptr, value.clone());
                     }
                 }
                 *l = serde_json::from_value(v).map_err(|e| format!("{}: {e}", l.id))?;
@@ -208,6 +241,29 @@ mod tests {
         assert_eq!(v["children"][0]["$tokens"], json!({"/color": "red"}));
         let e = bind(&mut json!({"type": "rect", "color": "$blue"}), &tokens).unwrap_err();
         assert_eq!(e, "unknown token $blue; tokens: pad, red");
+    }
+
+    #[test]
+    fn a_default_first_value_still_follows_its_token() {
+        let mut v = json!({"type": "text"});
+        super::set_at(&mut v, "/color", json!("#D0202E"));
+        super::set_at(&mut v, "/stack/padding", json!(8));
+        assert_eq!(
+            v,
+            json!({"type": "text", "color": "#D0202E", "stack": {"padding": 8}})
+        );
+    }
+
+    #[test]
+    fn text_that_is_wholly_a_token_name_is_bound() {
+        let tokens = serde_json::from_value(json!({"headline": "Summer sale"})).unwrap();
+        let mut v = json!({"type": "text", "text": "$headline"});
+        bind(&mut v, &tokens).unwrap();
+        assert_eq!(v["text"], "Summer sale");
+        assert_eq!(v["$tokens"], json!({"/text": "headline"}));
+        let mut v = json!({"type": "text", "text": "$headlines"});
+        bind(&mut v, &tokens).unwrap();
+        assert_eq!(v["text"], "$headlines", "no such token: still text");
     }
 
     #[test]

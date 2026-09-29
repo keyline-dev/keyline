@@ -23,18 +23,29 @@ Conventions for every tool:
 
 | Input | Type | Default | Meaning |
 |---|---|---|---|
-| `sizes` | array, required | | Target sizes. Each is `{id, width, height, scale, safe}`, a preset name, or `"WxH"` |
+| `sizes` | array | required, or the template's | Target sizes. Each is `{id, width, height, scale, safe}`, a preset name, or `"WxH"` |
+| `url` | string | | Start from a template: a scene JSON file at a public http(s) URL |
+| `path` | string | | Or a template file in a folder the server may read (`--allow-read`); offered only then |
+| `tokens` | object | | The template's variables to set, `{name: value}`; each must be one of its tokens |
 | `width`, `height` | number | the first size's | The master size, px: the size the design is written at |
 | `background` | color | `#FFFFFF` | Canvas color |
 | `duration` | number | none, or where the last shot ends | Seconds: makes the scene move ([Motion](scene.md#motion)) |
 | `fps` | number | 30 | Frames per second of animated and video output |
 | `loop` | boolean | false | The animation repeats forever |
 
+**Templates.** A template is a scene file ([scene.md](scene.md#templates)), loaded by `url` or `path` the same way an image is. Its images are added as assets, `tokens` fill its variables, and any other input given here (`sizes`, `background` …) replaces the template's. Nothing else is kept: the template stays wherever it came from.
+
 A size's `scale` (default 1) shrinks everything, fonts included, before the layout adapts to the size. `safe` is `[top, right, bottom, left]` px that the platform covers (a story's UI, for example); text under it is reported as `!unsafe`.
 
 Presets: `instagram-portrait`, `instagram-square`, `instagram-story`, `facebook-feed`, `linkedin-post`, `x-post`, `youtube-thumbnail`, `iab-medium-rectangle`, `iab-leaderboard`, `iab-skyscraper`, `iab-half-page`, `a4-portrait`. A preset's id is its name; a `"WxH"` size's id is that string.
 
-Reply: the new scene's id and version. When ffmpeg can't be found (and motion is on), a second line says so up front, so the agent doesn't plan a video it can't make:
+Reply: the new scene's id and version. From a template, the reply also lists its variables and then, like an edit, `ok` or the problems at each size, so a long value that doesn't fit shows at once:
+
+```text
+s5b0a42a5e v0 tokens: accent, headline, price ok
+```
+
+When ffmpeg can't be found (and motion is on), a second line says so up front, so the agent doesn't plan a video it can't make:
 
 ```text
 sfc5e3bbb5b v0
@@ -176,12 +187,15 @@ A layer's line is `id type x,y w×h`, in px at that size, then:
 | `preview` | boolean | false | Also returns one small image (384 px tall) of all sizes side by side |
 | `time` | number | | Seconds into a moving scene: a still at that moment, saved as `<size>-v<n>.at<time>s.<ext>` |
 | `audio` | boolean | true | `false` leaves the clips' sound out of `mp4` and `webm` |
+| `rows` | array of objects | | Variants: one render per row of token values, `[{"headline": "Fall"}, {"headline": "Winter"}]`. The saved scene doesn't change |
 
 `format: "apng"` renders a moving scene as an animated PNG (`<size>-v<n>.anim.png`: lossless, fully transparent, plays in browsers), and `format: "gif"` as an animated GIF (plays everywhere, including email and chat, in 256 colors per frame). Frames are drawn in memory, several at once, and each stores only the part that changed; `maxKB` halves the frame rate until it fits. Scenes without a `duration` or shots refuse both.
 
 `format: "mp4"` (H.264, plays everywhere) and `"webm"` (VP9) render video through [ffmpeg](https://ffmpeg.org), run as a separate program: found on the PATH or at `KEYLINE_MCP_FFMPEG` when a call needs it, so it can be installed without a restart. Without it, video is refused with how to install it, and everything else works. MP4 encodes on the GPU when ffmpeg has a hardware encoder that works on the machine (VideoToolbox on macOS; NVENC, Quick Sync or AMF elsewhere), else with `libx264`; `KEYLINE_MCP_ENCODER` picks one (`software`, or an encoder name). The clips' sound comes along (AAC in MP4, Opus in WebM) unless `audio` is `false`. PDF refuses scenes with video.
 
 `--no-motion` leaves `duration`, `fps`, `loop`, `time`, `audio`, video, shots and the motion fields out of the tools.
+
+With `rows`, each row renders as `layer_update` with those `tokens` would, to a copy; its files are named `<size>-v<n>.r<row>.<ext>` and its reply lines start with `r<row>`. A key that isn't one of the scene's tokens is an error naming the ones there are. `preview` shows the first row.
 
 Reply: per size, the size id and the file's path. With `maxKB`, the path is followed by `quality N` when the quality was lowered, or `!too-big N KB` when even the lowest quality (or a lossless format) doesn't fit. Under each size, every text that wrapped, shrank or was cut, as actually drawn, so wording and line breaks can be checked without looking at the image:
 

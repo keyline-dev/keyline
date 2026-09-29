@@ -4,6 +4,7 @@
 mod args;
 mod handlers;
 mod schema;
+mod template;
 
 use std::sync::Arc;
 

@@ -58,7 +58,9 @@ pub(super) fn compact_all<S>(
                 props.remove(*a);
             }
         }
-        if route.attr.name == "asset_add"
+        // A local `path` is offered only where the server may read, and
+        // says where that is.
+        if matches!(route.attr.name.as_ref(), "asset_add" | "scene_create")
             && let Some(Value::Object(props)) = schema.get_mut("properties")
         {
             if folders.is_empty() {
@@ -68,9 +70,14 @@ pub(super) fn compact_all<S>(
                     Some(d.replace("url, path or base64", "url or base64").into());
             } else if let Some(Value::Object(path)) = props.get_mut("path") {
                 let list: Vec<_> = folders.iter().map(|f| f.display().to_string()).collect();
+                let or = if route.attr.name == "asset_add" {
+                    "Or"
+                } else {
+                    "or"
+                };
                 path.insert(
                     "description".into(),
-                    format!("Or a local file in {}", list.join(", ")).into(),
+                    format!("{or} a local file in {}", list.join(", ")).into(),
                 );
             }
         }

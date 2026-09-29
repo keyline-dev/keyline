@@ -78,7 +78,7 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 - **Paint:** stacked fills (solid, linear/radial/conic gradients, images, patterns, film grain), strokes (inside, center or outside, per side, dashed, with arrowheads, hand-drawn), shadows (outer and inner, following a cutout's or text's shape), blur and backdrop blur, masks (gradient, shape, path, another layer or an image), torn edges, 16 blend modes, corner radius, rotation, skew, flips
 - **Images:** fill, fit, crop or tile, with a focus point that stays in view; adjustments (brightness, contrast, saturation, grayscale, sepia, hue, duotone, tint, halftone)
 - **Icons:** about 5,000 built in, by name: [Lucide](https://lucide.dev) outline icons and [Font Awesome Free](https://fontawesome.com) solid, regular and brand icons, in any color
-- **Reuse:** named styles on any layer, tokens (`"$brand"`) that update every field using them, and components placed once or once per data row
+- **Reuse:** named styles on any layer, tokens (`"$brand"`) that update every field using them, components placed once or once per data row, and templates: a scene file loaded by URL or path with its variables set, rendered once per row of values
 - **Motion:** GSAP-style animation: enter and exit effects (fade, fade-up, pop, zoom, blur-in), keyframes on opacity, scale, rotation, offset, skew, blur and color with GSAP's eases, `random()` starts, staggered children, and text split into letters or words that move on their own
 - **Video:** video clips as layers, trimmed, slowed or looped, with titles and graphics over them; shots that play in turn, joined by cuts, fades, slides, pushes, wipes or zooms; each clip's own sound carried into the video
 - **Assets:** stored under content hashes. URLs are fetched only over http(s), and private and local addresses are refused.
@@ -152,12 +152,12 @@ Every input and reply format is in [docs/tools.md](docs/tools.md).
 
 | Tool | Does | Replies |
 |---|---|---|
-| `scene_create` | New scene: master size, target sizes, background | `s5b0a42a5e v0` |
+| `scene_create` | New scene: master size, target sizes, background; or from a template file by URL or path, with its variables set | `s5b0a42a5e v0` |
 | `asset_add` | Adds an image or video clip from a URL, a local path or base64 | `photo 1600×900 v1` |
 | `layer_add` | Adds layers, optionally into a `parent` frame, and shared `styles`, `tokens` and `components` | `added headline,cta v2 ok` and facts |
 | `layer_update` | Changes (`set`), deletes or detaches layers, styles and components; changes tokens | `changed … v3`, then problems or `ok` |
 | `scene_describe` | Problems per size, or `ok`; `full` lists every layer's box | text |
-| `render` | PNG, JPEG, WebP, PDF, animated PNG, GIF, MP4 or WebM for all or some sizes, or a still at `time`; `maxKB` caps file size; `preview` adds a contact sheet | paths and how text was drawn |
+| `render` | PNG, JPEG, WebP, PDF, animated PNG, GIF, MP4 or WebM for all or some sizes, or a still at `time`; `rows` renders one variant per row of variables; `maxKB` caps file size; `preview` adds a contact sheet | paths and how text was drawn |
 
 A typical call:
 

@@ -16,7 +16,15 @@ pub struct SceneCreateArgs {
     /// Target sizes: {id, width, height, scale, safe}, a preset (instagram-portrait|-square|-story,
     /// facebook-feed, linkedin-post, x-post, youtube-thumbnail, iab-medium-rectangle|-leaderboard|-skyscraper|-half-page,
     /// a4-portrait) or "WxH". `scale` (default 1) shrinks everything, fonts included, before constraints apply.
+    #[serde(default)]
     pub(super) sizes: Vec<SizeSpec>,
+    /// Or start from a template: a scene JSON file by url
+    pub(super) url: Option<String>,
+    /// or local path
+    pub(super) path: Option<String>,
+    /// The template's variables to set: {name: value}
+    #[serde(default)]
+    pub(super) tokens: serde_json::Map<String, Value>,
     /// Hex color, default #FFFFFF.
     pub(super) background: Option<String>,
     /// Seconds: makes it move
@@ -95,6 +103,9 @@ pub struct RenderArgs {
     pub(super) time: Option<f32>,
     /// false leaves the clips' sound out of mp4/webm
     pub(super) audio: Option<bool>,
+    /// Variants: one render per row of token values, e.g. [{"headline": "Sale"}]
+    #[serde(default)]
+    pub(super) rows: Vec<serde_json::Map<String, Value>>,
     /// png|jpeg|webp|pdf|apng|gif|mp4|webm
     #[serde(default)]
     pub(super) format: crate::render::Format,
