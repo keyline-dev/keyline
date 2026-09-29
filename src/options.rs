@@ -29,7 +29,7 @@ Options:
 
 Each flag also takes its value as --flag=value.
 
-Docs: https://github.com/yuvalt/keyline";
+Docs: https://github.com/keyline-dev/keyline";
 
 /// The parsed command line.
 #[derive(Debug, Default, PartialEq)]
