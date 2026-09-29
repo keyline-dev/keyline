@@ -171,12 +171,7 @@ async fn three_clips_play_as_shots_with_titles_and_sound() {
 
 #[tokio::test]
 async fn without_ffmpeg_video_is_refused_and_apng_still_works() {
-    let mcp = Mcp::start_env(
-        "no-ffmpeg",
-        &[],
-        &[("KEYLINE_MCP_FFMPEG", "/no/such/ffmpeg")],
-    )
-    .await;
+    let mcp = Mcp::start_args("no-ffmpeg", &["--ffmpeg", "/no/such/ffmpeg"]).await;
     let created = mcp
         .ok(
             "scene_create",
@@ -208,8 +203,8 @@ async fn without_ffmpeg_video_is_refused_and_apng_still_works() {
 
 #[tokio::test]
 async fn video_off_goes_unsaid_when_motion_is_off() {
-    let env = [("KEYLINE_MCP_FFMPEG", "/no/such/ffmpeg")];
-    let mcp = Mcp::start_env("no-ffmpeg-no-motion", &["--no-motion"], &env).await;
+    let args = ["--no-motion", "--ffmpeg", "/no/such/ffmpeg"];
+    let mcp = Mcp::start_args("no-ffmpeg-no-motion", &args).await;
     let created = mcp.ok("scene_create", json!({"sizes": ["100x50"]})).await;
     assert!(!created.contains("video"), "{created}");
     mcp.stop().await;

@@ -457,7 +457,13 @@ fn the_command_line_explains_itself() {
     let help = run("--help");
     let text = String::from_utf8_lossy(&help.stdout);
     assert!(help.status.success(), "{text}");
-    for word in ["--allow-read", "KEYLINE_MCP_DATA", "KEYLINE_MCP_RENDERER"] {
+    for word in [
+        "--allow-read",
+        "--data",
+        "--renderer",
+        "--ffmpeg",
+        "--encoder",
+    ] {
         assert!(text.contains(word), "{word} missing from --help");
     }
     let bad = run("--bogus");

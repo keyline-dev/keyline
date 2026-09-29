@@ -9,6 +9,7 @@ pub mod icons;
 pub mod layout;
 pub mod local;
 pub mod ops;
+pub mod options;
 pub mod render;
 pub mod reuse;
 pub mod scene;

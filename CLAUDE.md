@@ -9,10 +9,10 @@ Server-side image composition engine driven by an AI agent over MCP.
 
 ## Commands
 
-- Build / run the MCP server (stdio): `cargo run --release`. Data lives in `$KEYLINE_MCP_DATA` (default `~/.keyline-mcp`).
+- Build / run the MCP server (stdio): `cargo run --release`. Data lives in `--data <folder>` (default `~/.keyline-mcp`); every setting is a flag (`keyline-mcp --help`).
 - Tests: `cargo test`. Golden PNGs are per OS in `tests/golden/<os>/`; regenerate deliberately with `UPDATE_GOLDEN=1 cargo test --test e2e`.
 - Web-font tests (need the network): `cargo test -- --ignored web_fonts google_fonts`.
-- Rendering: GPU by default (Metal on macOS, Vulkan on Linux and Windows), CPU when no GPU opens or with `KEYLINE_MCP_RENDERER=cpu`. Tests and reference images always use the CPU, which is deterministic on one OS version; glyph edges still differ slightly between OS versions (macOS 26 vs 27), so goldens are compared with a small tolerance.
+- Rendering: GPU by default (Metal on macOS, Vulkan on Linux and Windows), CPU when no GPU opens or with `--renderer cpu`. Tests and reference images always use the CPU, which is deterministic on one OS version; glyph edges still differ slightly between OS versions (macOS 26 vs 27), so goldens are compared with a small tolerance.
 - Real-LLM test (runs Claude Code headless on the Claude subscription, no API key): `cargo test --test llm_e2e -- --ignored --nocapture`. Set `CLAUDE_BIN` if `claude` isn't on PATH.
 - Benchmarks: set `KEYLINE_MCP_BENCH=<label>` on `llm_e2e` (kept in `bench/reference-ad/`, committed) or `recreate_e2e` (rebuilds a design from its image; designs and runs stay in the gitignored `bench/recreate/local/`). Runs vary up to 2× in cost, so judge a change on at least 3 runs, and compare prompt versions only with each other (see `bench/reference-ad/README.md`).
 - Release: push a `v*` tag; `.github/workflows/release.yml` builds the Linux `.deb` (via `cargo deb`, a build tool, not a dependency) and tarball for amd64 and arm64 and attaches them to a GitHub release.

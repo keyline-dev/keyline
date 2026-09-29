@@ -16,24 +16,24 @@ use anyhow::{Result, anyhow, bail};
 use skia_safe::{Canvas, EncodedImageFormat, ImageInfo, gpu};
 
 /// Which rasterizer draws final renders.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Backend {
     /// The GPU, falling back to the CPU when none can be opened.
+    #[default]
     Gpu,
     /// Always the CPU: reproducible to the byte, used by tests.
     Cpu,
 }
 
-impl Backend {
-    /// From `$KEYLINE_MCP_RENDERER`: `gpu` (the default) or `cpu`.
-    ///
-    /// # Errors
-    /// Any other value.
-    pub fn from_env() -> Result<Self> {
-        match std::env::var("KEYLINE_MCP_RENDERER").as_deref() {
-            Err(_) | Ok("gpu") => Ok(Backend::Gpu),
-            Ok("cpu") => Ok(Backend::Cpu),
-            Ok(other) => bail!("KEYLINE_MCP_RENDERER must be gpu or cpu, not {other:?}"),
+impl std::str::FromStr for Backend {
+    type Err = anyhow::Error;
+
+    /// `--renderer`: `gpu` or `cpu`.
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "gpu" => Ok(Backend::Gpu),
+            "cpu" => Ok(Backend::Cpu),
+            other => bail!("--renderer must be gpu or cpu, not {other:?}"),
         }
     }
 }

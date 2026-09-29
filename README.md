@@ -124,7 +124,7 @@ Then ask your agent for a design: *"Make a vote-by-mail flyer with this photo, i
 
 **Video** needs [ffmpeg](https://ffmpeg.org) (`brew install ffmpeg`, `apt install ffmpeg`), looked up when a call needs it. It's optional: without it, everything else works, animated PNG and GIF included.
 
-Flags (`--allow-read`, `--no-motion`) and environment variables (data directory, fonts, renderer, ffmpeg, encoder) are listed in [docs/tools.md](docs/tools.md#server-configuration) and by `keyline-mcp --help`.
+Every setting is a flag (`--allow-read`, `--no-motion`, `--data`, `--fonts`, `--renderer`, `--ffmpeg`, `--encoder`), listed in [docs/tools.md](docs/tools.md#server-configuration) and by `keyline-mcp --help`.
 
 **GPU on a Linux server:** it needs a GPU with Vulkan drivers (NVIDIA's, or Mesa for AMD and Intel); no display is needed. In Docker, pass the GPU through (for NVIDIA: the Container Toolkit, `--gpus all`, with graphics capability) and install `libvulkan1`. Software Vulkan drivers are skipped, since the CPU renderer is faster; without a GPU, renders use the CPU.
 

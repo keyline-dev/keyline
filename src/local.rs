@@ -6,34 +6,25 @@
 use std::io::Read;
 use std::path::PathBuf;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 
 /// The folders local paths may be read from, resolved at startup.
 #[derive(Debug, Default)]
 pub struct AllowedDirs(Vec<PathBuf>);
 
 impl AllowedDirs {
-    /// Reads `--allow-read <folder>` (repeatable, or `--allow-read=<folder>`)
-    /// from the command line, without the program name.
+    /// The folders named with `--allow-read`, resolved through symlinks.
     ///
     /// # Errors
-    /// An unknown argument, a flag without a folder, or a folder that
-    /// doesn't exist.
-    pub fn from_args(args: impl IntoIterator<Item = String>) -> Result<Self> {
-        let mut dirs = Vec::new();
-        let mut args = args.into_iter();
-        while let Some(arg) = args.next() {
-            let dir = match arg.strip_prefix("--allow-read") {
-                Some("") => args.next().context("--allow-read needs a folder")?,
-                Some(rest) if rest.starts_with('=') => rest[1..].to_owned(),
-                _ => bail!("unknown argument {arg}; see keyline-mcp --help"),
-            };
-            dirs.push(
-                std::fs::canonicalize(&dir)
-                    .with_context(|| format!("--allow-read {dir}: no such folder"))?,
-            );
-        }
-        Ok(AllowedDirs(dirs))
+    /// A folder that doesn't exist.
+    pub fn new(dirs: &[PathBuf]) -> Result<Self> {
+        dirs.iter()
+            .map(|d| {
+                std::fs::canonicalize(d)
+                    .with_context(|| format!("--allow-read {}: no such folder", d.display()))
+            })
+            .collect::<Result<_>>()
+            .map(AllowedDirs)
     }
 
     /// The allowed folders, resolved.
@@ -92,15 +83,13 @@ mod tests {
 
     #[test]
     fn paths_are_off_unless_a_folder_is_allowed() {
-        let none = AllowedDirs::from_args(Vec::new()).unwrap();
+        let none = AllowedDirs::new(&[]).unwrap();
         assert!(
             none.read("/etc/hosts", 1 << 20)
                 .unwrap_err()
                 .contains("--allow-read")
         );
-        assert!(AllowedDirs::from_args(["--bogus".to_owned()]).is_err());
-        assert!(AllowedDirs::from_args(["--allow-read".to_owned()]).is_err());
-        assert!(AllowedDirs::from_args(["--allow-read=/no/such/folder".to_owned()]).is_err());
+        assert!(AllowedDirs::new(&["/no/such/folder".into()]).is_err());
     }
 
     #[test]
@@ -112,7 +101,7 @@ mod tests {
         std::fs::create_dir_all(&outside).unwrap();
         std::fs::write(allowed.join("sub/logo.svg"), b"<svg/>").unwrap();
         std::fs::write(outside.join("secret.txt"), b"secret").unwrap();
-        let dirs = AllowedDirs::from_args([format!("--allow-read={}", allowed.display())]).unwrap();
+        let dirs = AllowedDirs::new(std::slice::from_ref(&allowed)).unwrap();
         let path = |p: &std::path::Path| p.display().to_string();
 
         assert_eq!(

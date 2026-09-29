@@ -50,9 +50,7 @@ impl Server {
         // Said up front, so the agent doesn't plan a video it can't make;
         // looked up now, since ffmpeg can be installed while the server runs.
         if self.motion && crate::video::ffmpeg().is_err() {
-            out.push_str(
-                "\nvideo off: no ffmpeg (install it or set KEYLINE_MCP_FFMPEG); apng, gif work",
-            );
+            out.push_str("\nvideo off: no ffmpeg (install it or pass --ffmpeg); apng, gif work");
         }
         Ok(out)
     }

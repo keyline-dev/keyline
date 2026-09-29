@@ -15,10 +15,13 @@ pub struct Store {
 }
 
 impl Store {
-    /// `$KEYLINE_MCP_DATA`, else `~/.keyline-mcp`.
-    pub fn open_default() -> Result<Self> {
-        let root = match std::env::var_os("KEYLINE_MCP_DATA") {
-            Some(dir) => PathBuf::from(dir),
+    /// `data` (`--data`), else `~/.keyline-mcp`.
+    ///
+    /// # Errors
+    /// No `data` and no `HOME`, or the directories can't be created.
+    pub fn open_default(data: Option<PathBuf>) -> Result<Self> {
+        let root = match data {
+            Some(dir) => dir,
             None => PathBuf::from(std::env::var_os("HOME").context("HOME is not set")?)
                 .join(".keyline-mcp"),
         };

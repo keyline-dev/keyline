@@ -94,7 +94,7 @@ Fix any defects, then render.\n\n{extra}",
 
     let mcp_config = json!({"mcpServers": {"scene": {
         "command": env!("CARGO_BIN_EXE_keyline-mcp"),
-        "env": {"KEYLINE_MCP_DATA": mcp.data}
+        "args": ["--data", mcp.data]
     }}});
     let mut cmd = tokio::process::Command::new(
         std::env::var("CLAUDE_BIN").unwrap_or_else(|_| "claude".into()),

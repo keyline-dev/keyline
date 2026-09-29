@@ -14,16 +14,40 @@ use std::process::{Command, Stdio};
 use std::sync::OnceLock;
 
 /// What to say when a call needs ffmpeg and there is none.
-pub const MISSING: &str = "video needs ffmpeg: install it (brew install ffmpeg, apt install ffmpeg) \\
-or set KEYLINE_MCP_FFMPEG; stills, apng and gif work without it";
+pub const MISSING: &str = "video needs ffmpeg: install it (brew install ffmpeg, apt install ffmpeg) \
+or pass --ffmpeg <path>; stills, apng and gif work without it";
 
-/// The ffmpeg program: `$KEYLINE_MCP_FFMPEG`, else `ffmpeg` on the PATH.
-/// Looked up on every call, so installing it needs no restart.
+/// Video settings from the command line.
+#[derive(Debug, Default)]
+pub struct Settings {
+    /// `--ffmpeg`: the ffmpeg program (default: `ffmpeg` on the PATH).
+    pub ffmpeg: Option<PathBuf>,
+    /// `--encoder`: the H.264 encoder (default `auto`).
+    pub encoder: Option<String>,
+}
+
+static SETTINGS: OnceLock<Settings> = OnceLock::new();
+
+/// Sets the video settings, once, at startup; later calls are ignored.
+pub fn configure(settings: Settings) {
+    let _ = SETTINGS.set(settings);
+}
+
+fn settings() -> &'static Settings {
+    SETTINGS.get_or_init(Settings::default)
+}
+
+/// The ffmpeg program: `--ffmpeg`, else `ffmpeg` on the PATH. Looked up
+/// on every call, so installing it needs no restart.
 ///
 /// # Errors
 /// [`MISSING`] when there is none.
 pub fn ffmpeg() -> Result<PathBuf, String> {
-    tool("KEYLINE_MCP_FFMPEG", "ffmpeg")
+    match &settings().ffmpeg {
+        Some(p) if p.is_file() => Ok(p.clone()),
+        Some(_) => Err(MISSING.into()),
+        None => on_path("ffmpeg"),
+    }
 }
 
 /// The ffprobe program, next to ffmpeg or on the PATH.
@@ -39,17 +63,10 @@ pub fn ffprobe() -> Result<PathBuf, String> {
             return Ok(probe);
         }
     }
-    tool("KEYLINE_MCP_FFPROBE", "ffprobe")
+    on_path("ffprobe")
 }
 
-fn tool(var: &str, name: &str) -> Result<PathBuf, String> {
-    if let Some(p) = std::env::var_os(var).map(PathBuf::from) {
-        return if p.is_file() {
-            Ok(p)
-        } else {
-            Err(MISSING.into())
-        };
-    }
+fn on_path(name: &str) -> Result<PathBuf, String> {
     let exe = format!("{name}{}", std::env::consts::EXE_SUFFIX);
     std::env::var_os("PATH")
         .into_iter()
@@ -70,16 +87,16 @@ fn hardware_h264() -> &'static [&'static str] {
     }
 }
 
-/// The H.264 encoder to use: `$KEYLINE_MCP_ENCODER` (`software`, or an
+/// The H.264 encoder to use: `--encoder` (`software`, or an
 /// encoder name), else the first hardware encoder that encodes a test frame
 /// on this machine, else software (`libx264`). Probed once per run:
 /// `ffmpeg -encoders` lists what ffmpeg was built with, not what the
 /// machine can run.
 pub fn h264_encoder(ffmpeg: &std::path::Path) -> String {
     static CHOSEN: OnceLock<String> = OnceLock::new();
-    match std::env::var("KEYLINE_MCP_ENCODER").as_deref() {
-        Ok("software") => return "libx264".into(),
-        Ok(name) if !name.is_empty() && name != "auto" => return name.into(),
+    match settings().encoder.as_deref() {
+        Some("software") => return "libx264".into(),
+        Some(name) if !name.is_empty() && name != "auto" => return name.into(),
         _ => {}
     }
     CHOSEN
@@ -109,10 +126,12 @@ fn works(ffmpeg: &std::path::Path, encoder: &str) -> bool {
 mod tests {
     #[test]
     fn a_missing_ffmpeg_says_how_to_get_it() {
-        // An explicit path that doesn't exist is reported, not searched past.
-        let e = super::tool("KEYLINE_MCP_TEST_NO_SUCH_TOOL", "keyline-no-such-tool").unwrap_err();
+        let e = super::on_path("keyline-no-such-tool").unwrap_err();
         assert!(
-            e.contains("brew install ffmpeg") && e.contains("apng and gif work"),
+            e.contains("brew install ffmpeg")
+                && e.contains("--ffmpeg <path>")
+                && e.contains("apng and gif work")
+                && !e.contains('\\'),
             "{e}"
         );
     }

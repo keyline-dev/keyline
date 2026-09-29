@@ -113,7 +113,7 @@ s5b0a42a5e v0 tokens: accent, headline, price ok
 
 ```text
 sfc5e3bbb5b v0
-video off: no ffmpeg (install it or set KEYLINE_MCP_FFMPEG); apng, gif work
+video off: no ffmpeg (install it or pass --ffmpeg); apng, gif work
 ```
 
 ## asset_add
@@ -248,27 +248,30 @@ A template is a scene file ([its format](scene.md#template-files)) that `scene_c
 | `mp4` | H.264 video, plays everywhere. Needs [ffmpeg](#ffmpeg) |
 | `webm` | VP9 video. Needs [ffmpeg](#ffmpeg) |
 
-The animated and video formats need a scene that moves (a `duration`, or shots); `time` can't be combined with them. Frames are drawn in memory, several at once, and APNG and GIF frames store only the part that changed. MP4 encodes on the GPU when ffmpeg has a hardware encoder that works on the machine (VideoToolbox on macOS; NVENC, Quick Sync or AMF elsewhere), else with `libx264`; `KEYLINE_MCP_ENCODER` picks one. The clips' own sound comes along, AAC in MP4 and Opus in WebM, unless `muted` is `true`.
+The animated and video formats need a scene that moves (a `duration`, or shots); `time` can't be combined with them. Frames are drawn in memory, several at once, and APNG and GIF frames store only the part that changed. MP4 encodes on the GPU when ffmpeg has a hardware encoder that works on the machine (VideoToolbox on macOS; NVENC, Quick Sync or AMF elsewhere), else with `libx264`; `--encoder` picks one. The clips' own sound comes along, AAC in MP4 and Opus in WebM, unless `muted` is `true`.
 
 ## Server configuration
 
 ### Command-line flags
 
-| Flag | Does |
-|---|---|
-| `--allow-read <folder>` | Lets `asset_add` and `scene_create` read local files inside this folder (repeatable). Without it, `path` isn't offered to the agent at all |
-| `--no-motion` | Leaves motion out of the tools: `duration`, `fps`, `loop`, `time`, `muted`, video, shots and the motion fields. Fewer tokens per turn, for stills-only use |
-| `-h`, `--help` | Prints the flags and environment variables |
+Every setting is a flag; each takes its value after a space or as `--flag=value`.
 
-### Environment variables
-
-| Variable | Default | Purpose |
+| Flag | Default | Does |
 |---|---|---|
-| `KEYLINE_MCP_DATA` | `~/.keyline-mcp` | The [data directory](#data-directory) |
-| `KEYLINE_MCP_FONTS` | none | An extra folder of `.ttf` and `.otf` fonts |
-| `KEYLINE_MCP_RENDERER` | `gpu` | `gpu` renders on the GPU and falls back to the CPU; `cpu` always uses the CPU |
-| `KEYLINE_MCP_FFMPEG` | `ffmpeg` on the PATH | The ffmpeg program |
-| `KEYLINE_MCP_ENCODER` | `auto` | H.264 encoder: `auto` (a GPU encoder that works, else `libx264`), `software`, or an ffmpeg encoder name |
+| `--allow-read <folder>` | none | Lets `asset_add` and `scene_create` read local files inside this folder (repeatable). Without it, `path` isn't offered to the agent at all |
+| `--no-motion` | motion on | Leaves motion out of the tools: `duration`, `fps`, `loop`, `time`, `muted`, video, shots and the motion fields. Fewer tokens per turn, for stills-only use |
+| `--data <folder>` | `~/.keyline-mcp` | The [data directory](#data-directory) |
+| `--fonts <folder>` | none | An extra folder of `.ttf` and `.otf` fonts (repeatable) |
+| `--renderer gpu\|cpu` | `gpu` | `gpu` renders on the GPU and falls back to the CPU; `cpu` always uses the CPU |
+| `--ffmpeg <path>` | `ffmpeg` on the PATH | The ffmpeg program; ffprobe is looked for next to it, else on the PATH |
+| `--encoder <name>` | `auto` | H.264 encoder: `auto` (a GPU encoder that works, else `libx264`), `software`, or an ffmpeg encoder name |
+| `-h`, `--help` | | Prints the flags |
+
+An MCP client passes them in `args`:
+
+```json
+{"mcpServers": {"keyline": {"command": "keyline-mcp", "args": ["--data", "/srv/keyline", "--allow-read", "/srv/brand"]}}}
+```
 
 ### Data directory
 
@@ -276,11 +279,11 @@ Scenes are saved as JSON under `<data>/scenes/`, assets under `<data>/assets/` b
 
 ### Fonts
 
-Inter is bundled. A `fontFamily` that isn't installed is fetched from [Google Fonts](https://fonts.google.com) once and cached in `<data>/fonts/` (tracked in `fonts/index.json`); the reply then starts with `fetched font <family> (<n> files)`. Fonts in `<data>/fonts/` and `KEYLINE_MCP_FONTS` are loaded too. Fonts are never taken from the machine's system fonts, so renders don't vary with what's installed.
+Inter is bundled. A `fontFamily` that isn't installed is fetched from [Google Fonts](https://fonts.google.com) once and cached in `<data>/fonts/` (tracked in `fonts/index.json`); the reply then starts with `fetched font <family> (<n> files)`. Fonts in `<data>/fonts/` and the `--fonts` folders are loaded too. Fonts are never taken from the machine's system fonts, so renders don't vary with what's installed.
 
 ### ffmpeg
 
-Video clips and MP4 and WebM output need [ffmpeg](https://ffmpeg.org) (`brew install ffmpeg`, `apt install ffmpeg`), run as a separate program. It's looked up on every call that needs it (`KEYLINE_MCP_FFMPEG`, else the PATH), so it can be installed without a restart. Without it, those calls are refused with how to install it, `scene_create` says `video off` up front, and everything else works, APNG and GIF included.
+Video clips and MP4 and WebM output need [ffmpeg](https://ffmpeg.org) (`brew install ffmpeg`, `apt install ffmpeg`), run as a separate program. It's looked up on every call that needs it (`--ffmpeg`, else the PATH), so it can be installed without a restart. Without it, those calls are refused with how to install it, `scene_create` says `video off` up front, and everything else works, APNG and GIF included.
 
 ## Security
 
