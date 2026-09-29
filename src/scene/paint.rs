@@ -98,7 +98,7 @@ pub enum Fit {
     Tile,
 }
 
-/// `#RRGGBB`, `#RRGGBBAA`, `#RGB`, `#RGBA` or a common CSS color name,
+/// Any CSS color: hex, `rgb()`, `hsl()` and the other CSS Color 4 functions,
 /// stored as ARGB.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Color(pub u32);
@@ -106,20 +106,10 @@ pub struct Color(pub u32);
 impl Color {
     /// Parses `#RRGGBB`, `#RRGGBBAA`, `#RGB`, `#RGBA` or a CSS color name.
     pub fn parse(s: &str) -> Option<Self> {
-        let Some(hex) = s.strip_prefix('#') else {
-            return named(s);
-        };
-        // #RGB and #RGBA double each digit, as in CSS.
-        let long: String = match hex.len() {
-            3 | 4 => hex.chars().flat_map(|c| [c, c]).collect(),
-            _ => hex.to_owned(),
-        };
-        let v = u32::from_str_radix(&long, 16).ok()?;
-        match long.len() {
-            6 => Some(Color(0xFF00_0000 | v)),
-            8 => Some(Color(v.rotate_right(8))),
-            _ => None,
-        }
+        let [r, g, b, a] = csscolorparser::parse(s.trim()).ok()?.to_rgba8();
+        Some(Color(
+            u32::from(a) << 24 | u32::from(r) << 16 | u32::from(g) << 8 | u32::from(b),
+        ))
     }
 }
 
@@ -144,35 +134,15 @@ impl Serialize for Color {
 impl<'de> Deserialize<'de> for Color {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        Color::parse(&s)
-            .ok_or_else(|| serde::de::Error::custom(format!("bad color {s:?}, want #RRGGBB")))
+        Color::parse(&s).ok_or_else(|| {
+            serde::de::Error::custom(format!(
+                "bad color {s:?}, want #RRGGBB, rgba(…), hsl(…) or a CSS name"
+            ))
+        })
     }
 }
 
 /// Common CSS color names, for agents that write `white` instead of hex.
-fn named(s: &str) -> Option<Color> {
-    let rgb = match s.to_ascii_lowercase().as_str() {
-        "transparent" => return Some(Color(0)),
-        "black" => 0x000000,
-        "white" => 0xFFFFFF,
-        "red" => 0xFF0000,
-        "green" => 0x008000,
-        "blue" => 0x0000FF,
-        "yellow" => 0xFFFF00,
-        "orange" => 0xFFA500,
-        "purple" => 0x800080,
-        "pink" => 0xFFC0CB,
-        "gray" | "grey" => 0x808080,
-        "navy" => 0x000080,
-        "teal" => 0x008080,
-        "gold" => 0xFFD700,
-        "silver" => 0xC0C0C0,
-        "maroon" => 0x800000,
-        _ => return None,
-    };
-    Some(Color(0xFF00_0000 | rgb))
-}
-
 #[cfg(test)]
 mod tests {
     use crate::scene::Color;
@@ -188,6 +158,11 @@ mod tests {
         assert_eq!(Color::parse("#0008").unwrap().0, 0x8800_0000);
         assert_eq!(Color::parse("White").unwrap().0, 0xFFFF_FFFF);
         assert_eq!(Color::parse("transparent").unwrap().0, 0);
+        // CSS functions and every CSS name, as models write them.
+        assert_eq!(Color::parse("rgba(0, 0, 0, 0.25)").unwrap().0, 0x4000_0000);
+        assert_eq!(Color::parse("rgb(255 128 0 / 50%)").unwrap().0, 0x80FF_8000);
+        assert_eq!(Color::parse("hsl(120, 100%, 50%)").unwrap().0, 0xFF00_FF00);
+        assert_eq!(Color::parse("RebeccaPurple").unwrap().0, 0xFF66_3399);
         assert!(Color::parse("#12345").is_none());
         assert!(Color::parse("reddish").is_none());
     }

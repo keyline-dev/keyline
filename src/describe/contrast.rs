@@ -33,8 +33,20 @@ pub(super) fn contrast(
     if fill.is_some() || gradient.is_some() {
         return None; // letters painted with an image or gradient: no single color to judge
     }
+    // `fills` paint the letters instead of `color`: judged by the top one
+    // when it's a plain color, else not at all.
+    let color = match p.layer.look.fills.as_ref().map(|f| match f {
+        crate::scene::OneOrMany::One(p) => std::slice::from_ref(p),
+        crate::scene::OneOrMany::Many(v) => v.as_slice(),
+    }) {
+        None => *color,
+        Some(paints) => match paints.last() {
+            Some(crate::scene::Paint::Solid(s)) => s.color,
+            _ => return None,
+        },
+    };
     const GRID: i32 = 16;
-    let colors: Vec<Color> = std::iter::once(*color)
+    let colors: Vec<Color> = std::iter::once(color)
         .chain(ranges.iter().filter_map(|r| r.color))
         .collect();
     let (bw, bh) = (backdrop.width() - 1, backdrop.height() - 1);

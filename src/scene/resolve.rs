@@ -47,6 +47,8 @@ pub(super) fn styled(l: &Layer, scene: &Scene) -> Result<Option<Layer>, String> 
         }
     }
     obj.remove("style");
+    // A style's frame fields (`padding`, `gap`) go where the layer keeps them.
+    crate::ops::normalize(&mut v);
     let layer: Layer = serde_json::from_value(v.clone()).map_err(|e| format!("style: {e}"))?;
     check_keys(&v, &layer).map_err(|e| format!("style {}: {e}", names.join(", ")))?;
     Ok(Some(layer))

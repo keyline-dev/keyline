@@ -110,9 +110,10 @@ pub struct Shared {
 /// changed are re-applied to every layer bound to them.
 fn share(next: &mut Scene, shared: Shared) -> Result<(), String> {
     for (name, style) in shared.styles {
-        let Value::Object(style) = style else {
+        let Value::Object(mut style) = style else {
             return Err(format!("style {name} must be an object of layer fields"));
         };
+        guesses::fields(&mut style, None);
         next.styles.insert(name, style);
     }
     for (name, c) in shared.components {
@@ -290,7 +291,8 @@ fn restyle(scene: &mut Scene, name: &str, op: &Op) -> Result<(), String> {
         Some(set) => {
             let mut v = Value::Object(scene.styles.remove(name).unwrap_or_default());
             merge_patch(&mut v, &Value::Object(set.clone()));
-            if let Value::Object(style) = v {
+            if let Value::Object(mut style) = v {
+                guesses::fields(&mut style, None);
                 scene.styles.insert(name.to_owned(), style);
             }
             Ok(())

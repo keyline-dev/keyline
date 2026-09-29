@@ -131,7 +131,7 @@ async fn bad_layout_values_get_one_line_errors() {
     let e = err(json!({"type": "rect", "width": "wide"})).await;
     assert!(e.contains("\"hug\", \"fill\" or \"40%\""), "{e}");
     assert_eq!(e.lines().count(), 1, "{e}");
-    let e = err(json!({"type": "rect", "place": "middle"})).await;
+    let e = err(json!({"type": "rect", "place": "somewhere"})).await;
     assert!(e.contains("expected one of `top-left`"), "{e}");
     let e = err(json!({"type": "rect", "at": {"tiny": {"width": 5}}})).await;
     assert!(e.contains("no size or aspect class tiny"), "{e}");

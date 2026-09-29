@@ -1,13 +1,16 @@
-//! First guesses agents make, read as what they mean. A rejected guess
+//! First guesses agents make, read as what they mean: names and values
+//! from CSS, React Native, Figma, GSAP and video tools. A rejected guess
 //! costs the agent a resend of its whole batch, so these are cheaper to
 //! accept than to refuse.
 
+mod css;
+mod flex;
+mod names;
+
 use serde_json::{Map, Value};
 
-/// Accepts the names agents reach for first: on shapes, `fill` and
-/// `shadow` mean `fills` and `shadows` (text keeps its own `fill`, an image
-/// in the letters, and `shadow`). A rejected guess costs the agent a
-/// resend of its whole batch, so these are cheaper to accept than to refuse.
+/// A layer as written, in the scene's own names and shapes; its children
+/// and `at` changes too.
 pub(crate) fn normalize(v: &mut Value) {
     let Some(o) = v.as_object_mut() else { return };
     // A generic "shape" is a path when it names one, else a rect.
@@ -19,15 +22,6 @@ pub(crate) fn normalize(v: &mut Value) {
         };
         o.insert("type".into(), kind.into());
     }
-    if o.get("type").and_then(Value::as_str) != Some("text") {
-        for (short, full) in [("fill", "fills"), ("shadow", "shadows")] {
-            if !o.contains_key(full)
-                && let Some(x) = o.remove(short)
-            {
-                o.insert(full.into(), x);
-            }
-        }
-    }
     // An icon named as `icon`, as in icon-font markup.
     if o.get("type").and_then(Value::as_str) == Some("icon")
         && !o.contains_key("name")
@@ -37,9 +31,31 @@ pub(crate) fn normalize(v: &mut Value) {
     }
     line_ends(o);
     shot(o);
+    let kind = o.get("type").and_then(Value::as_str).map(str::to_owned);
+    fields(o, kind.as_deref());
+    if let Some(Value::Object(at)) = o.get_mut("at") {
+        for patch in at.values_mut().filter_map(Value::as_object_mut) {
+            fields(patch, kind.as_deref());
+        }
+    }
     if let Some(Value::Array(children)) = o.get_mut("children") {
         children.iter_mut().for_each(normalize);
     }
+}
+
+/// The fields of a layer, a style (no `kind`) or an `at` change.
+pub(crate) fn fields(o: &mut Map<String, Value>, kind: Option<&str>) {
+    names::fields(o, kind);
+    if kind == Some("frame") {
+        flex::frame(o);
+    }
+    if let Some(Value::Object(s)) = o.get_mut("stack") {
+        flex::stack(s);
+    }
+    if let Some(Value::Object(g)) = o.get_mut("grid") {
+        flex::grid(g);
+    }
+    flex::child(o);
 }
 
 /// `{"type": "shot", "duration": 3, "transition": "fade", …}`: a frame that
