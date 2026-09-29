@@ -5,7 +5,7 @@
 Server-side image composition engine driven by an AI agent over MCP.
 
 - Scene JSON + MCP — Design Spec: https://claude.ai/artifact/JA2qcvuxn3GgL1aTDkjMEk (Claude Doc; read and edit it with the docs tools, no local copy)
-- Concepts: [docs/concepts.md](docs/concepts.md); scene format reference: [docs/scene.md](docs/scene.md); tools, replies and configuration: [docs/tools.md](docs/tools.md). Each fact has one home; the others link to it.
+- Concepts: [docs/concepts.md](docs/concepts.md); scene format reference: [docs/scene.md](docs/scene.md); tools, replies and configuration: [docs/tools.md](docs/tools.md); setup per MCP client: [docs/clients.md](docs/clients.md). Each fact has one home; the others link to it.
 
 ## Commands
 

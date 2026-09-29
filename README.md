@@ -103,22 +103,12 @@ cargo build --release
 **Claude Code:**
 
 ```sh
-claude mcp add keyline-mcp -- keyline-mcp   # or the path to target/release/keyline-mcp
+claude mcp add keyline -- keyline-mcp   # or the path to target/release/keyline-mcp
 ```
 
-**Any other MCP client** (stdio):
+**Claude Desktop, Cursor, VS Code, Windsurf, Cline and other clients:** [docs/clients.md](docs/clients.md) has a copy-paste setup for each, and how to check a download against the release's `SHA256SUMS`. The server speaks MCP over stdio, so it runs where your MCP client runs. To render on another machine, make the command `ssh that-machine keyline-mcp`.
 
-```json
-{
-  "mcpServers": {
-    "keyline-mcp": { "command": "/path/to/keyline-mcp/target/release/keyline-mcp" }
-  }
-}
-```
-
-The server speaks MCP over stdio, so it runs where your MCP client runs. To render on another machine, make the command `ssh that-machine keyline-mcp`.
-
-**Local files:** to let the agent add images and templates by path (so their bytes never pass through the model, which is far cheaper than base64), start the server with `--allow-read <folder>`, once per folder: `claude mcp add keyline-mcp -- keyline-mcp --allow-read ~/projects/ads`. Paths are resolved through every symlink before the check.
+**Local files:** to let the agent add images and templates by path (so their bytes never pass through the model, which is far cheaper than base64), start the server with `--allow-read <folder>`, once per folder: `claude mcp add keyline -- keyline-mcp --allow-read ~/projects/ads`. Paths are resolved through every symlink before the check.
 
 Then ask your agent for a design: *"Make a vote-by-mail flyer with this photo, in 1080×1350, 1200×1000 and a 300×600 skyscraper."*
 
