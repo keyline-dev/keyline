@@ -30,25 +30,9 @@ pub fn facts(scene: &Scene) -> String {
             (Some((_, fit)), _) if min.is_none_or(|(px, _)| fit.font_size < px) => {
                 min = Some((fit.font_size, &p.layer.id));
             }
-            (
-                _,
-                Kind::Image {
-                    asset,
-                    fit,
-                    crop,
-                    tile_scale,
-                    ..
-                },
-            ) => {
+            (_, kind) if let Some((asset, fit, crop, tile_scale)) = kind.picture() => {
                 if let Some(a) = scene.assets.get(asset).filter(|a| !a.svg) {
-                    let up = image_scale(
-                        p.rect,
-                        a.width,
-                        a.height,
-                        *fit,
-                        crop.as_ref(),
-                        tile_scale * p.k,
-                    );
+                    let up = image_scale(p.rect, a.width, a.height, fit, crop, tile_scale * p.k);
                     if up > 1.005 {
                         upscaled.push(format!("{} {} {up:.1}x", size.id, p.layer.id));
                     }

@@ -50,6 +50,8 @@ pub struct Server {
     backend: Backend,
     /// Folders `asset_add` may read local paths from.
     reads: Arc<crate::local::AllowedDirs>,
+    /// Motion and video are in the tools (not `--no-motion`).
+    motion: bool,
     tool_router: ToolRouter<Self>,
 }
 
@@ -65,12 +67,13 @@ impl Server {
         motion: bool,
     ) -> Self {
         let mut tool_router = Self::tool_router();
-        schema::compact_all(&mut tool_router, motion);
+        schema::compact_all(&mut tool_router, motion, reads.dirs());
         Server {
             store: Arc::new(store),
             lock: Arc::new(Mutex::new(())),
             backend,
             reads: Arc::new(reads),
+            motion,
             tool_router,
         }
     }

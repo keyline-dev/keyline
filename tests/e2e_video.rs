@@ -76,7 +76,7 @@ async fn build(mcp: &Mcp, dir: &Path, sources: [&str; 3]) -> String {
             )
             .await;
         assert!(
-            reply.starts_with(&format!("{name} 1280×720 1s 30fps")),
+            reply.starts_with(&format!("{name} 1280×720 1s 30fps sound")),
             "{reply}"
         );
     }
@@ -132,6 +132,13 @@ async fn three_clips_play_as_shots_with_titles_and_sound() {
     )
     .await;
 
+    // Clips are listed and measured like images.
+    let full = mcp
+        .ok("scene_describe", json!({"sceneId": id, "full": true}))
+        .await;
+    assert!(full.contains("one 1280×720 1s sound"), "{full}");
+    assert!(full.contains("video1 video 0,0 1280×720 fill"), "{full}");
+
     // The first title flying in, the push, the wipe, the last title.
     for t in [0.3_f32, 0.8, 1.5, 2.2] {
         let reply = mcp.ok("render", json!({"sceneId": id, "time": t})).await;
@@ -170,16 +177,17 @@ async fn without_ffmpeg_video_is_refused_and_apng_still_works() {
         &[("KEYLINE_MCP_FFMPEG", "/no/such/ffmpeg")],
     )
     .await;
-    let id = mcp
+    let created = mcp
         .ok(
             "scene_create",
             json!({"sizes": ["100x50"], "duration": 0.2, "fps": 10}),
         )
-        .await
-        .split(' ')
-        .next()
-        .unwrap()
-        .to_owned();
+        .await;
+    assert!(
+        created.contains("\nvideo off: no ffmpeg"),
+        "said up front: {created}"
+    );
+    let id = created.split(' ').next().unwrap().to_owned();
     mcp.ok(
         "layer_add",
         json!({"sceneId": id, "layers": [{"type": "rect", "width": 20, "height": 20,
@@ -195,6 +203,40 @@ async fn without_ffmpeg_video_is_refused_and_apng_still_works() {
         .ok("render", json!({"sceneId": id, "format": "apng"}))
         .await;
     assert!(reply.contains(".anim.png"), "{reply}");
+    mcp.stop().await;
+}
+
+#[tokio::test]
+async fn video_off_goes_unsaid_when_motion_is_off() {
+    let env = [("KEYLINE_MCP_FFMPEG", "/no/such/ffmpeg")];
+    let mcp = Mcp::start_env("no-ffmpeg-no-motion", &["--no-motion"], &env).await;
+    let created = mcp.ok("scene_create", json!({"sizes": ["100x50"]})).await;
+    assert!(!created.contains("video"), "{created}");
+    mcp.stop().await;
+}
+
+#[tokio::test]
+async fn local_paths_are_offered_only_with_folders_and_name_them() {
+    let asset_add = |tools: Vec<rmcp::model::Tool>| {
+        let t = tools.into_iter().find(|t| t.name == "asset_add").unwrap();
+        (
+            t.description.unwrap_or_default().to_string(),
+            Value::Object((*t.input_schema).clone()),
+        )
+    };
+    let mcp = Mcp::start("paths-off").await;
+    let (doc, schema) = asset_add(mcp.tools().await);
+    assert!(schema["properties"].get("path").is_none(), "{schema}");
+    assert!(doc.contains("from url or base64"), "{doc}");
+    mcp.stop().await;
+
+    let dir = std::fs::canonicalize(scratch("paths-on")).unwrap();
+    let mcp = Mcp::start_args("paths-on", &["--allow-read", dir.to_str().unwrap()]).await;
+    let (_, schema) = asset_add(mcp.tools().await);
+    let path = schema["properties"]["path"]["description"]
+        .as_str()
+        .unwrap();
+    assert_eq!(path, format!("Or a local file in {}", dir.display()));
     mcp.stop().await;
 }
 

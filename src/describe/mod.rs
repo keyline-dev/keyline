@@ -62,7 +62,13 @@ pub fn describe(
         let list: Vec<_> = scene
             .assets
             .iter()
-            .map(|(id, a)| format!("{id} {}×{}", n(a.width), n(a.height)))
+            .map(|(id, a)| {
+                let clip = a.clip.map_or_else(String::new, |c| {
+                    let sound = if c.audio { " sound" } else { "" };
+                    format!(" {}s{sound}", (c.duration * 10.0).round() / 10.0)
+                });
+                format!("{id} {}×{}{clip}", n(a.width), n(a.height))
+            })
             .collect();
         let _ = writeln!(out, "assets {}", list.join(", "));
     }
@@ -257,15 +263,9 @@ fn line(
                 let _ = write!(out, " warn contrast {ratio:.1}:1 (WCAG {min})");
             }
         }
-        Kind::Image {
-            asset,
-            fit,
-            crop,
-            tile_scale,
-            ..
-        } => {
+        kind if let Some((asset, fit, crop, tile_scale)) = kind.picture() => {
             if let Some(a) = checks.scene.assets.get(asset) {
-                let (cw, ch) = image_crop(r, a.width, a.height, *fit, crop.as_ref());
+                let (cw, ch) = image_crop(r, a.width, a.height, fit, crop);
                 out.push_str(match fit {
                     Fit::Fill => " fill",
                     Fit::Fit => " fit",
@@ -277,7 +277,7 @@ fn line(
                 if ch >= 0.005 {
                     let _ = write!(out, " crop {}%h", (ch * 100.0).round());
                 }
-                let up = image_scale(r, a.width, a.height, *fit, crop.as_ref(), tile_scale * p.k);
+                let up = image_scale(r, a.width, a.height, fit, crop, tile_scale * p.k);
                 if !a.svg && up > 1.005 {
                     let _ = write!(out, " upscaled {up:.1}x");
                 }

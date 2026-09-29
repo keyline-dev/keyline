@@ -10,3 +10,4 @@ bench/recreate/local/
 
 # Design proposals under review stay local until built.
 /docs/design/
+.DS_Store

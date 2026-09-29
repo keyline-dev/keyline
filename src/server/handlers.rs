@@ -52,6 +52,13 @@ impl Server {
         scene.validate()?;
         let id = self.store.new_scene_id();
         self.store.save(&id, &scene).map_err(err)?;
+        // Said up front, so the agent doesn't plan a video it can't make;
+        // looked up now, since ffmpeg can be installed while the server runs.
+        if self.motion && crate::video::ffmpeg().is_err() {
+            return Ok(format!(
+                "{id} v0\nvideo off: no ffmpeg (install it or set KEYLINE_MCP_FFMPEG); apng, gif work"
+            ));
+        }
         Ok(format!("{id} v0"))
     }
 
@@ -107,9 +114,10 @@ impl Server {
             .await?;
         let length = clip.map_or_else(String::new, |c| {
             format!(
-                " {}s {}fps",
+                " {}s {}fps{}",
                 (c.duration * 10.0).round() / 10.0,
-                c.fps.round()
+                c.fps.round(),
+                if c.audio { " sound" } else { "" }
             )
         });
         Ok(format!("{id} {width}×{height}{length} v{}", scene.version))

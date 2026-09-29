@@ -327,6 +327,24 @@ impl std::fmt::Display for IconSet {
 }
 
 impl Kind {
+    /// An image's or a video's `(asset, fit, crop, tile scale)`: both are
+    /// cropped and scaled alike.
+    pub fn picture(&self) -> Option<(&str, Fit, Option<&Crop>, f32)> {
+        match self {
+            Kind::Image {
+                asset,
+                fit,
+                crop,
+                tile_scale,
+                ..
+            } => Some((asset, *fit, crop.as_ref(), *tile_scale)),
+            Kind::Video {
+                asset, fit, crop, ..
+            } => Some((asset, *fit, crop.as_ref(), 1.0)),
+            _ => None,
+        }
+    }
+
     /// Child layers, for types that hold them (frames and `firstFit`).
     pub fn children(&self) -> Option<&Vec<Layer>> {
         match self {

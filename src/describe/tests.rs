@@ -215,3 +215,15 @@ fn every_shot_is_checked_not_only_the_one_shown_at_rest() {
     assert!(w.contains("wide b ") && w.contains("!overflow"), "{w}");
     assert_eq!(w.matches("logo").count(), 2, "listed once per size: {w}");
 }
+
+#[test]
+fn a_video_is_cropped_and_scaled_like_an_image() {
+    let mut s = scene(
+        json!([{"id": "clip", "type": "video", "asset": "img", "width": 400, "height": 200}]),
+    );
+    s.assets.get_mut("img").unwrap().clip =
+        serde_json::from_value(json!({"duration": 2, "fps": 30, "audio": true})).unwrap();
+    let d = describe(&s, Some("wide"), true, None).unwrap();
+    assert!(d.contains("assets img 400×400 2s sound"), "{d}");
+    assert!(d.contains(" clip video 0,0 400×200 fill crop 50%h"), "{d}");
+}

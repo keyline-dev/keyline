@@ -124,7 +124,7 @@ claude mcp add keyline-mcp -- keyline-mcp   # or the path to target/release/keyl
 
 The server speaks MCP over stdio, so it runs where your MCP client runs. To render on another machine, make the command `ssh that-machine keyline-mcp`.
 
-**Local files:** to let the agent add images by path (so their bytes never pass through the model, which is far cheaper than base64), start the server with `--allow-read <folder>`, once per folder: `claude mcp add keyline-mcp -- keyline-mcp --allow-read ~/projects/ads`. Without it, paths are refused. A path is resolved through every symlink before the check, so a link inside the folder can't lead outside it.
+**Local files:** to let the agent add images by path (so their bytes never pass through the model, which is far cheaper than base64), start the server with `--allow-read <folder>`, once per folder: `claude mcp add keyline-mcp -- keyline-mcp --allow-read ~/projects/ads`. Without it, paths are refused and `path` isn't offered to the agent at all; with it, the tool names the folders, so the agent knows where it may read. A path is resolved through every symlink before the check, so a link inside the folder can't lead outside it.
 
 Then ask your agent for a design: *"Make a vote-by-mail flyer with this photo, in 1080×1350, 1200×1000 and a 300×600 skyscraper."*
 

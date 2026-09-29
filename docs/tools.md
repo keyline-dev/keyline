@@ -34,10 +34,11 @@ A size's `scale` (default 1) shrinks everything, fonts included, before the layo
 
 Presets: `instagram-portrait`, `instagram-square`, `instagram-story`, `facebook-feed`, `linkedin-post`, `x-post`, `youtube-thumbnail`, `iab-medium-rectangle`, `iab-leaderboard`, `iab-skyscraper`, `iab-half-page`, `a4-portrait`. A preset's id is its name; a `"WxH"` size's id is that string.
 
-Reply: the new scene's id and version.
+Reply: the new scene's id and version. When ffmpeg can't be found (and motion is on), a second line says so up front, so the agent doesn't plan a video it can't make:
 
 ```text
 sfc5e3bbb5b v0
+video off: no ffmpeg (install it or set KEYLINE_MCP_FFMPEG); apng, gif work
 ```
 
 ## asset_add
@@ -46,17 +47,17 @@ sfc5e3bbb5b v0
 |---|---|---|---|
 | `sceneId` | string, required | | The scene |
 | `url` | string | | Public http(s) URL of a PNG, JPEG or SVG (or a video clip) |
-| `path` | string | | Or a local file, inside a folder the server was started with (`--allow-read <folder>`) |
+| `path` | string | | Or a local file, inside a folder the server was started with (`--allow-read <folder>`). Offered only with `--allow-read`, and its description names the folders, so the agent knows where it may read |
 | `base64` | string | | Or the file's bytes, base64. They pass through the model, so keep this for small files |
 | `id` | string | generated | The id layers use to refer to it |
 
 Give exactly one of `url`, `path` or `base64`. The limit is 50 MB, or 500 MB for a video clip by `path`. Clips (MP4, MOV, WebM…) are read with ffprobe, so they need ffmpeg installed, and can't be sent as base64. A `path` is resolved through every symlink and `..` first, then must lie inside an allowed folder and be a regular file; without `--allow-read`, paths are refused. SVGs are rasterized at their drawn size, so they stay sharp.
 
-Reply: the asset's id, its intrinsic size and the scene version.
+Reply: the asset's id, its intrinsic size and the scene version; for a clip, also its length, frame rate and `sound` when it has any.
 
 ```text
 photo 864×530 v1
-beach 1920×1080 12.5s 30fps v2
+beach 1920×1080 12.5s 30fps sound v2
 ```
 
 ## layer_add
@@ -146,7 +147,7 @@ Without `full`, the reply is `ok` or one line per problem: the size, the layer's
 
 Defects need fixing; advisories need judgment.
 
-With `full`, the reply lists assets, then each size and every layer at it, indented by nesting:
+With `full`, the reply lists assets (a clip with its length and `sound`), then each size and every layer at it, indented by nesting:
 
 ```text
 assets photo 864×530
@@ -159,7 +160,7 @@ instagram-portrait 1080×1350
 A layer's line is `id type x,y w×h`, in px at that size, then:
 
 - **text:** the font size drawn, `(max N)` when it shrank to fit, and `2L` for the number of lines
-- **image:** the fit, `crop N%w` / `N%h` for how much is cut, and `upscaled N×` when it's enlarged past its pixels
+- **image** and **video:** the fit, `crop N%w` / `N%h` for how much is cut, and `upscaled N×` when it's enlarged past its pixels
 - **adaptive layouts:** `→ row` for the direction a stack chose, or `→ <id>` for the child a `firstFit` drew
 - `rot N°` for a rotated layer
 

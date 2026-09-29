@@ -40,8 +40,13 @@ const MOTION_ARGS: &[(&str, &[&str])] = &[
 ];
 
 /// Trims every tool's input schema in place, and adds motion's words to the
-/// tools, or takes its arguments out (`--no-motion`).
-pub(super) fn compact_all<S>(router: &mut ToolRouter<S>, motion: bool) {
+/// tools, or takes its arguments out (`--no-motion`). `asset_add`'s `path`
+/// names the `folders` it may read, and is left out when there are none.
+pub(super) fn compact_all<S>(
+    router: &mut ToolRouter<S>,
+    motion: bool,
+    folders: &[std::path::PathBuf],
+) {
     for route in router.map.values_mut() {
         let mut schema = Value::Object(route.attr.input_schema.as_ref().clone());
         compact(&mut schema, true);
@@ -51,6 +56,22 @@ pub(super) fn compact_all<S>(router: &mut ToolRouter<S>, motion: bool) {
         {
             for a in *args {
                 props.remove(*a);
+            }
+        }
+        if route.attr.name == "asset_add"
+            && let Some(Value::Object(props)) = schema.get_mut("properties")
+        {
+            if folders.is_empty() {
+                props.remove("path");
+                let d = route.attr.description.clone().unwrap_or_default();
+                route.attr.description =
+                    Some(d.replace("url, path or base64", "url or base64").into());
+            } else if let Some(Value::Object(path)) = props.get_mut("path") {
+                let list: Vec<_> = folders.iter().map(|f| f.display().to_string()).collect();
+                path.insert(
+                    "description".into(),
+                    format!("Or a local file in {}", list.join(", ")).into(),
+                );
             }
         }
         if let Value::Object(o) = schema {

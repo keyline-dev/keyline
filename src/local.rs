@@ -36,6 +36,11 @@ impl AllowedDirs {
         Ok(AllowedDirs(dirs))
     }
 
+    /// The allowed folders, resolved.
+    pub fn dirs(&self) -> &[PathBuf] {
+        &self.0
+    }
+
     /// The bytes of the regular file at `path`, at most `max` of them.
     ///
     /// # Errors
