@@ -216,6 +216,11 @@ async fn bad_input_gets_one_line_errors() {
             json!({"sceneId": id, "sizes": ["nope"]}),
             "no size nope",
         ),
+        (
+            "render",
+            json!({"sceneId": id, "size": ["a"]}),
+            "unknown field `size`",
+        ),
     ];
     for (tool, args, want) in cases {
         let err = mcp.call(tool, args).await.unwrap_err();

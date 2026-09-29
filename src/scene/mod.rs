@@ -100,7 +100,7 @@ pub struct Scene {
     /// Top-level layers, drawn bottom to top.
     #[serde(default)]
     pub layers: Vec<Layer>,
-    /// Bumped on every mutation; doubles as the concurrency token.
+    /// Bumped on every change; shown in replies and render file names.
     #[serde(default)]
     pub version: u64,
 }

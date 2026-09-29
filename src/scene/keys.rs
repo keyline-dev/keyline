@@ -111,6 +111,7 @@ const COMMON_KEYS: &[&str] = &[
     "edges",
     "style",
     "$tokens",
+    "$defaults",
     "in",
     "out",
     "animate",

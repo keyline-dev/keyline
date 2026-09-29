@@ -25,6 +25,7 @@ keyline-mcp exposes six tools. This page lists each tool's inputs and the exact 
 - **Batches are atomic.** A tool that takes a list applies all of it or none of it.
 - **Every change bumps the scene's version**, shown in replies as `v3`.
 - **Defaults are omitted** in both directions: leave a field out to get its default.
+- **Unknown arguments are refused**, like unknown scene fields, so a misspelled one is never silently ignored.
 - **Replies are compact text, not JSON.** Their parts are described once, under [Replies](#replies).
 - **Errors are one line** that names what failed and how to fix it, and change nothing ([Errors](#errors)).
 
@@ -307,5 +308,6 @@ layers[0]: unknown field(s) fontsize for text layer; did you mean fontsize → f
 ops[0]: no layer with id nope
 text1: <span color="$blue">: bad color "$blue", want #RRGGBB
 row 2: no token headlin; tokens: accent, headline
+layers[0]: token $big doesn't suit fontSize: invalid type: string "huge", expected f32
 give exactly one of url, path or base64
 ```

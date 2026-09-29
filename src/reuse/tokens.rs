@@ -43,17 +43,7 @@ pub fn bind(layer: &mut Value, tokens: &BTreeMap<String, Value>) -> Result<(), S
                     }
                 }
             }
-            // Text is a token only when it's wholly the name of one: a
-            // template's "$headline". "$29", or "$SALE" with no such
-            // token, stays text.
-            "text" => {
-                if let Some(name) = val.as_str().and_then(reference)
-                    && let Some(value) = tokens.get(name)
-                {
-                    refs.insert("/text".into(), name.to_owned());
-                    *val = value.clone();
-                }
-            }
+            "text" => text_token(val, "/text", tokens, &mut refs),
             "id" | "type" | "$tokens" => {}
             _ => replace(val, &format!("/{}", escape(key)), tokens, &mut refs)?,
         }
@@ -69,6 +59,22 @@ pub fn bind(layer: &mut Value, tokens: &BTreeMap<String, Value>) -> Result<(), S
         );
     }
     Ok(())
+}
+
+/// Text is a token only when it's wholly the name of one: a template's
+/// "$headline". "$29", or "$SALE" with no such token, stays text.
+fn text_token(
+    val: &mut Value,
+    at: &str,
+    tokens: &BTreeMap<String, Value>,
+    refs: &mut BTreeMap<String, String>,
+) {
+    if let Some(name) = val.as_str().and_then(reference)
+        && let Some(value) = tokens.get(name)
+    {
+        refs.insert(at.to_owned(), name.to_owned());
+        *val = value.clone();
+    }
 }
 
 /// Replaces token references anywhere in `v` (styles, components), without
@@ -101,8 +107,11 @@ fn replace(
         }
         Value::Object(o) => {
             for (k, x) in o.iter_mut() {
-                if k != "text" {
-                    replace(x, &format!("{at}/{}", escape(k)), tokens, refs)?;
+                let ptr = format!("{at}/{}", escape(k));
+                if k == "text" {
+                    text_token(x, &ptr, tokens, refs);
+                } else {
+                    replace(x, &ptr, tokens, refs)?;
                 }
             }
         }
@@ -201,7 +210,15 @@ pub fn rebind(scene: &mut Scene, changed: &[String]) -> Result<(), String> {
                         set_at(&mut v, ptr, value.clone());
                     }
                 }
-                *l = serde_json::from_value(v).map_err(|e| format!("{}: {e}", l.id))?;
+                *l = serde_json::from_value(v).map_err(|e| {
+                    let names: Vec<String> = l
+                        .token_refs
+                        .values()
+                        .filter(|t| changed.contains(t))
+                        .map(|t| format!("${t}"))
+                        .collect();
+                    format!("{}: token {} doesn't suit it: {e}", l.id, names.join(", "))
+                })?;
             }
             if let Some(children) = l.kind.children_mut() {
                 go(children, tokens, changed)?;
@@ -261,6 +278,10 @@ mod tests {
         bind(&mut v, &tokens).unwrap();
         assert_eq!(v["text"], "Summer sale");
         assert_eq!(v["$tokens"], json!({"/text": "headline"}));
+        let mut v =
+            json!({"type": "text", "text": "$headline", "at": {"sky": {"text": "$headline"}}});
+        bind(&mut v, &tokens).unwrap();
+        assert_eq!(v["at"]["sky"]["text"], "Summer sale", "in at too");
         let mut v = json!({"type": "text", "text": "$headlines"});
         bind(&mut v, &tokens).unwrap();
         assert_eq!(v["text"], "$headlines", "no such token: still text");

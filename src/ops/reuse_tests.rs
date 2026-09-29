@@ -184,3 +184,82 @@ fn deleting_by_role_removes_inner_layers_or_the_whole_component() {
     let e = update_layers(&mut s, Shared::default(), &[delete("box")]).unwrap_err();
     assert!(e.ends_with("no component card; components: "), "{e}");
 }
+
+#[test]
+fn an_own_field_set_to_its_default_still_beats_the_style() {
+    let mut s = scene();
+    let styles = json!({"soft": {"opacity": 0.5, "color": "#FF0000"}});
+    add_layers(
+        &mut s,
+        Shared {
+            styles: styles.as_object().cloned().unwrap(),
+            ..Shared::default()
+        },
+        vec![
+            json!({"id": "t", "type": "text", "text": "Hi", "style": "soft",
+            "opacity": 1, "color": "#000000"}),
+        ],
+    )
+    .unwrap();
+    let look = |s: &Scene| {
+        let r = s.resolved();
+        let l = r.layers[0].clone();
+        let Kind::Text { color, .. } = l.kind else {
+            panic!("not text")
+        };
+        (l.opacity, color)
+    };
+    assert_eq!(look(&s), (1.0, Color::parse("#000000").unwrap()));
+
+    // An unrelated edit keeps them; resetting one hands it back to the style.
+    let set = |v: Value| Op {
+        target: serde_json::from_value(json!({"id": "t"})).unwrap(),
+        set: v.as_object().cloned(),
+        delete: false,
+        detach: false,
+    };
+    update_layers(&mut s, Shared::default(), &[set(json!({"text": "Hello"}))]).unwrap();
+    assert_eq!(look(&s), (1.0, Color::parse("#000000").unwrap()));
+    update_layers(&mut s, Shared::default(), &[set(json!({"opacity": null}))]).unwrap();
+    assert_eq!(look(&s), (0.5, Color::parse("#000000").unwrap()));
+}
+
+#[test]
+fn a_bad_at_key_inside_a_component_is_an_error() {
+    let mut s = scene();
+    let e = add_layers(
+        &mut s,
+        with(
+            json!({}),
+            json!({"card": {"type": "rect", "at": {"skyy": {"hidden": true}}}}),
+        ),
+        vec![json!({"id": "c", "type": "use", "component": "card"})],
+    )
+    .unwrap_err();
+    assert!(e.contains("no size or aspect class skyy"), "{e}");
+}
+
+#[test]
+fn a_token_of_the_wrong_type_is_named() {
+    let mut s = scene();
+    let e = add_layers(
+        &mut s,
+        with(json!({"big": "huge"}), json!({})),
+        vec![json!({"type": "text", "text": "Hi", "fontSize": "$big"})],
+    )
+    .unwrap_err();
+    assert!(e.contains("token $big doesn't suit fontSize"), "{e}");
+}
+
+#[test]
+fn changing_a_token_to_the_wrong_type_is_named() {
+    let mut s = scene();
+    add_layers(
+        &mut s,
+        with(json!({"big": 40}), json!({})),
+        vec![json!({"id": "t", "type": "text", "text": "Hi", "fontSize": "$big"})],
+    )
+    .unwrap();
+    let e = update_layers(&mut s, with(json!({"big": "huge"}), json!({})), &[]).unwrap_err();
+    assert!(e.contains("t: token $big doesn't suit it"), "{e}");
+}

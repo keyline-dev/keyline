@@ -113,6 +113,15 @@ pub struct Layer {
         skip_serializing_if = "BTreeMap::is_empty"
     )]
     pub token_refs: BTreeMap<String, String>,
+    /// Fields a styled layer sets to their default value, which storage
+    /// otherwise leaves out, so its style can't override them. Kept by the
+    /// server.
+    #[serde(
+        rename = "$defaults",
+        default,
+        skip_serializing_if = "serde_json::Map::is_empty"
+    )]
+    pub own_defaults: serde_json::Map<String, serde_json::Value>,
     /// How it enters, leaves and moves over time (`in`, `out`, `animate`,
     /// `stagger`); nothing moves when absent.
     #[serde(flatten)]

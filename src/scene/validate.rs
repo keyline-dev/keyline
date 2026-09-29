@@ -71,7 +71,8 @@ impl Scene {
         let resolved = self.try_resolved()?;
         let resolved = resolved.as_ref().unwrap_or(self);
         let mut result = Ok(());
-        self.walk(&mut |l| {
+        // The resolved scene, so `at` inside components is checked too.
+        resolved.walk(&mut |l| {
             for size in l.at.keys() {
                 if result.is_err() {
                     return;

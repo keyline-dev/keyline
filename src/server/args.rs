@@ -7,7 +7,7 @@ use crate::ops::Op;
 use crate::scene::SizeSpec;
 
 #[derive(Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 /// Arguments of `scene_create`.
 pub struct SceneCreateArgs {
     /// Master size, px; the first size's when omitted.
@@ -36,7 +36,7 @@ pub struct SceneCreateArgs {
 }
 
 #[derive(Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 /// Arguments of `asset_add`.
 pub struct AssetAddArgs {
     pub(super) scene_id: String,
@@ -51,7 +51,7 @@ pub struct AssetAddArgs {
 }
 
 #[derive(Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 /// Arguments of `layer_add`.
 pub struct LayerAddArgs {
     pub(super) scene_id: String,
@@ -68,7 +68,7 @@ pub struct LayerAddArgs {
 }
 
 #[derive(Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 /// Arguments of `layer_update`.
 pub struct LayerUpdateArgs {
     pub(super) scene_id: String,
@@ -79,7 +79,7 @@ pub struct LayerUpdateArgs {
 }
 
 #[derive(Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 /// Arguments of `scene_describe`.
 pub struct SceneDescribeArgs {
     pub(super) scene_id: String,
@@ -91,7 +91,7 @@ pub struct SceneDescribeArgs {
 }
 
 #[derive(Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 /// Arguments of `render`.
 pub struct RenderArgs {
     pub(super) scene_id: String,

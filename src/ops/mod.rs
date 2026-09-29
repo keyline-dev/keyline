@@ -157,7 +157,7 @@ pub fn add_layers(
             Some(_) => return Err(at("parent must be a frame id".into())),
         };
         crate::reuse::tokens::bind(&mut v, &next.tokens).map_err(at)?;
-        let mut layer = parse_layer(&v).map_err(at)?;
+        let mut layer = parse_layer(&v).map_err(|e| at(blame_token(&v, e)))?;
         resolve_assets(&mut layer, &next.assets);
         reserve_ids(&layer, &mut taken);
         parsed.push((i, parent, layer));
@@ -316,10 +316,16 @@ fn apply(
                 let mut v = serde_json::to_value(&layers[i]).map_err(|e| e.to_string())?;
                 // An explicit value replaces a token binding; a new "$name" binds again.
                 crate::reuse::tokens::unbind_set(&mut v, set);
+                // A field the set mentions is no longer a kept default:
+                // its new value (or its reset) decides.
+                if let Some(Value::Object(kept)) = v.get_mut("$defaults") {
+                    kept.retain(|k, _| !set.contains_key(k));
+                }
                 merge_patch(&mut v, &Value::Object(set.clone()));
                 crate::reuse::tokens::bind(&mut v, tokens)
                     .map_err(|e| format!("{}: {e}", layers[i].id))?;
-                layers[i] = parse_layer(&v).map_err(|e| format!("{}: {e}", layers[i].id))?;
+                layers[i] = parse_layer(&v)
+                    .map_err(|e| format!("{}: {}", layers[i].id, blame_token(&v, e)))?;
             }
         }
         if let Some(children) = layers[i].kind.children_mut() {
@@ -334,8 +340,13 @@ fn apply(
 pub(crate) fn parse_layer(v: &Value) -> Result<Layer, String> {
     let mut v = v.clone();
     normalize(&mut v);
-    let layer: Layer = serde_json::from_value(v.clone()).map_err(|e| e.to_string())?;
+    let mut layer: Layer = serde_json::from_value(v.clone()).map_err(|e| e.to_string())?;
     check_keys(&v, &layer)?;
+    layer.own_defaults = if layer.style.is_some() {
+        explicit_defaults(&v, &layer)
+    } else {
+        Map::new()
+    };
     if let (Some(_), Some(children)) = (
         layer.kind.children(),
         v.get("children").and_then(Value::as_array),
@@ -345,6 +356,62 @@ pub(crate) fn parse_layer(v: &Value) -> Result<Layer, String> {
         }
     }
     Ok(layer)
+}
+
+/// Names the token behind a layer that doesn't parse, when dropping one
+/// bound field makes it parse: a token whose value doesn't suit a field.
+fn blame_token(v: &Value, e: String) -> String {
+    let Some(Value::Object(refs)) = v.get("$tokens") else {
+        return e;
+    };
+    for (ptr, name) in refs {
+        let mut without = v.clone();
+        let Some((parent, key)) = ptr.rsplit_once('/') else {
+            continue;
+        };
+        let key = key.replace("~1", "/").replace("~0", "~");
+        let dropped = without
+            .pointer_mut(parent)
+            .and_then(Value::as_object_mut)
+            .is_some_and(|o| o.remove(&key).is_some());
+        if dropped && parse_layer(&without).is_ok() {
+            let field = ptr.trim_start_matches('/');
+            let name = name.as_str().unwrap_or_default();
+            return format!("token ${name} doesn't suit {field}: {e}");
+        }
+    }
+    e
+}
+
+/// The fields `v` gives (or kept from before, in `$defaults`) that `layer`
+/// holds at their default value, so storage would drop them. A field
+/// counts only when adding it back leaves the layer the same, which rules
+/// out short forms stored under another name.
+fn explicit_defaults(v: &Value, layer: &Layer) -> Map<String, Value> {
+    let mut plain = layer.clone();
+    plain.own_defaults.clear();
+    let Ok(Value::Object(saved)) = serde_json::to_value(&plain) else {
+        return Map::new();
+    };
+    let mut given = match v.get("$defaults") {
+        Some(Value::Object(kept)) => kept.clone(),
+        _ => Map::new(),
+    };
+    if let Value::Object(o) = v {
+        for (k, val) in o {
+            given.insert(k.clone(), val.clone());
+        }
+    }
+    given
+        .into_iter()
+        .filter(|(k, val)| {
+            !k.starts_with('$') && !saved.contains_key(k) && {
+                let mut with = saved.clone();
+                with.insert(k.clone(), val.clone());
+                serde_json::from_value::<Layer>(Value::Object(with)).is_ok_and(|w| w == plain)
+            }
+        })
+        .collect()
 }
 
 /// An asset reference written with its size, as `asset_add` replies

@@ -14,6 +14,7 @@ pub(super) const UNSTYLABLE: &[&str] = &[
     "props",
     "each",
     "$tokens",
+    "$defaults",
 ];
 
 /// `l` with its styles applied under its own fields, or `None` when it has
@@ -25,6 +26,12 @@ pub(super) fn styled(l: &Layer, scene: &Scene) -> Result<Option<Layer>, String> 
     };
     let mut v = serde_json::to_value(l).map_err(|e| e.to_string())?;
     let obj = v.as_object_mut().ok_or("layer isn't an object")?;
+    // Own fields set to their default aren't stored; they still win.
+    if let Some(serde_json::Value::Object(own)) = obj.remove("$defaults") {
+        for (k, val) in own {
+            obj.entry(k).or_insert(val);
+        }
+    }
     for name in names.iter().rev() {
         let style = scene.styles.get(name).ok_or_else(|| {
             let known: Vec<&str> = scene.styles.keys().map(String::as_str).collect();
