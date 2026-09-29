@@ -86,7 +86,7 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 sudo apt install ./keyline-mcp_<version>-1_amd64.deb
 ```
 
-**macOS (Apple silicon):** download `keyline-mcp-<version>-macos-arm64.tar.gz` from the latest release, unpack it and put `keyline-mcp` on your PATH. The binary isn't signed by Apple, so if you downloaded it in a browser, clear the quarantine flag once:
+**macOS (Apple silicon):** `brew install keyline-dev/tap/keyline-mcp`. Or download `keyline-mcp-<version>-macos-arm64.tar.gz` from the latest release, unpack it and put `keyline-mcp` on your PATH. The binary isn't signed by Apple, so if you downloaded it in a browser, clear the quarantine flag once:
 
 ```sh
 tar xzf keyline-mcp-<version>-macos-arm64.tar.gz

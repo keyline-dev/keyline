@@ -7,7 +7,7 @@ keyline is one program, `keyline-mcp`, that an MCP client starts and talks to ov
 Download the file for your machine from the [latest release](https://github.com/keyline-dev/keyline/releases/latest):
 
 - **Linux** (amd64 or arm64): the `.deb`, then `sudo apt install ./keyline-mcp_<version>-1_amd64.deb`. It puts `keyline-mcp` in `/usr/bin`.
-- **macOS** (Apple silicon): the `macos-arm64` tarball; unpack it and put `keyline-mcp` on your PATH ([README](../README.md#quick-start) has the commands).
+- **macOS** (Apple silicon): `brew install keyline-dev/tap/keyline-mcp`, or the `macos-arm64` tarball, unpacked, with `keyline-mcp` put on your PATH ([README](../README.md#quick-start) has the commands).
 
 To check a download, compare it with the release's `SHA256SUMS`, or check where it was built with the [GitHub CLI](https://cli.github.com):
 
