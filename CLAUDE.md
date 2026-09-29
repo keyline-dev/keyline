@@ -15,7 +15,7 @@ Server-side image composition engine driven by an AI agent over MCP.
 - Rendering: GPU by default (Metal on macOS, Vulkan on Linux and Windows), CPU when no GPU opens or with `--renderer cpu`. Tests and reference images always use the CPU, which is deterministic on one OS version; glyph edges still differ slightly between OS versions (macOS 26 vs 27), so goldens are compared with a small tolerance.
 - Real-LLM test (runs Claude Code headless on the Claude subscription, no API key): `cargo test --test llm_e2e -- --ignored --nocapture`. Set `CLAUDE_BIN` if `claude` isn't on PATH.
 - Benchmarks: set `KEYLINE_MCP_BENCH=<label>` on `llm_e2e` (kept in `bench/reference-ad/`, committed) or `recreate_e2e` (rebuilds a design from its image; designs and runs stay in the gitignored `bench/recreate/local/`). Runs vary up to 2× in cost, so judge a change on at least 3 runs, and compare prompt versions only with each other (see `bench/reference-ad/README.md`).
-- Release: push a `v*` tag; `.github/workflows/release.yml` builds the Linux `.deb` (via `cargo deb`, a build tool, not a dependency) and tarball for amd64 and arm64 and attaches them to a GitHub release.
+- Release: bump `version` in `Cargo.toml`, commit, and push a `vX.Y.Z` tag that matches it (the workflow refuses a mismatch; only full versions trigger it). `.github/workflows/release.yml` builds the Linux `.deb` (via `cargo deb`, a build tool, not a dependency) and tarballs for Linux amd64, arm64 and macOS arm64, and attaches them to a GitHub release with `SHA256SUMS` and build provenance attestations.
 
 ## Language
 

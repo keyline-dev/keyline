@@ -2,16 +2,33 @@ name: Release
 
 # Push a tag like v0.1.0 to build and attach to a GitHub release: for Linux
 # (x86_64 and arm64) a .deb (install with `sudo apt install ./keyline-mcp_*.deb`)
-# and a tarball of the binary; for macOS (Apple silicon) a tarball.
+# and a tarball of the binary; for macOS (Apple silicon) a tarball. Every
+# file is listed in SHA256SUMS and gets a build provenance attestation
+# (`gh attestation verify <file> --repo keyline-dev/keyline`).
 on:
   push:
-    tags: ["v*"]
+    # Full versions only: a moving tag like `v0` (for the GitHub Action)
+    # must not start a release.
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The tag matches Cargo.toml
+        run: |
+          want="v$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
+          if [ "$GITHUB_REF_NAME" != "$want" ]; then
+            echo "::error::tag $GITHUB_REF_NAME, but Cargo.toml says $want: bump the version first"
+            exit 1
+          fi
+
   build:
+    needs: version
     name: ${{ matrix.os }}-${{ matrix.arch }}
     strategy:
       matrix:
@@ -54,14 +71,26 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
+          path: dist
+      - name: Checksums
+        working-directory: dist
+        run: |
+          find . -mindepth 2 -type f -exec mv {} . \;
+          find . -mindepth 1 -type d -empty -delete
+          sha256sum *.deb *.tar.gz > SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-            --title "$GITHUB_REF_NAME" --generate-notes \
-            $(find . -name '*.deb' -o -name '*.tar.gz')
+            --title "$GITHUB_REF_NAME" --generate-notes dist/*
