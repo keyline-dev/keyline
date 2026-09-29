@@ -157,17 +157,16 @@ async fn edits_are_batched_atomic_and_terse() {
     let d = mcp
         .ok(
             "layer_update",
-            json!({"sceneId": id, "ops": [
-                {"target": {"id": "cta-text"}, "set": {"resize": "fixed", "width": 120, "height": 50}}
-            ]}),
+            json!({"sceneId": id,
+                "ops": [{"target": {"id": "cta-text"}, "set": {"width": 120, "height": 50}}]}),
         )
         .await;
     // The warning says what size would fit, so one retry is enough.
-    assert!(d.contains("!overflow needs 120×"), "{d}");
+    assert!(d.contains("!truncated needs 120×"), "{d}");
     for size in ["portrait", "wide", "sky"] {
         assert!(
             d.lines()
-                .any(|l| l.starts_with(&format!("{size} cta-text")) && l.contains("!overflow")),
+                .any(|l| l.starts_with(&format!("{size} cta-text")) && l.contains("!truncated")),
             "{d}"
         );
     }

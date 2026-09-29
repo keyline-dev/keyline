@@ -12,8 +12,7 @@ fn rects(n: usize) -> Value {
 #[test]
 fn equal_columns_fill_rows_in_order() {
     let s = scene(
-        json!([{"id": "g", "type": "frame", "width": 620, "height": 210,
-        "grid": {"columns": 3, "gap": 10}, "children": rects(5)}]),
+        json!([{"id": "g", "type": "frame", "width": 620, "height": 210, "gridTemplateColumns": "repeat(3, 1fr)", "gap": 10, "children": rects(5)}]),
     );
     let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
     // 620 - 2 × 10 = 600 → 200 per column; two auto rows share nothing, so
@@ -27,12 +26,7 @@ fn equal_columns_fill_rows_in_order() {
 #[test]
 fn px_pct_auto_and_fr_tracks() {
     let s = scene(
-        json!([{"id": "g", "type": "frame", "width": 1000, "height": 400,
-        "grid": {"columns": "100px 1fr auto 2fr 10%", "rows": "1fr 3fr"},
-        "children": [
-            {"id": "a", "type": "rect"}, {"id": "b", "type": "rect"},
-            {"id": "c", "type": "rect", "width": 70, "height": 30},
-            {"id": "d", "type": "rect"}, {"id": "e", "type": "rect"}]}]),
+        json!([{"id": "g", "type": "frame", "width": 1000, "height": 400, "gridTemplateColumns": "100px 1fr auto 2fr 10%", "gridTemplateRows": "1fr 3fr", "children": [{"id": "a", "type": "rect"}, {"id": "b", "type": "rect"}, {"id": "c", "type": "rect", "width": 70, "height": 30}, {"id": "d", "type": "rect"}, {"id": "e", "type": "rect"}]}]),
     );
     let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
     // 1000 - 100 - 70 (auto: c's width) - 100 (10%) = 730 → 1fr 243.3, 2fr 486.7.
@@ -47,13 +41,7 @@ fn px_pct_auto_and_fr_tracks() {
 #[test]
 fn areas_place_children_by_name() {
     let s = scene(
-        json!([{"id": "g", "type": "frame", "width": 900, "height": 400,
-        "grid": {"columns": "1fr 1fr 1fr", "rows": "3fr 1fr", "gap": 20,
-                 "areas": ["hero hero side", "cta cta side"]},
-        "children": [
-            {"id": "s", "type": "rect", "area": "side"},
-            {"id": "h", "type": "rect", "area": "hero"},
-            {"id": "c", "type": "rect", "area": "cta"}]}]),
+        json!([{"id": "g", "type": "frame", "width": 900, "height": 400, "gridTemplateColumns": "1fr 1fr 1fr", "gridTemplateRows": "3fr 1fr", "gridTemplateAreas": ["hero hero side", "cta cta side"], "gap": 20, "children": [{"id": "s", "type": "rect", "gridArea": "side"}, {"id": "h", "type": "rect", "gridArea": "hero"}, {"id": "c", "type": "rect", "gridArea": "cta"}]}]),
     );
     let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
     // Columns (900 - 40) / 3; rows 380 split 3:1.
@@ -66,10 +54,7 @@ fn areas_place_children_by_name() {
 #[test]
 fn areas_alone_give_equal_columns() {
     let s = scene(
-        json!([{"id": "g", "type": "frame", "width": 400, "height": 200,
-        "grid": {"areas": ["a b", "a c"], "rows": "1fr 1fr"},
-        "children": [{"id": "b", "type": "rect", "area": "b"}, {"id": "a", "type": "rect", "area": "a"},
-                     {"id": "c", "type": "rect", "area": "c"}]}]),
+        json!([{"id": "g", "type": "frame", "width": 400, "height": 200, "gridTemplateRows": "1fr 1fr", "gridTemplateAreas": ["a b", "a c"], "children": [{"id": "b", "type": "rect", "gridArea": "b"}, {"id": "a", "type": "rect", "gridArea": "a"}, {"id": "c", "type": "rect", "gridArea": "c"}]}]),
     );
     let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
     check(&b, "a", (0.0, 0.0, 200.0, 200.0));
@@ -80,13 +65,7 @@ fn areas_alone_give_equal_columns() {
 #[test]
 fn cells_and_spans_then_auto_flow_around_them() {
     let s = scene(
-        json!([{"id": "g", "type": "frame", "width": 300, "height": 300,
-        "grid": {"columns": 3, "rows": 3},
-        "children": [
-            {"id": "a", "type": "rect"},
-            {"id": "big", "type": "rect", "cell": [1, 2], "span": [2, 2]},
-            {"id": "b", "type": "rect"},
-            {"id": "wide", "type": "rect", "span": [1, 3]}]}]),
+        json!([{"id": "g", "type": "frame", "width": 300, "height": 300, "gridTemplateColumns": "repeat(3, 1fr)", "gridTemplateRows": "repeat(3, 1fr)", "children": [{"id": "a", "type": "rect"}, {"id": "big", "type": "rect", "gridRow": "1 / span 2", "gridColumn": "2 / span 2"}, {"id": "b", "type": "rect"}, {"id": "wide", "type": "rect", "gridColumn": "span 3"}]}]),
     );
     let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
     check(&b, "big", (100.0, 0.0, 200.0, 200.0));
@@ -98,8 +77,7 @@ fn cells_and_spans_then_auto_flow_around_them() {
 #[test]
 fn min_columns_fit_as_many_as_the_width_allows() {
     let s = scene(
-        json!([{"id": "g", "type": "frame", "width": 700, "height": 100,
-        "grid": {"columns": {"min": 160}, "gap": 20}, "children": rects(5)}]),
+        json!([{"id": "g", "type": "frame", "width": 700, "height": 100, "gridTemplateColumns": "repeat(auto-fill, minmax(160px, 1fr))", "gap": 20, "children": rects(5)}]),
     );
     let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
     // (700 + 20) / (160 + 20) = 4 columns of (700 - 60) / 4 = 160.
@@ -109,12 +87,9 @@ fn min_columns_fit_as_many_as_the_width_allows() {
 
 #[test]
 fn a_grid_without_a_size_hugs_its_tracks_and_padding() {
-    let s = scene(json!([{"id": "g", "type": "frame", "x": 10, "y": 20,
-        "grid": {"columns": "auto auto", "gap": [5, 10], "padding": 8},
-        "children": [
-            {"id": "a", "type": "rect", "width": 50, "height": 30},
-            {"id": "b", "type": "rect", "width": 80, "height": 20},
-            {"id": "c", "type": "rect", "width": 60, "height": 40}]}]));
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "x": 10, "y": 20, "gridTemplateColumns": "auto auto", "gap": [5, 10], "padding": 8, "children": [{"id": "a", "type": "rect", "width": 50, "height": 30}, {"id": "b", "type": "rect", "width": 80, "height": 20}, {"id": "c", "type": "rect", "width": 60, "height": 40}]}]),
+    );
     let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
     // Columns 60 and 80, rows 30 and 40: 8 + 60 + 10 + 80 + 8 = 166 wide,
     // 8 + 30 + 5 + 40 + 8 = 91 tall.
@@ -125,11 +100,9 @@ fn a_grid_without_a_size_hugs_its_tracks_and_padding() {
 
 #[test]
 fn auto_rows_grow_to_wrapped_text() {
-    let s = scene(json!([{"id": "g", "type": "frame", "width": 400,
-        "grid": {"columns": 2},
-        "children": [
-            {"id": "t", "type": "text", "text": "one two three four five six seven eight", "fontSize": 20},
-            {"id": "r", "type": "rect"}]}]));
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "width": 400, "gridTemplateColumns": "repeat(2, 1fr)", "children": [{"id": "t", "type": "text", "text": "one two three four five six seven eight", "fontSize": 20}, {"id": "r", "type": "rect"}]}]),
+    );
     let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
     let t = b["t"];
     assert_eq!((t.x, t.w), (0.0, 200.0));
@@ -142,11 +115,7 @@ fn auto_rows_grow_to_wrapped_text() {
 #[test]
 fn at_rearranges_a_grid_per_size() {
     let s = scene_with(
-        json!([{"id": "g", "type": "frame", "width": "fill", "height": "fill",
-            "grid": {"columns": "1fr 1fr", "rows": "1fr 1fr", "areas": ["a b", "a c"]},
-            "at": {"wide": {"grid": {"columns": "1fr 1fr 1fr", "rows": "1fr", "areas": ["a b c"]}}},
-            "children": [{"id": "a", "type": "rect", "area": "a"}, {"id": "b", "type": "rect", "area": "b"},
-                         {"id": "c", "type": "rect", "area": "c"}]}]),
+        json!([{"id": "g", "type": "frame", "width": "fill", "height": "fill", "gridTemplateColumns": "1fr 1fr", "gridTemplateRows": "1fr 1fr", "gridTemplateAreas": ["a b", "a c"], "media": {"wide": {"gridTemplateColumns": "1fr 1fr 1fr", "gridTemplateRows": "1fr", "gridTemplateAreas": ["a b c"]}}, "children": [{"id": "a", "type": "rect", "gridArea": "a"}, {"id": "b", "type": "rect", "gridArea": "b"}, {"id": "c", "type": "rect", "gridArea": "c"}]}]),
         json!({"width": 400, "height": 400, "sizes": [
             {"id": "sq", "width": 400, "height": 400}, {"id": "banner", "width": 900, "height": 300}]}),
     );
@@ -160,37 +129,50 @@ fn at_rearranges_a_grid_per_size() {
 #[test]
 fn grid_errors_are_one_line() {
     let bad = |g: Value, child: Value| {
-        let s = scene(json!([{"id": "g", "type": "frame", "grid": g, "children": [child]}]));
-        s.validate().unwrap_err()
+        let mut f = json!({"id": "g", "type": "frame", "children": [child]});
+        for (k, v) in g.as_object().unwrap() {
+            f[k] = v.clone();
+        }
+        scene(json!([f])).validate().unwrap_err()
     };
     let r = json!({"id": "r", "type": "rect"});
     assert_eq!(
-        bad(json!({"areas": ["a a", "b a"]}), r.clone()),
+        bad(json!({"gridTemplateAreas": ["a a", "b a"]}), r.clone()),
         "g: grid area a isn't a rectangle"
     );
     assert!(
         bad(
-            json!({"areas": ["a"]}),
-            json!({"id": "r", "type": "rect", "area": "x"})
+            json!({"gridTemplateAreas": ["a"]}),
+            json!({"id": "r", "type": "rect", "gridArea": "x"})
         )
         .contains("r: no grid area x")
     );
-    assert!(
-        bad(
-            json!({"columns": 2}),
-            json!({"id": "r", "type": "rect", "cell": [0, 1]})
-        )
-        .contains("count from 1")
-    );
+    let e =
+        serde_json::from_value::<keyline_mcp::scene::Layer>(json!({"type": "rect", "gridRow": 0}))
+            .unwrap_err();
+    assert!(e.to_string().contains("a line like 2"), "{e}");
 }
 
 #[test]
 fn min_columns_never_outnumber_the_children() {
     let s = scene(
-        json!([{"id": "g", "type": "frame", "width": 1000, "height": 100,
-        "grid": {"columns": {"min": 1}}, "children": rects(2)}]),
+        json!([{"id": "g", "type": "frame", "width": 1000, "height": 100, "gridTemplateColumns": "repeat(auto-fill, minmax(1px, 1fr))", "children": rects(2)}]),
     );
     let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
     // A 1 px minimum fits 1000 columns; two children get two, 500 each.
     check(&b, "c1", (500.0, 0.0, 500.0, 100.0));
+}
+
+#[test]
+fn a_lone_grid_column_keeps_the_child_in_that_column() {
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "width": 300, "height": 200, "gridTemplateColumns": "repeat(3, 1fr)", "children": [
+            {"id": "a", "type": "rect", "gridColumn": 3},
+            {"id": "b", "type": "rect", "gridColumn": "1 / span 2"},
+            {"id": "c", "type": "rect", "gridRow": 2}]}]),
+    );
+    let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
+    check(&b, "a", (200.0, 0.0, 100.0, 100.0));
+    check(&b, "b", (0.0, 0.0, 200.0, 100.0));
+    check(&b, "c", (0.0, 100.0, 100.0, 100.0));
 }

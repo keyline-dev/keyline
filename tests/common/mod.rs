@@ -219,27 +219,52 @@ pub async fn build_reference_ad(mcp: &Mcp) -> String {
 
     let navy = "#1B2A5C";
     let red = "#D0202E";
-    let bottom = json!({"h": "stretch", "v": "bottom"});
+    let bottom = json!({"horizontal": "stretch", "vertical": "bottom"});
     let mut layers = vec![
-        json!({"id": "headline", "type": "text", "x": 60, "y": 40, "width": 960, "resize": "auto-height",
-               "fontSize": 64, "weight": 800, "align": "center", "color": navy,
-               "text": "Proven RESULTS for WILLOWMERE Families",
-               "ranges": [{"start": 7, "end": 14, "color": red}, {"start": 19, "end": 29, "color": red}],
-               "constraints": {"h": "stretch", "v": "top"}}),
-        json!({"id": "photo", "type": "image", "asset": "photo", "x": 0, "y": 220, "width": 1080, "height": 460,
-               "constraints": {"h": "stretch", "v": "stretch"}}),
+        json!({"id": "headline",
+            "type": "text",
+            "x": 60,
+            "y": 40,
+            "width": 960,
+            "fontSize": 64,
+            "fontWeight": 800,
+            "textAlign": "center",
+            "color": navy,
+            "text": "Proven RESULTS for WILLOWMERE Families",
+            "ranges": [
+                {"start": 7, "end": 14, "color": red},
+                {"start": 19, "end": 29, "color": red}],
+            "constraints": {"horizontal": "stretch", "vertical": "top"}}),
+        json!({"id": "photo",
+            "type": "image",
+            "asset": "photo",
+            "x": 0,
+            "y": 220,
+            "width": 1080,
+            "height": 460,
+            "constraints": {"horizontal": "stretch", "vertical": "stretch"}}),
         json!({"id": "names", "type": "frame", "y": 700, "width": 1080, "height": 110, "constraints": bottom}),
-        json!({"id": "cta", "type": "frame", "y": 830, "width": 1080, "height": 100, "color": red, "constraints": bottom,
-        "children": [
-            {"id": "mail", "type": "image", "asset": "mail", "x": 318, "y": 28, "width": 56, "height": 44,
-             "constraints": {"h": "center", "v": "center"}},
-            {"id": "cta-text", "type": "text", "text": "VOTE BY MAIL", "x": 394, "y": 21, "fontSize": 48,
-             "weight": 800, "color": "#FFFFFF", "constraints": {"h": "center", "v": "center"}}
-        ]}),
+        json!({"id": "cta",
+            "type": "frame",
+            "y": 830,
+            "width": 1080,
+            "height": 100,
+            "constraints": bottom,
+            "children": [
+                {"id": "mail", "type": "image", "asset": "mail", "x": 318, "y": 28, "width": 56, "height": 44, "constraints": {"horizontal": "center", "vertical": "center"}},
+                {"id": "cta-text", "type": "text", "text": "VOTE BY MAIL", "x": 394, "y": 21, "fontSize": 48, "fontWeight": 800, "color": "#FFFFFF", "constraints": {"horizontal": "center", "vertical": "center"}}],
+            "fill": red}),
         json!({"id": "steps", "type": "frame", "y": 950, "width": 1080, "height": 290, "constraints": bottom}),
-        json!({"id": "footer", "type": "text", "x": 60, "y": 1280, "width": 960, "resize": "auto-height",
-               "fontSize": 30, "align": "center", "color": "#6B7280",
-               "text": "Paid for by Willowmere Forward · willowmereforward.org", "constraints": bottom}),
+        json!({"id": "footer",
+            "type": "text",
+            "x": 60,
+            "y": 1280,
+            "width": 960,
+            "fontSize": 30,
+            "textAlign": "center",
+            "color": "#6B7280",
+            "text": "Paid for by Willowmere Forward · willowmereforward.org",
+            "constraints": bottom}),
     ];
     let columns = [
         ("Dana Levi", "Mayor"),
@@ -248,15 +273,31 @@ pub async fn build_reference_ad(mcp: &Mcp) -> String {
     ];
     for (i, (name, title)) in columns.iter().enumerate() {
         let x = 60 + i * 330;
-        let col = json!({"h": "scale", "v": "top"});
-        layers.push(
-            json!({"type": "text", "parent": "names", "role": "name", "text": name, "x": x, "y": 10,
-            "width": 300, "resize": "auto-height", "fontSize": 36, "weight": 700, "align": "center",
-            "color": navy, "constraints": col}),
-        );
-        layers.push(json!({"type": "text", "parent": "names", "role": "title", "text": title, "x": x, "y": 60,
-            "width": 300, "resize": "auto-height", "fontSize": 30, "weight": 500, "align": "center",
-            "color": red, "constraints": col}));
+        let col = json!({"horizontal": "scale", "vertical": "top"});
+        layers.push(json!({"type": "text",
+                "parent": "names",
+                "role": "name",
+                "text": name,
+                "x": x,
+                "y": 10,
+                "width": 300,
+                "fontSize": 36,
+                "fontWeight": 700,
+                "textAlign": "center",
+                "color": navy,
+                "constraints": col}));
+        layers.push(json!({"type": "text",
+            "parent": "names",
+            "role": "title",
+            "text": title,
+            "x": x,
+            "y": 60,
+            "width": 300,
+            "fontSize": 30,
+            "fontWeight": 500,
+            "textAlign": "center",
+            "color": red,
+            "constraints": col}));
     }
     let steps = [
         "Request your ballot by October 20",
@@ -269,9 +310,17 @@ pub async fn build_reference_ad(mcp: &Mcp) -> String {
             json!({"type": "image", "parent": "steps", "asset": "check", "x": 120, "y": y,
             "width": 48, "height": 48}),
         );
-        layers.push(json!({"type": "text", "parent": "steps", "role": "step", "text": step, "x": 190, "y": y + 4,
-            "width": 800, "resize": "auto-height", "fontSize": 32, "weight": 500, "color": navy,
-            "constraints": {"h": "stretch", "v": "top"}}));
+        layers.push(json!({"type": "text",
+            "parent": "steps",
+            "role": "step",
+            "text": step,
+            "x": 190,
+            "y": y + 4,
+            "width": 800,
+            "fontSize": 32,
+            "fontWeight": 500,
+            "color": navy,
+            "constraints": {"horizontal": "stretch", "vertical": "top"}}));
     }
     mcp.ok("layer_add", json!({"sceneId": id, "layers": layers}))
         .await;

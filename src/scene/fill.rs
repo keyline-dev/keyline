@@ -79,7 +79,7 @@ pub struct ImagePaint {
     #[serde(default = "one", skip_serializing_if = "is_one")]
     pub tile_scale: f32,
     /// Color adjustments.
-    #[serde(default, skip_serializing_if = "Adjust::is_none")]
+    #[serde(rename = "filter", default, skip_serializing_if = "Adjust::is_none")]
     pub adjust: Adjust,
     /// 0–1 (1).
     #[serde(default = "one", skip_serializing_if = "is_one")]
@@ -150,18 +150,18 @@ pub struct NoisePaint {
     pub blend_mode: BlendMode,
 }
 
-/// Image color adjustments, CSS filter names; 0 leaves the image unchanged.
-#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+/// Image color adjustments, CSS `filter` functions on their CSS scales.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Adjust {
-    /// −1…1: darker or lighter.
-    #[serde(default, skip_serializing_if = "is_zero")]
+    /// × each channel: 0 is black, 1 unchanged, 1.5 lighter (1).
+    #[serde(default = "one", skip_serializing_if = "is_one")]
     pub brightness: f32,
-    /// −1…1: flatter or punchier.
-    #[serde(default, skip_serializing_if = "is_zero")]
+    /// 0 is flat gray, 1 unchanged, 2 punchier (1).
+    #[serde(default = "one", skip_serializing_if = "is_one")]
     pub contrast: f32,
-    /// −1…1: grayer or more vivid.
-    #[serde(default, skip_serializing_if = "is_zero")]
+    /// 0 is gray, 1 unchanged, 2 more vivid (1).
+    #[serde(default = "one", skip_serializing_if = "is_one")]
     pub saturate: f32,
     /// 0…1: toward black and white.
     #[serde(default, skip_serializing_if = "is_zero")]
@@ -169,8 +169,8 @@ pub struct Adjust {
     /// 0…1: toward sepia.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub sepia: f32,
-    /// Hue rotation, degrees.
-    #[serde(default, skip_serializing_if = "is_zero")]
+    /// Hue rotation, degrees (CSS `hue-rotate`).
+    #[serde(rename = "hueRotate", default, skip_serializing_if = "is_zero")]
     pub hue: f32,
     /// Maps shadows to the first color and highlights to the second.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -182,6 +182,22 @@ pub struct Adjust {
     /// where it's darker, on transparent (0: off). `tint` recolors the dots.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub halftone: f32,
+}
+
+impl Default for Adjust {
+    fn default() -> Self {
+        Adjust {
+            brightness: 1.0,
+            contrast: 1.0,
+            saturate: 1.0,
+            grayscale: 0.0,
+            sepia: 0.0,
+            hue: 0.0,
+            duotone: None,
+            tint: None,
+            halftone: 0.0,
+        }
+    }
 }
 
 impl Adjust {
@@ -301,10 +317,10 @@ mod tests {
 
     #[test]
     fn flat_gradients_as_agents_write_them_are_gradients() {
-        // The fill every benchmark run guessed first (with `pos` stops).
+        // The fill every benchmark run guessed first: the gradient written flat.
         let p: Paint =
             serde_json::from_value(json!({"type": "linear", "angle": 180, "opacity": 0.5,
-            "stops": [{"color": "#F4F5F4", "pos": 0}, {"color": "#F4F5F400", "pos": 1}]}))
+            "stops": [{"color": "#F4F5F4", "offset": 0}, {"color": "#F4F5F400", "offset": 1}]}))
             .unwrap();
         let Paint::Gradient(g) = p else {
             panic!("not a gradient")

@@ -148,15 +148,13 @@ mod tests {
     fn each_shot_is_heard_in_its_time_and_muted_clips_not_at_all() {
         let clip = json!({"sha256": "c", "width": 10, "height": 10,
             "clip": {"duration": 5, "fps": 30, "audio": true}});
-        let scene: Scene = serde_json::from_value(json!({"width": 10, "height": 10,
+        let scene: Scene = serde_json::from_value(json!({"width": 10,
+            "height": 10,
             "sizes": [{"id": "a", "width": 10, "height": 10}],
             "assets": {"v": clip},
             "layers": [
-                {"type": "frame", "shot": {"duration": 1},
-                 "children": [{"type": "video", "asset": "v", "audio": false}]},
-                {"type": "frame", "hidden": true,
-                 "shot": {"duration": 2, "transition": {"type": "fade", "duration": 0.4}},
-                 "children": [{"type": "video", "asset": "v", "delay": 0.1}]}]}))
+                {"type": "frame", "shot": {"duration": 1}, "children": [{"type": "video", "asset": "v", "muted": true}]},
+                {"type": "frame", "hidden": true, "shot": {"duration": 2, "transition": {"type": "fade", "duration": 0.4}}, "children": [{"type": "video", "asset": "v", "delay": 0.1}]}]}))
         .unwrap();
         let s = sources(&scene, "/a".as_ref());
         assert_eq!(s.len(), 1, "{s:?}");

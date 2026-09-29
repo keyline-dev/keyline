@@ -64,8 +64,8 @@ fn motion(time: &LayerTime, i: usize, seed: u32, t: f32, end: f32) -> (Away, f32
         away.opacity *= num("opacity", 1.0);
         away.scale *= num("scale", 1.0);
         away.blur += num("blur", 0.0);
-        rotation = num("rotation", rotation);
-        if let Some(Val::Pair([x, y])) = tr.value("offset", Val::Pair([0.0, 0.0]), t, seed) {
+        rotation = num("rotate", rotation);
+        if let Some(Val::Pair([x, y])) = tr.value("translate", Val::Pair([0.0, 0.0]), t, seed) {
             away.offset = [away.offset[0] + x, away.offset[1] + y];
         }
         if let Some(Val::Pair(s)) = tr.value("skew", Val::Pair(skew), t, seed) {

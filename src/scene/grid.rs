@@ -8,26 +8,20 @@ use super::{Gap, Padding};
 /// Children take `area`, or `cell` and `span`, else fill the next free cell
 /// row by row. They stretch to their cell unless they have a px size, then
 /// they sit at its top-left. Without a `width` or `height`, the frame hugs.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Grid {
     /// Column tracks, CSS style: `"1fr 2fr"`, `"200px auto 25%"`,
     /// `"repeat(3, 1fr)"`; or `{"min": 160}`, as many equal columns as fit
     /// at least that wide. Default: one `1fr` per `areas` column, else one.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub columns: Option<Tracks>,
     /// Row tracks, as `columns`; rows beyond them are `auto` (default).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rows: Option<Tracks>,
     /// Space between cells, px; `[rowGap, columnGap]` (default 0).
-    #[serde(default, skip_serializing_if = "Gap::is_zero")]
     pub gap: Gap,
     /// Space inside the frame's edges, as a stack's (default 0).
-    #[serde(default, skip_serializing_if = "Padding::is_zero")]
     pub padding: Padding,
     /// Named areas, one string per row, a name per column; `.` is empty:
     /// `["hero hero side", "cta cta side"]`. Each name is a rectangle.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub areas: Vec<String>,
 }
 
@@ -123,23 +117,15 @@ fn parse_tracks(s: &str) -> Result<Vec<Track>, String> {
 impl<'de> Deserialize<'de> for Tracks {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let v = serde_json::Value::deserialize(d)?;
-        let what = "tracks like \"1fr 200px auto\", a count, or {\"min\": px}";
+        let what =
+            "CSS tracks like \"1fr 200px auto\" or \"repeat(auto-fill, minmax(160px, 1fr))\"";
         match &v {
-            serde_json::Value::String(s) => parse_tracks(s)
-                .map(Tracks::List)
-                .map_err(serde::de::Error::custom),
-            // A count is that many equal columns: 3 → "repeat(3, 1fr)".
-            serde_json::Value::Number(n) => n
-                .as_u64()
-                .filter(|n| (1..=MAX_TRACKS as u64).contains(n))
-                .map(|n| Tracks::List(vec![Track::Fr(1.0); n as usize]))
-                .ok_or_else(|| super::de::expected(what, &v)),
-            serde_json::Value::Object(o) if o.len() == 1 => o
-                .get("min")
-                .and_then(super::de::float)
-                .filter(|m| *m > 0.0)
-                .map(|min| Tracks::Fit { min })
-                .ok_or_else(|| super::de::expected(what, &v)),
+            serde_json::Value::String(s) => match auto_fill(s) {
+                Some(min) => Ok(Tracks::Fit { min }),
+                None => parse_tracks(s)
+                    .map(Tracks::List)
+                    .map_err(serde::de::Error::custom),
+            },
             _ => Err(super::de::expected(what, &v)),
         }
     }
@@ -148,7 +134,9 @@ impl<'de> Deserialize<'de> for Tracks {
 impl Serialize for Tracks {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         match self {
-            Tracks::Fit { min } => serde_json::json!({ "min": min }).serialize(s),
+            Tracks::Fit { min } => {
+                s.serialize_str(&format!("repeat(auto-fill, minmax({min}px, 1fr))"))
+            }
             Tracks::List(t) => {
                 let words: Vec<String> = t
                     .iter()
@@ -163,6 +151,23 @@ impl Serialize for Tracks {
             }
         }
     }
+}
+
+/// The smallest width in `repeat(auto-fill, minmax(160px, 1fr))` (or
+/// `auto-fit`): as many equal tracks as fit, each at least that wide.
+fn auto_fill(s: &str) -> Option<f32> {
+    let inner = s.trim().strip_prefix("repeat(")?.strip_suffix(')')?;
+    let (count, size) = inner.split_once(',')?;
+    if !matches!(count.trim(), "auto-fill" | "auto-fit") {
+        return None;
+    }
+    let min = size.trim().strip_prefix("minmax(")?.split(',').next()?;
+    min.trim()
+        .strip_suffix("px")?
+        .trim()
+        .parse()
+        .ok()
+        .filter(|m| *m > 0.0)
 }
 
 /// A named area's cells: `(row, column, rows, columns)`, 0-based.
@@ -224,12 +229,19 @@ impl Grid {
 #[cfg(test)]
 mod tests {
     use super::{Grid, Track, Tracks};
+    use crate::scene::FrameLayout;
     use serde_json::json;
 
+    fn grid(v: serde_json::Value) -> Result<Grid, serde_json::Error> {
+        serde_json::from_value::<FrameLayout>(v)
+            .map(|l| l.grid.unwrap_or_else(|| panic!("not a grid")))
+    }
+
     #[test]
-    fn tracks_read_css_syntax_counts_and_min() {
-        let g: Grid = serde_json::from_value(
-            json!({"columns": "200px repeat(2, 1fr) auto 25% 10", "rows": 2}),
+    fn tracks_read_css_syntax() {
+        let g = grid(
+            json!({"gridTemplateColumns": "200px repeat(2, 1fr) auto 25% 10",
+            "gridTemplateRows": "repeat(2, 1fr)"}),
         )
         .unwrap();
         assert_eq!(
@@ -247,39 +259,158 @@ mod tests {
             g.rows.as_ref().unwrap().list(),
             [Track::Fr(1.0), Track::Fr(1.0)]
         );
-        let mut g = g;
-        g.rows = None;
-        let v = serde_json::to_value(&g).unwrap();
-        assert_eq!(v["columns"], "200px 1fr 1fr auto 25% 10px");
-        assert!(v.get("rows").is_none());
-        let g: Grid = serde_json::from_value(json!({"columns": {"min": 160}})).unwrap();
-        assert_eq!(g.columns, Some(Tracks::Fit { min: 160.0 }));
+        let l = FrameLayout {
+            stack: None,
+            grid: Some(Grid { rows: None, ..g }),
+        };
+        let v = serde_json::to_value(&l).unwrap();
         assert_eq!(
-            serde_json::to_value(&g).unwrap(),
-            json!({"columns": {"min": 160.0}})
+            v,
+            json!({"gridTemplateColumns": "200px 1fr 1fr auto 25% 10px"})
         );
-        let e = serde_json::from_value::<Grid>(json!({"columns": "1fr 2em"})).unwrap_err();
+        let fit = json!({"gridTemplateColumns": "repeat(auto-fill, minmax(160px, 1fr))"});
+        let g = grid(fit.clone()).unwrap();
+        assert_eq!(g.columns, Some(Tracks::Fit { min: 160.0 }));
+        let l = FrameLayout {
+            stack: None,
+            grid: Some(g),
+        };
+        assert_eq!(serde_json::to_value(&l).unwrap(), fit);
+        let e = grid(json!({"gridTemplateColumns": "1fr 2em"})).unwrap_err();
         assert!(e.to_string().contains("bad track 2em"), "{e}");
         for huge in [
-            json!({"columns": "repeat(100000, 1fr)"}),
-            json!({"columns": 101}),
-            json!({"columns": "repeat(60, 1fr) repeat(60, 1fr)"}),
+            json!({"gridTemplateColumns": "repeat(100000, 1fr)"}),
+            json!({"gridTemplateColumns": "repeat(60, 1fr) repeat(60, 1fr)"}),
+            json!({"gridTemplateColumns": 3}),
         ] {
-            assert!(serde_json::from_value::<Grid>(huge).is_err());
+            assert!(serde_json::from_value::<FrameLayout>(huge).is_err());
         }
     }
 
     #[test]
     fn areas_are_rectangles() {
-        let g: Grid =
-            serde_json::from_value(json!({"areas": ["hero hero side", "cta cta side"]})).unwrap();
+        let g = grid(json!({"gridTemplateAreas": ["hero hero side", "cta cta side"]})).unwrap();
         g.check().unwrap();
         assert_eq!(g.area("hero"), Some((0, 0, 1, 2)));
         assert_eq!(g.area("side"), Some((0, 2, 2, 1)));
         assert_eq!(g.area("nope"), None);
-        let bad: Grid = serde_json::from_value(json!({"areas": ["a a", "a b"]})).unwrap();
+        let bad = grid(json!({"gridTemplateAreas": ["a a", "a b"]})).unwrap();
         assert_eq!(bad.check().unwrap_err(), "grid area a isn't a rectangle");
-        let bad: Grid = serde_json::from_value(json!({"areas": ["a a", "b"]})).unwrap();
+        let bad = grid(json!({"gridTemplateAreas": ["a a", "b"]})).unwrap();
         assert!(bad.check().unwrap_err().contains("same number"));
+    }
+}
+
+/// Where a grid child sits on one axis, CSS `grid-row` / `grid-column`:
+/// `2`, `"1 / span 2"`, `"1 / 3"` or `"span 2"`, counted from 1.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GridLine {
+    /// The first line, from 1; the next free cell when absent.
+    pub start: Option<u16>,
+    /// How many tracks it covers (1).
+    pub span: u16,
+}
+
+impl<'de> Deserialize<'de> for GridLine {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let v = serde_json::Value::deserialize(d)?;
+        let what = "a line like 2, \"1 / span 2\", \"1 / 3\" or \"span 2\"";
+        let bad = || super::de::expected(what, &v);
+        let num = |s: &str| s.trim().parse::<u16>().ok().filter(|n| *n >= 1);
+        let span = |s: &str| s.trim().strip_prefix("span").and_then(num);
+        match &v {
+            serde_json::Value::Number(n) => n
+                .as_u64()
+                .and_then(|n| u16::try_from(n).ok())
+                .filter(|n| *n >= 1)
+                .map(|n| GridLine {
+                    start: Some(n),
+                    span: 1,
+                })
+                .ok_or_else(bad),
+            serde_json::Value::String(s) => match s.split_once('/') {
+                None => span(s)
+                    .map(|n| GridLine {
+                        start: None,
+                        span: n,
+                    })
+                    .or_else(|| {
+                        num(s).map(|n| GridLine {
+                            start: Some(n),
+                            span: 1,
+                        })
+                    })
+                    .ok_or_else(bad),
+                Some((a, b)) => {
+                    let start = num(a).ok_or_else(bad)?;
+                    let n = span(b)
+                        .or_else(|| {
+                            num(b)
+                                .and_then(|end| end.checked_sub(start))
+                                .filter(|n| *n >= 1)
+                        })
+                        .ok_or_else(bad)?;
+                    Ok(GridLine {
+                        start: Some(start),
+                        span: n,
+                    })
+                }
+            },
+            _ => Err(bad()),
+        }
+    }
+}
+
+impl Serialize for GridLine {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        match (self.start, self.span) {
+            (Some(n), 1) => s.serialize_u16(n),
+            (Some(n), m) => s.serialize_str(&format!("{n} / span {m}")),
+            (None, m) => s.serialize_str(&format!("span {m}")),
+        }
+    }
+}
+
+#[cfg(test)]
+mod line_tests {
+    use super::GridLine;
+    use serde_json::json;
+
+    #[test]
+    fn grid_lines_read_as_css_writes_them() {
+        let line = |v| serde_json::from_value::<GridLine>(v).unwrap();
+        assert_eq!(
+            line(json!(2)),
+            GridLine {
+                start: Some(2),
+                span: 1
+            }
+        );
+        assert_eq!(
+            line(json!("1 / span 2")),
+            GridLine {
+                start: Some(1),
+                span: 2
+            }
+        );
+        assert_eq!(
+            line(json!("2 / 4")),
+            GridLine {
+                start: Some(2),
+                span: 2
+            }
+        );
+        assert_eq!(
+            line(json!("span 3")),
+            GridLine {
+                start: None,
+                span: 3
+            }
+        );
+        assert!(serde_json::from_value::<GridLine>(json!("3 / 2")).is_err());
+        assert_eq!(
+            serde_json::to_value(line(json!("1 / span 2"))).unwrap(),
+            json!("1 / span 2")
+        );
     }
 }

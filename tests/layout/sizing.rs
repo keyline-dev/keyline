@@ -67,8 +67,7 @@ fn percentages_inside_frames_use_the_frame() {
 #[test]
 fn min_and_max_clamp_stretched_sizes() {
     let s = scene(
-        json!([{"id": "r", "type": "rect", "x": 100, "width": 800, "height": 50,
-        "minWidth": 50, "maxWidth": 1000, "constraints": {"h": "stretch"}}]),
+        json!([{"id": "r", "type": "rect", "x": 100, "width": 800, "height": 50, "minWidth": 50, "maxWidth": 1000, "constraints": {"horizontal": "stretch"}}]),
     );
     check(
         &boxes(&s, &size("s", 1600.0, 500.0, 1.0)),
@@ -109,12 +108,9 @@ fn aspect_ratio_derives_the_missing_side() {
 
 #[test]
 fn place_pins_to_a_spot_at_every_size() {
-    let s = scene(json!([
-        {"id": "br", "type": "rect", "width": 100, "height": 50, "place": "bottom-right", "inset": 20},
-        {"id": "c", "type": "rect", "width": 100, "height": 50, "place": "center"},
-        {"id": "t", "type": "rect", "width": 100, "height": 50, "place": "top", "inset": [0, 10]},
-        {"id": "l", "type": "rect", "width": 100, "height": 50, "place": "left", "inset": [30, 0]},
-    ]));
+    let s = scene(
+        json!([{"id": "br", "type": "rect", "width": 100, "height": 50, "place": "bottom-right", "margin": 20}, {"id": "c", "type": "rect", "width": 100, "height": 50, "place": "center"}, {"id": "t", "type": "rect", "width": 100, "height": 50, "place": "top", "margin": [0, 10]}, {"id": "l", "type": "rect", "width": 100, "height": 50, "place": "left", "margin": [30, 0]}]),
+    );
     let a = boxes(&s, &size("s", 1000.0, 500.0, 1.0));
     check(&a, "br", (880.0, 430.0, 100.0, 50.0));
     check(&a, "c", (450.0, 225.0, 100.0, 50.0));
@@ -128,7 +124,7 @@ fn place_pins_to_a_spot_at_every_size() {
 #[test]
 fn place_insets_scale_with_the_scale_tool() {
     let s = scene(
-        json!([{"id": "br", "type": "rect", "width": 100, "height": 50, "place": "bottom-right", "inset": 20}]),
+        json!([{"id": "br", "type": "rect", "width": 100, "height": 50, "place": "bottom-right", "margin": 20}]),
     );
     check(
         &boxes(&s, &size("s", 600.0, 300.0, 0.5)),
@@ -199,6 +195,64 @@ fn bad_clamps_and_ratios_are_rejected() {
     };
     assert!(bad(json!({"minWidth": 50, "maxWidth": 10})).contains("minWidth must be <= maxWidth"));
     assert!(bad(json!({"aspectRatio": 0})).contains("aspectRatio must be > 0"));
-    assert!(bad(json!({"inset": 4})).contains("inset needs place"));
     assert!(bad(json!({"width": -5})).contains("width and height must be >= 0"));
+    assert!(bad(json!({"margin": 4})).contains("margin needs place; in a stack"));
+}
+
+#[test]
+fn a_clamped_placed_layer_is_placed_by_its_real_size() {
+    // B2: fill clamped to 300, pinned bottom-right 10 px in.
+    let s = scene(
+        json!([{"id": "r", "type": "rect", "width": "fill", "maxWidth": 300,
+        "height": 50, "place": "bottom-right", "margin": 10}]),
+    );
+    let b = boxes(&s, &size("s", 1000.0, 600.0, 1.0));
+    check(&b, "r", (690.0, 540.0, 300.0, 50.0));
+}
+
+#[test]
+fn a_placed_fill_layer_keeps_its_margins() {
+    // B3: a bottom bar 24 px in from each side.
+    let s = scene(
+        json!([{"id": "bar", "type": "rect", "width": "fill", "height": 50,
+        "place": "bottom", "margin": 24}]),
+    );
+    let b = boxes(&s, &size("s", 1000.0, 600.0, 1.0));
+    check(&b, "bar", (24.0, 526.0, 952.0, 50.0));
+}
+
+#[test]
+fn an_unsized_free_frame_wraps_its_children() {
+    // B9: like a CSS block or a Figma group, not a 100 px box.
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "x": 10, "y": 10, "children": [
+        {"id": "a", "type": "rect", "width": 300, "height": 40},
+        {"id": "b", "type": "rect", "y": 50, "width": 120, "height": 30}]}]),
+    );
+    let b = boxes(&s, &size("s", 1000.0, 600.0, 1.0));
+    check(&b, "g", (10.0, 10.0, 300.0, 80.0));
+}
+
+#[test]
+fn placed_fill_text_wraps_between_its_margins_before_it_is_placed() {
+    // Measured at 1000 it's one line; at 952 it wraps, and still ends 24 px up.
+    let s = scene(
+        json!([{"id": "t", "type": "text", "width": "fill", "place": "bottom", "margin": 24,
+        "fontSize": 47, "text": "one line that wraps only when it is narrower"}]),
+    );
+    let b = boxes(&s, &size("s", 1000.0, 600.0, 1.0));
+    let t = b["t"];
+    assert!(
+        (t.x - 24.0).abs() < 0.5 && (t.w - 952.0).abs() < 0.5 && (t.y + t.h - 576.0).abs() < 0.5,
+        "{t:?}"
+    );
+}
+
+#[test]
+fn a_free_frame_whose_children_all_fill_is_a_plain_box() {
+    let s = scene(json!([{"id": "g", "type": "frame", "x": 40, "children": [
+        {"id": "r", "type": "rect", "width": "fill", "height": "fill"}]}]));
+    let b = boxes(&s, &size("s", 1000.0, 600.0, 1.0));
+    check(&b, "g", (40.0, 0.0, 100.0, 100.0));
+    check(&b, "r", (40.0, 0.0, 100.0, 100.0));
 }

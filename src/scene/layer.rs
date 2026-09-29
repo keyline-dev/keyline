@@ -53,8 +53,8 @@ pub struct Layer {
     /// `constraints`, and holds at every size.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub place: Option<Place>,
-    /// Distance from the parent's edges for `place`, px or `[x, y]` (0).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// With `place`, its distance from the parent's edges, px or `[x, y]` (0).
+    #[serde(rename = "margin", default, skip_serializing_if = "Option::is_none")]
     pub inset: Option<Inset>,
     /// Not drawn and takes no space (default false); handy per size via `at`.
     #[serde(default, skip_serializing_if = "is_false")]
@@ -62,25 +62,28 @@ pub struct Layer {
     /// In a stack: this child's cross-axis placement, over the stack's `align`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub align_self: Option<StackAlign>,
-    /// In a stack: this child's share of the free space when it `fill`s (1).
-    #[serde(default = "one", skip_serializing_if = "is_one")]
-    pub grow: f32,
+    /// In a stack: this child's share of the free space, as CSS `flex-grow`.
+    /// A child with no size on the stack's axis grows when it's above 0; a
+    /// `fill` child takes 1 unless given.
+    #[serde(rename = "flexGrow", default, skip_serializing_if = "Option::is_none")]
+    pub grow: Option<f32>,
     /// In a stack that's too small: lower priorities give way first, like
     /// SwiftUI's `layoutPriority` (0).
-    #[serde(default, skip_serializing_if = "is_zero")]
+    #[serde(rename = "layoutPriority", default, skip_serializing_if = "is_zero")]
     pub priority: f32,
     /// In a stack: `absolute` takes the child out of the flow (default `auto`).
     #[serde(default, skip_serializing_if = "is_default")]
     pub position: Position,
     /// In a grid: the named area it fills.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "gridArea", default, skip_serializing_if = "Option::is_none")]
     pub area: Option<String>,
-    /// In a grid: `[row, column]`, from 1 (default: the next free cell).
+    /// In a grid: its row, CSS `grid-row`: `2`, `"1 / span 2"` or `"1 / 3"`,
+    /// counted from 1 (default: the next free cell, one row).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cell: Option<[u16; 2]>,
-    /// In a grid: `[rows, columns]` the child covers (default `[1, 1]`).
+    pub grid_row: Option<super::GridLine>,
+    /// In a grid: its column, as `gridRow`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub span: Option<[u16; 2]>,
+    pub grid_column: Option<super::GridLine>,
     /// How the layer follows its parent when the parent resizes.
     #[serde(default, skip_serializing_if = "Constraints::is_default")]
     pub constraints: Constraints,
@@ -88,7 +91,7 @@ pub struct Layer {
     #[serde(default = "one", skip_serializing_if = "is_one")]
     pub opacity: f32,
     /// Degrees, clockwise, about the box's center. Children rotate with it.
-    #[serde(default, skip_serializing_if = "is_zero")]
+    #[serde(rename = "rotate", default, skip_serializing_if = "is_zero")]
     pub rotation: f32,
     /// How the layer composites onto what's below.
     #[serde(default, skip_serializing_if = "is_default")]
@@ -128,11 +131,27 @@ pub struct Layer {
     pub time: crate::anim::LayerTime,
     /// Per-size changes, by size id: fields merged over this layer's own
     /// for that size only, e.g. `{"sky": {"fontSize": 20}}`.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(rename = "media", default, skip_serializing_if = "BTreeMap::is_empty")]
     pub at: BTreeMap<String, serde_json::Map<String, serde_json::Value>>,
     /// The type-specific part, tagged by `type`.
     #[serde(flatten)]
     pub kind: Kind,
+}
+
+impl Layer {
+    /// In a grid: `[row, column]` it starts at, from 1, each when given.
+    pub fn cell(&self) -> [Option<u16>; 2] {
+        [
+            self.grid_row.and_then(|l| l.start),
+            self.grid_column.and_then(|l| l.start),
+        ]
+    }
+
+    /// In a grid: `[rows, columns]` it covers (`[1, 1]`).
+    pub fn span(&self) -> [u16; 2] {
+        let n = |l: Option<super::GridLine>| l.map_or(1, |l| l.span);
+        [n(self.grid_row), n(self.grid_column)]
+    }
 }
 
 /// One style name, or several applied in order.

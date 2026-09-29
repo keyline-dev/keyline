@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields)]
 pub struct Constraints {
     /// Horizontal constraint.
-    #[serde(default)]
+    #[serde(rename = "horizontal", default)]
     pub h: HConstraint,
     /// Vertical constraint.
-    #[serde(default)]
+    #[serde(rename = "vertical", default)]
     pub v: VConstraint,
 }
 
@@ -100,9 +100,10 @@ mod tests {
 
     #[test]
     fn constraint_names_parse() {
-        let c: Constraints = serde_json::from_value(json!({"h": "right", "v": "bottom"})).unwrap();
+        let c: Constraints =
+            serde_json::from_value(json!({"horizontal": "right", "vertical": "bottom"})).unwrap();
         assert_eq!(Pin::from(c.h), Pin::End);
         assert_eq!(Pin::from(c.v), Pin::End);
-        assert!(serde_json::from_value::<Constraints>(json!({"h": "top"})).is_err());
+        assert!(serde_json::from_value::<Constraints>(json!({"horizontal": "top"})).is_err());
     }
 }

@@ -21,16 +21,12 @@ fn template_dir(name: &str) -> PathBuf {
     ));
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("photo.png"), common::photo_png()).unwrap();
-    let template = json!({
-        "sizes": ["400x200"],
+    let template = json!({"sizes": ["400x200"],
         "tokens": {"headline": "Spring sale", "accent": "#000000"},
         "assets": {"photo": "photo.png"},
         "layers": [
             {"type": "image", "asset": "photo", "width": "fill", "height": "fill"},
-            {"id": "headline", "type": "text", "text": "$headline", "fontSize": 40, "weight": 800,
-             "color": "$accent", "place": "center"}
-        ]
-    });
+            {"id": "headline", "type": "text", "text": "$headline", "fontSize": 40, "fontWeight": 800, "color": "$accent", "place": "center"}]});
     std::fs::write(dir.join("template.json"), template.to_string()).unwrap();
     dir
 }

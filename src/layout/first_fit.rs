@@ -1,7 +1,7 @@
 //! `firstFit`: of its children, only the first that fits is laid out and
 //! drawn, like SwiftUI's `ViewThatFits`.
 
-use crate::scene::{Kind, Layer, Resize, Scene};
+use crate::scene::{Kind, Layer, Scene};
 use crate::text::Text;
 
 use super::measure::{Forced, measure};
@@ -39,16 +39,12 @@ pub(super) fn content(
 fn fits_inside(scene: &Scene, c: &Layer, k: f32, size: (f32, f32)) -> bool {
     match &c.kind {
         Kind::Text { .. } => Text::of(c, k).is_none_or(|t| {
-            if matches!(t.resize(), Resize::Fit | Resize::Fixed | Resize::Truncate) {
-                let (_, fit) = t.layout(size.0, size.1);
-                !fit.overflow && !fit.truncated && fit.font_size >= t.font_size() - 0.01
-            } else {
-                true
-            }
+            let (_, fit) = t.layout(size.0, size.1);
+            !fit.overflow && !fit.truncated && fit.font_size >= t.font_size() - 0.01
         }),
         Kind::Frame {
             children,
-            stack: Some(s),
+            layout: crate::scene::FrameLayout { stack: Some(s), .. },
             ..
         } => {
             let [t, r, b, l] = s.padding.sides().map(|p| p * k);

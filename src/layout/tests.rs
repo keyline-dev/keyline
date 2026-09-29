@@ -55,12 +55,9 @@ fn axis_follows_constraints() {
 
 #[test]
 fn constraints_apply_on_resize() {
-    let s = scene(json!([
-        {"id": "a", "type": "rect", "x": 900, "y": 400, "width": 100, "height": 100,
-         "constraints": {"h": "right", "v": "bottom"}},
-        {"id": "b", "type": "rect", "x": 0, "y": 0, "width": 1000, "height": 50,
-         "constraints": {"h": "stretch"}}
-    ]));
+    let s = scene(
+        json!([{"id": "a", "type": "rect", "x": 900, "y": 400, "width": 100, "height": 100, "constraints": {"horizontal": "right", "vertical": "bottom"}}, {"id": "b", "type": "rect", "x": 0, "y": 0, "width": 1000, "height": 50, "constraints": {"horizontal": "stretch"}}]),
+    );
     let p = layout(&s, &size(600.0, 600.0, 1.0));
     assert_eq!(p[0].rect, rect(500.0, 500.0, 100.0, 100.0));
     assert_eq!(p[1].rect, rect(0.0, 0.0, 600.0, 50.0));
@@ -68,10 +65,9 @@ fn constraints_apply_on_resize() {
 
 #[test]
 fn scale_applies_before_constraints() {
-    let s = scene(json!([
-        {"id": "a", "type": "rect", "x": 900, "y": 400, "width": 100, "height": 100,
-         "constraints": {"h": "right", "v": "bottom"}}
-    ]));
+    let s = scene(
+        json!([{"id": "a", "type": "rect", "x": 900, "y": 400, "width": 100, "height": 100, "constraints": {"horizontal": "right", "vertical": "bottom"}}]),
+    );
     // Master scaled to 500 × 250, then resized to 300 × 600.
     let p = layout(&s, &size(300.0, 600.0, 0.5));
     assert_eq!(p[0].rect, rect(250.0, 550.0, 50.0, 50.0));
@@ -79,14 +75,9 @@ fn scale_applies_before_constraints() {
 
 #[test]
 fn frames_constrain_children_relative_to_themselves() {
-    let s = scene(json!([
-        {"id": "f", "type": "frame", "x": 0, "y": 400, "width": 1000, "height": 100,
-         "constraints": {"h": "stretch", "v": "bottom"},
-         "children": [
-            {"id": "c", "type": "rect", "x": 450, "y": 25, "width": 100, "height": 50,
-             "constraints": {"h": "center", "v": "center"}}
-         ]}
-    ]));
+    let s = scene(
+        json!([{"id": "f", "type": "frame", "x": 0, "y": 400, "width": 1000, "height": 100, "constraints": {"horizontal": "stretch", "vertical": "bottom"}, "children": [{"id": "c", "type": "rect", "x": 450, "y": 25, "width": 100, "height": 50, "constraints": {"horizontal": "center", "vertical": "center"}}]}]),
+    );
     let p = layout(&s, &size(1200.0, 600.0, 1.0));
     assert_eq!(p[0].rect, rect(0.0, 500.0, 1200.0, 100.0));
     assert_eq!(p[0].children[0].rect, rect(550.0, 525.0, 100.0, 50.0));
@@ -94,14 +85,9 @@ fn frames_constrain_children_relative_to_themselves() {
 
 #[test]
 fn a_column_stack_hugs_and_centers_its_children() {
-    let s = scene(json!([
-        {"id": "col", "type": "frame", "x": 100, "y": 50,
-         "stack": {"dir": "column", "gap": 10, "padding": 5, "align": "center"},
-         "children": [
-            {"id": "a", "type": "rect", "x": 999, "y": 999, "width": 200, "height": 40},
-            {"id": "b", "type": "rect", "width": 100, "height": 20}
-         ]}
-    ]));
+    let s = scene(
+        json!([{"id": "col", "type": "frame", "x": 100, "y": 50, "flexDirection": "column", "gap": 10, "padding": 5, "alignItems": "center", "children": [{"id": "a", "type": "rect", "x": 999, "y": 999, "width": 200, "height": 40}, {"id": "b", "type": "rect", "width": 100, "height": 20}]}]),
+    );
     let p = layout(&s, &size(1000.0, 500.0, 1.0));
     // Hugs: widest child + padding, heights + gap + padding.
     assert_eq!(p[0].rect, rect(100.0, 50.0, 210.0, 80.0));
@@ -112,16 +98,9 @@ fn a_column_stack_hugs_and_centers_its_children() {
 
 #[test]
 fn a_row_stack_spreads_children_and_follows_its_frame() {
-    let s = scene(json!([
-        {"id": "row", "type": "frame", "width": 1000, "height": 100,
-         "constraints": {"h": "stretch"},
-         "stack": {"dir": "row", "justify": "evenly", "align": "end"},
-         "children": [
-            {"type": "rect", "width": 100, "height": 50},
-            {"type": "rect", "width": 100, "height": 100},
-            {"type": "rect", "width": 100, "height": 50}
-         ]}
-    ]));
+    let s = scene(
+        json!([{"id": "row", "type": "frame", "width": 1000, "height": 100, "constraints": {"horizontal": "stretch"}, "flexDirection": "row", "alignItems": "flex-end", "justifyContent": "space-evenly", "children": [{"type": "rect", "width": 100, "height": 50}, {"type": "rect", "width": 100, "height": 100}, {"type": "rect", "width": 100, "height": 50}]}]),
+    );
     let xs = |p: &[Placed]| {
         p[0].children
             .iter()
@@ -134,24 +113,18 @@ fn a_row_stack_spreads_children_and_follows_its_frame() {
     // The frame stretches to 1200, so the gaps grow to 225.
     let p = layout(&s, &size(1200.0, 500.0, 1.0));
     assert_eq!(xs(&p), [(225.0, 50.0), (550.0, 0.0), (875.0, 50.0)]);
-    let between = scene(json!([
-        {"type": "frame", "width": 1000, "height": 100,
-         "stack": {"dir": "row", "justify": "between"},
-         "children": [{"type": "rect", "width": 100, "height": 10}, {"type": "rect", "width": 100, "height": 10}]}
-    ]));
+    let between = scene(
+        json!([{"type": "frame", "width": 1000, "height": 100, "flexDirection": "row", "alignItems": "flex-start", "justifyContent": "space-between", "children": [{"type": "rect", "width": 100, "height": 10}, {"type": "rect", "width": 100, "height": 10}]}]),
+    );
     let p = layout(&between, &size(1000.0, 500.0, 1.0));
     assert_eq!(p[0].children[1].rect.x, 900.0);
 }
 
 #[test]
 fn stacks_measure_text_and_scale_gaps() {
-    let s = scene(json!([
-        {"type": "frame", "stack": {"dir": "column", "gap": 20},
-         "children": [
-            {"id": "t", "type": "text", "text": "Hi", "fontSize": 40},
-            {"type": "rect", "width": 10, "height": 10}
-         ]}
-    ]));
+    let s = scene(
+        json!([{"type": "frame", "flexDirection": "column", "gap": 20, "alignItems": "flex-start", "children": [{"id": "t", "type": "text", "text": "Hi", "fontSize": 40}, {"type": "rect", "width": 10, "height": 10}]}]),
+    );
     let p = layout(&s, &size(500.0, 250.0, 0.5));
     let t = p[0].children[0].rect;
     assert!(t.w > 0.0 && t.h > 0.0);
@@ -172,10 +145,9 @@ fn images_default_to_intrinsic_size_and_keep_aspect() {
 
 #[test]
 fn auto_width_text_keeps_width_when_stretched() {
-    let s = scene(json!([
-        {"id": "t", "type": "text", "text": "Hello", "x": 100, "fontSize": 40,
-         "constraints": {"h": "stretch"}}
-    ]));
+    let s = scene(
+        json!([{"id": "t", "type": "text", "text": "Hello", "x": 100, "fontSize": 40, "constraints": {"horizontal": "stretch"}}]),
+    );
     let a = layout(&s, &size(1000.0, 500.0, 1.0));
     let b = layout(&s, &size(1400.0, 500.0, 1.0));
     assert_eq!(a[0].rect.w, b[0].rect.w);
@@ -184,10 +156,9 @@ fn auto_width_text_keeps_width_when_stretched() {
 
 #[test]
 fn auto_height_text_rewraps_when_narrowed() {
-    let s = scene(json!([
-        {"id": "t", "type": "text", "text": "one two three four five six seven", "fontSize": 30,
-         "resize": "auto-height", "width": 1000, "constraints": {"h": "stretch"}}
-    ]));
+    let s = scene(
+        json!([{"id": "t", "type": "text", "text": "one two three four five six seven", "fontSize": 30, "width": 1000, "constraints": {"horizontal": "stretch"}}]),
+    );
     let wide = layout(&s, &size(1000.0, 500.0, 1.0));
     let narrow = layout(&s, &size(300.0, 500.0, 1.0));
     assert_eq!(narrow[0].rect.w, 300.0);

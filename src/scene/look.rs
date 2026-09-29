@@ -52,15 +52,15 @@ pub struct Look {
     /// Paints filling the shape (or the letters), bottom to top: a color
     /// string, `{color}`, `{gradient}`, `{image}`, `{pattern}` or `{noise}`.
     /// `[]` fills nothing (outlined text). Wins over `color`/`gradient`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "fill", default, skip_serializing_if = "Option::is_none")]
     pub fills: Option<OneOrMany<Paint>>,
     /// Strokes around the shape (or the letters), bottom to top; a color
     /// string is a 1 px stroke. Wins over `stroke`/`outline`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "stroke", default, skip_serializing_if = "Option::is_none")]
     pub strokes: Option<OneOrMany<Stroke>>,
     /// CSS box-shadow style shadows `{x, y, blur, spread, color, inset}`;
     /// they follow the layer's own alpha (a cutout's outline, the letters).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "shadow", default, skip_serializing_if = "Option::is_none")]
     pub shadows: Option<OneOrMany<Shadow>>,
     /// Gaussian blur of the whole layer, px (0).
     #[serde(default, skip_serializing_if = "is_zero")]
@@ -70,13 +70,17 @@ pub struct Look {
     pub backdrop_blur: f32,
     /// Corner radius of rects, frames and images: px, `[tl, tr, br, bl]`,
     /// or `"full"` for a capsule. Wins over `cornerRadius`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "borderRadius",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub radius: Option<Radius>,
     /// Visual scale about the box center, after layout (1).
     #[serde(default = "one", skip_serializing_if = "is_one")]
     pub scale: f32,
     /// Visual shift after layout, px `[x, y]`; siblings don't move ([0, 0]).
-    #[serde(default, skip_serializing_if = "is_origin")]
+    #[serde(rename = "translate", default, skip_serializing_if = "is_origin")]
     pub offset: [f32; 2],
     /// Skew in degrees `[x, y]` about the box center ([0, 0]).
     #[serde(default, skip_serializing_if = "is_origin")]
@@ -221,7 +225,7 @@ mod tests {
     #[test]
     fn looks_take_one_or_many_and_omit_defaults() {
         let l: Look = serde_json::from_value(
-            json!({"fills": "#FF0000", "shadows": [{"y": 4, "blur": 8, "color": "#0004"}]}),
+            json!({"fill": "#FF0000", "shadow": [{"y": 4, "blur": 8, "color": "#0004"}]}),
         )
         .unwrap();
         assert_eq!(l.fills.as_ref().unwrap().as_slice().len(), 1);

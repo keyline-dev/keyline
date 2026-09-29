@@ -3,8 +3,6 @@
 //! costs the agent a resend of its whole batch, so these are cheaper to
 //! accept than to refuse.
 
-mod css;
-mod flex;
 mod names;
 
 use serde_json::{Map, Value};
@@ -33,8 +31,8 @@ pub(crate) fn normalize(v: &mut Value) {
     shot(o);
     let kind = o.get("type").and_then(Value::as_str).map(str::to_owned);
     fields(o, kind.as_deref());
-    if let Some(Value::Object(at)) = o.get_mut("at") {
-        for patch in at.values_mut().filter_map(Value::as_object_mut) {
+    if let Some(Value::Object(media)) = o.get_mut("media") {
+        for patch in media.values_mut().filter_map(Value::as_object_mut) {
             fields(patch, kind.as_deref());
         }
     }
@@ -43,19 +41,9 @@ pub(crate) fn normalize(v: &mut Value) {
     }
 }
 
-/// The fields of a layer, a style (no `kind`) or an `at` change.
+/// The fields of a layer, a style (no `kind`) or a `media` change.
 pub(crate) fn fields(o: &mut Map<String, Value>, kind: Option<&str>) {
     names::fields(o, kind);
-    if kind == Some("frame") {
-        flex::frame(o);
-    }
-    if let Some(Value::Object(s)) = o.get_mut("stack") {
-        flex::stack(s);
-    }
-    if let Some(Value::Object(g)) = o.get_mut("grid") {
-        flex::grid(g);
-    }
-    flex::child(o);
 }
 
 /// `{"type": "shot", "duration": 3, "transition": "fade", …}`: a frame that

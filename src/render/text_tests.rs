@@ -14,7 +14,7 @@ fn dark(c: (u8, u8, u8)) -> bool {
 #[test]
 fn markup_colors_a_word() {
     let px = pixels(
-        json!([{"type": "text", "text": "ab <span color=\"#FF0000\">RED</span>", "fontSize": 30, "weight": 900}]),
+        json!([{"type": "text", "text": "ab <span style=\"color:#FF0000\">RED</span>", "fontSize": 30, "fontWeight": 900}]),
     );
     assert!(
         count(&px, |(r, g, b)| r > 200 && g < 60 && b < 60) > 100,
@@ -46,7 +46,7 @@ fn strike_draws_a_line_through() {
 #[test]
 fn vertical_align_bottom_puts_text_at_the_bottom_of_its_box() {
     let px = pixels(
-        json!([{"type": "text", "text": "x", "width": 100, "height": 100, "fontSize": 20, "verticalAlign": "bottom", "resize": "fixed"}]),
+        json!([{"type": "text", "text": "x", "width": 100, "height": 100, "fontSize": 20, "textAlignVertical": "bottom"}]),
     );
     let top = (0..50)
         .flat_map(|y| (0..100).map(move |x| (x, y)))
@@ -61,11 +61,9 @@ fn vertical_align_bottom_puts_text_at_the_bottom_of_its_box() {
 
 #[test]
 fn knockout_text_cuts_through_its_frame() {
-    let px = pixels(json!([
-        {"type": "rect", "width": 100, "height": 100, "color": "#FF0000"},
-        {"type": "frame", "width": 100, "height": 100, "color": "#000000", "children": [
-            {"type": "text", "text": "I", "x": 30, "fontSize": 90, "weight": 900, "knockout": true}]}
-    ]));
+    let px = pixels(
+        json!([{"type": "rect", "width": 100, "height": 100, "fill": "#FF0000"}, {"type": "frame", "width": 100, "height": 100, "children": [{"type": "text", "text": "I", "x": 30, "fontSize": 90, "fontWeight": 900, "knockout": true}], "fill": "#000000"}]),
+    );
     assert!(
         count(&px, |(r, g, b)| r > 200 && g < 60 && b < 60) > 200,
         "the red below shows through the letter"

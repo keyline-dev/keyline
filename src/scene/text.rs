@@ -12,9 +12,9 @@ pub enum TextCase {
     #[default]
     None,
     /// All upper case.
-    Upper,
+    Uppercase,
     /// All lower case.
-    Lower,
+    Lowercase,
     /// The first letter of every word in upper case.
     Capitalize,
 }
@@ -83,10 +83,19 @@ pub struct Range {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
     /// Weight, 100–900.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "fontWeight",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub weight: Option<u16>,
-    /// Italic.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// `fontStyle`: `"italic"` or `"normal"`.
+    #[serde(
+        rename = "fontStyle",
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "super::text_more::font_style::opt"
+    )]
     pub italic: Option<bool>,
     /// Font size, px.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -94,8 +103,12 @@ pub struct Range {
     /// Font family.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_family: Option<String>,
-    /// Underline or strike.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// `underline` or `line-through`.
+    #[serde(
+        rename = "textDecoration",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub decoration: Option<super::Decoration>,
     /// A box behind the span.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -142,10 +155,6 @@ mod tests {
         assert_eq!(
             mode(json!({"type": "text", "text": "a", "width": 9, "height": 9})),
             Some(Resize::Fit)
-        );
-        assert_eq!(
-            mode(json!({"type": "text", "text": "a", "width": 9, "height": 9, "resize": "fixed"})),
-            Some(Resize::Fixed)
         );
         assert_eq!(mode(json!({"type": "rect"})), None);
     }

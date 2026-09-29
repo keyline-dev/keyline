@@ -114,18 +114,18 @@ pub(super) fn adjust_filter(a: &Adjust) -> Option<skia_safe::ColorFilter> {
     }
     let mut m = IDENTITY;
     let (lr, lg, lb) = (0.2126, 0.7152, 0.0722);
-    if a.brightness != 0.0 {
-        let b = a.brightness;
+    if (a.brightness - 1.0).abs() > f32::EPSILON {
+        let b = a.brightness.max(0.0);
         m = then(
             m,
             [
-                1.0, 0.0, 0.0, 0.0, b, 0.0, 1.0, 0.0, 0.0, b, 0.0, 0.0, 1.0, 0.0, b, 0.0, 0.0, 0.0,
+                b, 0.0, 0.0, 0.0, 0.0, 0.0, b, 0.0, 0.0, 0.0, 0.0, 0.0, b, 0.0, 0.0, 0.0, 0.0, 0.0,
                 1.0, 0.0,
             ],
         );
     }
-    if a.contrast != 0.0 {
-        let c = 1.0 + a.contrast;
+    if (a.contrast - 1.0).abs() > f32::EPSILON {
+        let c = a.contrast.max(0.0);
         let t = 0.5 * (1.0 - c);
         m = then(
             m,
@@ -159,8 +159,8 @@ pub(super) fn adjust_filter(a: &Adjust) -> Option<skia_safe::ColorFilter> {
             0.0,
         ]
     };
-    if a.saturate != 0.0 {
-        m = then(m, saturation(1.0 + a.saturate));
+    if (a.saturate - 1.0).abs() > f32::EPSILON {
+        m = then(m, saturation(a.saturate.max(0.0)));
     }
     if a.grayscale != 0.0 {
         m = then(m, saturation(1.0 - a.grayscale.clamp(0.0, 1.0)));

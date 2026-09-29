@@ -69,8 +69,9 @@ async fn a_font_fetched_by_another_server_is_used_not_replaced() {
     // `early` started before the font existed; `other` fetches it.
     let other = Mcp::start_in(late_data).await;
     let fetched = other
-        .ok("layer_add", json!({"sceneId": id, "layers": [
-            {"id": "t", "type": "text", "text": "GLIDDEN", "fontFamily": "Montserrat", "weight": 900, "fontSize": 60}]}))
+        .ok("layer_add", json!({"sceneId": id,
+            "layers": [
+                {"id": "t", "type": "text", "text": "GLIDDEN", "fontFamily": "Montserrat", "fontWeight": 900, "fontSize": 60}]}))
         .await;
     assert!(fetched.starts_with("fetched font Montserrat"), "{fetched}");
     let width = |d: &str| {
@@ -125,20 +126,11 @@ async fn text_can_be_filled_with_images_and_outlined() {
     )
     .await;
     let reply = mcp
-        .ok("layer_add", json!({"sceneId": id, "layers": [
-            {"id": "pattern", "type": "image", "asset": "leopard", "fit": "tile", "tileScale": 1.5,
-             "width": 1080, "height": 1080, "opacity": 0.35,
-             "constraints": {"h": "stretch", "v": "stretch"}},
-            {"id": "usa", "type": "text", "text": "USA", "x": 90, "y": 170, "width": 900, "height": 330,
-             "fontSize": 320, "weight": 900, "align": "center", "rotation": -8,
-             "fill": {"asset": "flag"}, "outline": {"width": 8, "color": "#FFFFFF"},
-             "constraints": {"h": "center", "v": "center"}},
-            {"id": "leopard", "type": "text", "text": "LEOPARD", "x": 60, "y": 620, "width": 960, "height": 200,
-             "fontSize": 190, "weight": 900, "align": "center", "rotation": 6,
-             "fill": {"asset": "leopard", "fit": "tile", "tileScale": 0.8},
-             "outline": {"width": 5, "color": "#1A1A1A"},
-             "constraints": {"h": "center", "v": "center"}}
-        ]}))
+        .ok("layer_add", json!({"sceneId": id,
+            "layers": [
+                {"id": "pattern", "type": "image", "asset": "leopard", "fit": "tile", "tileScale": 1.5, "width": 1080, "height": 1080, "opacity": 0.35, "constraints": {"horizontal": "stretch", "vertical": "stretch"}},
+                {"id": "usa", "type": "text", "text": "USA", "x": 90, "y": 170, "width": 900, "height": 330, "fontSize": 320, "fontWeight": 900, "textAlign": "center", "rotate": -8, "constraints": {"horizontal": "center", "vertical": "center"}, "fill": {"image": "flag"}, "stroke": {"width": 8, "color": "#FFFFFF", "align": "center"}},
+                {"id": "leopard", "type": "text", "text": "LEOPARD", "x": 60, "y": 620, "width": 960, "height": 200, "fontSize": 190, "fontWeight": 900, "textAlign": "center", "rotate": 6, "constraints": {"horizontal": "center", "vertical": "center"}, "fill": {"fit": "tile", "tileScale": 0.8, "image": "leopard"}, "stroke": {"width": 5, "color": "#1A1A1A", "align": "center"}}]}))
         .await;
     assert!(reply.lines().next().unwrap().ends_with(" ok"), "{reply}");
 
@@ -177,19 +169,19 @@ async fn stacks_lay_out_rows_and_columns_at_every_size() {
     // Three centered columns, spread evenly across a full-width row: no x or
     // y below the row, and it keeps its spacing when the row stretches.
     let column = |label: &str, name: &str| {
-        json!({"type": "frame", "stack": {"dir": "column", "gap": 8, "align": "center"}, "children": [
-            {"type": "image", "asset": "check", "width": 48, "height": 48},
-            {"type": "text", "text": label, "fontSize": 20, "weight": 700, "color": "#1B2A5C"},
-            {"type": "text", "text": name, "fontSize": 48, "weight": 800, "color": "#D0202E"}
-        ]})
+        json!({"type": "frame",
+            "flexDirection": "column",
+            "gap": 8,
+            "alignItems": "center",
+            "children": [
+                {"type": "image", "asset": "check", "width": 48, "height": 48},
+                {"type": "text", "text": label, "fontSize": 20, "fontWeight": 700, "color": "#1B2A5C"},
+                {"type": "text", "text": name, "fontSize": 48, "fontWeight": 800, "color": "#D0202E"}]})
     };
     let reply = mcp
-        .ok("layer_add", json!({"sceneId": id, "layers": [
-            {"id": "row", "type": "frame", "y": 180, "width": 1080, "height": 240,
-             "constraints": {"h": "stretch"},
-             "stack": {"dir": "row", "justify": "evenly", "align": "center"},
-             "children": [column("MAYOR", "GLIDDEN"), column("COUNCIL", "CHO"), column("COUNCIL", "JETHANI")]}
-        ]}))
+        .ok("layer_add", json!({"sceneId": id,
+            "layers": [
+                {"id": "row", "type": "frame", "y": 180, "width": 1080, "height": 240, "constraints": {"horizontal": "stretch"}, "flexDirection": "row", "alignItems": "center", "justifyContent": "space-evenly", "children": [column("MAYOR", "GLIDDEN"), column("COUNCIL", "CHO"), column("COUNCIL", "JETHANI")]}]}))
         .await;
     assert!(reply.lines().next().unwrap().ends_with(" ok"), "{reply}");
 
@@ -232,32 +224,22 @@ async fn styles_icons_shapes_masks_and_focus_work_end_to_end() {
     .await;
     // One step: a red circle with a white icon, a title and a note.
     let step = |icon: &str, set: &str, title: &str| {
-        json!({"type": "frame", "stack": {"dir": "column", "gap": 10, "align": "center"}, "children": [
-            {"type": "frame", "width": 64, "height": 64, "children": [
-                {"type": "ellipse", "width": 64, "height": 64, "color": "#D0202E"},
-                {"type": "icon", "name": icon, "set": set, "color": "#FFFFFF", "x": 18, "y": 18, "width": 28, "height": 28}
-            ]},
-            {"type": "text", "text": title, "style": "step"},
-            {"type": "text", "text": "by Nov. 3", "style": "note"}
-        ]})
+        json!({"type": "frame",
+            "flexDirection": "column",
+            "gap": 10,
+            "alignItems": "center",
+            "children": [
+                {"type": "frame", "width": 64, "height": 64, "children": [{"type": "ellipse", "width": 64, "height": 64, "fill": "#D0202E"}, {"type": "icon", "name": icon, "set": set, "color": "#FFFFFF", "x": 18, "y": 18, "width": 28, "height": 28}]},
+                {"type": "text", "text": title, "style": "step"},
+                {"type": "text", "text": "by Nov. 3", "style": "note"}]})
     };
     let reply = mcp
         .ok("layer_add", json!({"sceneId": id,
-            "styles": {
-                "step": {"fontSize": 30, "weight": 800, "color": "#1B2A5C"},
-                "note": {"fontSize": 18, "color": "#4B5563"}
-            },
+            "styles": {"step": {"fontSize": 30, "fontWeight": 800, "color": "#1B2A5C"}, "note": {"fontSize": 18, "color": "#4B5563"}},
             "layers": [
-                {"id": "photo", "type": "image", "asset": "photo", "width": 960, "height": 260, "focus": [0.5, 0.2],
-                 "constraints": {"h": "stretch", "v": "stretch"},
-                 "mask": {"from": [0.5, 0], "to": [0.5, 0.4], "stops": [{"at": 0, "color": "#00000000"}, {"at": 1, "color": "#000000"}]}},
-                {"id": "rule", "type": "line", "x": 40, "y": 290, "width": 880, "color": "#CFD3DA", "strokeWidth": 2,
-                 "constraints": {"h": "stretch", "v": "bottom"}},
-                {"id": "steps", "type": "frame", "y": 320, "width": 960, "height": 190,
-                 "constraints": {"h": "stretch", "v": "bottom"},
-                 "stack": {"dir": "row", "justify": "evenly"},
-                 "children": [step("mail", "lucide", "MAIL IT"), step("location-dot", "solid", "DROP IT"), step("landmark", "lucide", "HAND IT IN")]}
-            ]}))
+                {"id": "photo", "type": "image", "asset": "photo", "width": 960, "height": 260, "focus": [0.5, 0.2], "constraints": {"horizontal": "stretch", "vertical": "stretch"}, "mask": {"from": [0.5, 0], "to": [0.5, 0.4], "stops": [{"offset": 0, "color": "#00000000"}, {"offset": 1, "color": "#000000"}]}},
+                {"id": "rule", "type": "line", "x": 40, "y": 290, "width": 880, "constraints": {"horizontal": "stretch", "vertical": "bottom"}, "stroke": {"width": 2, "color": "#CFD3DA"}},
+                {"id": "steps", "type": "frame", "y": 320, "width": 960, "height": 190, "constraints": {"horizontal": "stretch", "vertical": "bottom"}, "flexDirection": "row", "alignItems": "flex-start", "justifyContent": "space-evenly", "children": [step("mail", "lucide", "MAIL IT"), step("location-dot", "solid", "DROP IT"), step("landmark", "lucide", "HAND IT IN")]}]}))
         .await;
     assert!(reply.lines().next().unwrap().ends_with(" ok"), "{reply}");
 
@@ -297,7 +279,7 @@ async fn at_adapts_one_size_without_touching_the_others() {
     let reply = mcp
         .ok(
             "layer_update",
-            json!({"sceneId": id, "ops": [{"target": {"id": "footer"}, "set": {"at": {"sky": {"fontSize": 40}}}}]}),
+            json!({"sceneId": id, "ops": [{"target": {"id": "footer"}, "set": {"media": {"sky": {"fontSize": 40}}}}]}),
         )
         .await;
     assert!(reply.starts_with("changed footer v"), "{reply}");
@@ -317,7 +299,7 @@ async fn at_adapts_one_size_without_touching_the_others() {
     let err = mcp
         .call(
             "layer_update",
-            json!({"sceneId": id, "ops": [{"target": {"id": "footer"}, "set": {"at": {"tiny": {"fontSize": 9}}}}]}),
+            json!({"sceneId": id, "ops": [{"target": {"id": "footer"}, "set": {"media": {"tiny": {"fontSize": 9}}}}]}),
         )
         .await
         .unwrap_err();
@@ -481,4 +463,43 @@ fn the_command_line_explains_itself() {
     let bad = run("--bogus");
     assert!(!bad.status.success());
     assert!(String::from_utf8_lossy(&bad.stderr).contains("see keyline-mcp --help"));
+}
+
+#[tokio::test]
+async fn the_scene_itself_is_edited_like_a_layer() {
+    let mcp = Mcp::start("scene-set").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 400, "height": 400, "sizes": ["400x400"]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    let reply = mcp
+        .ok(
+            "layer_update",
+            json!({"sceneId": id, "ops": [{"target": {"scene": true},
+                "set": {"background": "#000", "sizes": ["200x100"]}}]}),
+        )
+        .await;
+    assert_eq!(reply, "changed scene v1 ok");
+    // The new size renders, on the new background.
+    let rendered = mcp.ok("render", json!({"sceneId": id})).await;
+    let (size, path) = rendered.lines().next().unwrap().split_once(' ').unwrap();
+    assert_eq!(size, "200x100", "{rendered}");
+    let (dims, px) = common::golden::rgba(&std::fs::read(path).unwrap());
+    assert_eq!(dims, (200, 100));
+    assert_eq!(px[..4], [0, 0, 0, 255]);
+    let e = mcp
+        .call(
+            "layer_update",
+            json!({"sceneId": id, "ops": [{"target": {"scene": true}, "set": {"fill": "#FFF"}}]}),
+        )
+        .await
+        .unwrap_err();
+    assert!(e.contains("the scene takes background, sizes"), "{e}");
+    mcp.stop().await;
 }

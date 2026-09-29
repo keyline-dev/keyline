@@ -40,7 +40,7 @@ fn auto_width_grows_with_text_and_scale() {
 #[test]
 fn auto_height_wraps() {
     let l = text_layer(
-        json!({"type": "text", "text": "one two three four five six", "fontSize": 20, "resize": "auto-height", "width": 80}),
+        json!({"type": "text", "text": "one two three four five six", "fontSize": 20, "width": 80}),
     );
     let t = Text::of(&l, 1.0).unwrap();
     let (w, h) = t.natural_size(80.0, 0.0);
@@ -50,38 +50,32 @@ fn auto_height_wraps() {
 }
 
 #[test]
-fn fixed_reports_overflow_and_truncate_ellipsizes() {
+fn cut_text_reports_the_size_it_needs() {
     let text = "one two three four five six seven eight";
-    let fixed = text_layer(
-        json!({"type": "text", "text": text, "fontSize": 20, "resize": "fixed", "width": 80, "height": 30}),
+    let boxed = text_layer(
+        json!({"type": "text", "text": text, "fontSize": 20, "width": 80, "height": 30, "minimumScaleFactor": 1}),
     );
-    let (_, fit) = Text::of(&fixed, 1.0).unwrap().layout(80.0, 30.0);
-    assert!(fit.overflow && !fit.truncated);
+    let (_, fit) = Text::of(&boxed, 1.0).unwrap().layout(80.0, 30.0);
+    assert!(fit.truncated && fit.lines == 1, "{fit:?}");
     // The server says what would fit, so the agent needn't guess.
     assert!(
         fit.need_height > 30.0 && fit.one_line_width > 80.0,
         "{fit:?}"
     );
-    let (_, refit) = Text::of(&fixed, 1.0).unwrap().layout(80.0, fit.need_height);
-    assert!(!refit.overflow, "{refit:?}");
-
-    let trunc = text_layer(
-        json!({"type": "text", "text": text, "fontSize": 20, "resize": "truncate", "width": 80, "height": 30}),
-    );
-    let (_, fit) = Text::of(&trunc, 1.0).unwrap().layout(80.0, 30.0);
-    assert!(fit.truncated && !fit.overflow && fit.lines == 1, "{fit:?}");
+    let (_, refit) = Text::of(&boxed, 1.0).unwrap().layout(80.0, fit.need_height);
+    assert!(!refit.truncated, "{refit:?}");
 }
 
 #[test]
 fn max_lines_never_keeps_more_lines_than_fit() {
     let text = "one two three four five six seven eight";
     let trunc = text_layer(
-        json!({"type": "text", "text": text, "fontSize": 20, "resize": "truncate", "maxLines": 5, "width": 80, "height": 30}),
+        json!({"type": "text", "text": text, "fontSize": 20, "maxLines": 5, "width": 80, "height": 30, "minimumScaleFactor": 1}),
     );
     let (_, fit) = Text::of(&trunc, 1.0).unwrap().layout(80.0, 30.0);
     assert!(fit.truncated && !fit.overflow && fit.lines == 1, "{fit:?}");
     let tiny = text_layer(
-        json!({"type": "text", "text": text, "fontSize": 40, "minFontScale": 0.9, "maxLines": 5, "width": 200, "height": 50}),
+        json!({"type": "text", "text": text, "fontSize": 40, "minimumScaleFactor": 0.9, "maxLines": 5, "width": 200, "height": 50}),
     );
     let (_, fit) = Text::of(&tiny, 1.0).unwrap().layout(200.0, 50.0);
     assert!(fit.truncated && !fit.overflow, "{fit:?}");
@@ -116,7 +110,7 @@ fn fit_shrinks_the_font_like_uilabel() {
 
     // Still too big at minFontScale → minimum size, then an ellipsis.
     let tiny = text_layer(
-        json!({"type": "text", "text": text, "fontSize": 40, "minFontScale": 0.9, "width": 200, "height": 50}),
+        json!({"type": "text", "text": text, "fontSize": 40, "minimumScaleFactor": 0.9, "width": 200, "height": 50}),
     );
     let (_, fit) = Text::of(&tiny, 1.0).unwrap().layout(200.0, 50.0);
     assert_eq!(fit.font_size, 36.0);
@@ -135,19 +129,12 @@ fn drawn_lines_show_breaks_and_cuts() {
     assert_eq!(lines.join(" "), text);
 
     let cut = text_layer(
-        json!({"type": "text", "text": text, "fontSize": 20, "width": 120, "height": 24, "resize": "truncate"}),
+        json!({"type": "text", "text": text, "fontSize": 20, "width": 120, "height": 24, "minimumScaleFactor": 1}),
     );
     let t = Text::of(&cut, 1.0).unwrap();
     let (p, fit) = t.layout(120.0, 24.0);
     let lines = t.drawn_lines(&p, &fit);
     assert!(lines.len() == 1 && lines[0].ends_with('…'), "{lines:?}");
-
-    let clip = text_layer(
-        json!({"type": "text", "text": text, "fontSize": 20, "width": 120, "height": 24, "resize": "truncate", "ellipsis": false}),
-    );
-    let t = Text::of(&clip, 1.0).unwrap();
-    let (p, fit) = t.layout(120.0, 24.0);
-    assert!(fit.truncated && !t.drawn_lines(&p, &fit)[0].ends_with('…'));
 }
 
 #[test]
@@ -166,10 +153,10 @@ fn letter_spacing_case_and_line_height_change_the_layout() {
 
     // Ranges count characters of the text as written, even when upper
     // case changes its length.
-    let upper = text_layer(
-        json!({"type": "text", "text": "straße sale", "textCase": "upper",
-        "ranges": [{"start": 7, "end": 11, "color": "#FF0000"}]}),
-    );
+    let upper = text_layer(json!({"type": "text",
+            "text": "straße sale",
+            "ranges": [{"start": 7, "end": 11, "color": "#FF0000"}],
+            "textTransform": "uppercase"}));
     let t = Text::of(&upper, 1.0).unwrap();
     assert_eq!(t.display, "STRASSE SALE");
     assert_eq!(&t.display[t.runs[1].0.clone()], "SALE");
@@ -196,7 +183,8 @@ fn unknown_font_families_are_rejected_with_the_list() {
 fn every_weight_from_one_variable_font() {
     // Heavier weights draw wider glyphs, all the way to 900.
     let width = |w: u16| {
-        let l = text_layer(json!({"type": "text", "text": "Weight", "fontSize": 40, "weight": w}));
+        let l =
+            text_layer(json!({"type": "text", "text": "Weight", "fontSize": 40, "fontWeight": w}));
         Text::of(&l, 1.0).unwrap().natural_size(0.0, 0.0).0
     };
     let widths: Vec<f32> = [100, 400, 700, 900].into_iter().map(width).collect();

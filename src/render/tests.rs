@@ -6,14 +6,13 @@ use skia_safe::Data;
 
 #[test]
 fn renders_deterministic_png_of_the_right_size() {
-    let scene: Scene = serde_json::from_value(json!({
-        "width": 200, "height": 100, "background": "#EEEEEE",
+    let scene: Scene = serde_json::from_value(json!({"width": 200,
+        "height": 100,
+        "background": "#EEEEEE",
         "sizes": [{"id": "a", "width": 200, "height": 100}],
         "layers": [
-            {"id": "r", "type": "rect", "x": 10, "y": 10, "width": 50, "height": 50, "color": "#D0202E", "cornerRadius": 8},
-            {"id": "t", "type": "text", "text": "Hi", "x": 80, "y": 20, "fontSize": 30, "weight": 800}
-        ]
-    }))
+            {"id": "r", "type": "rect", "x": 10, "y": 10, "width": 50, "height": 50, "borderRadius": 8, "fill": "#D0202E"},
+            {"id": "t", "type": "text", "text": "Hi", "x": 80, "y": 20, "fontSize": 30, "fontWeight": 800}]}))
     .unwrap();
     let dir = std::env::temp_dir();
     let a = render_png(&scene, &scene.sizes[0], 1.0, &dir).unwrap();
@@ -113,14 +112,12 @@ fn tiles_repeat_at_the_image_size_times_tile_scale() {
 
 #[test]
 fn ellipses_lines_and_icons_draw_where_their_box_says() {
-    let px = pixels(json!([
-        {"type": "ellipse", "width": 100, "height": 100, "color": "#FF0000"},
-    ]));
+    let px = pixels(json!([{"type": "ellipse", "width": 100, "height": 100, "fill": "#FF0000"}]));
     // Inside the circle, not its bounding box's corner.
     assert_eq!((px(50, 50), px(3, 3)), (RED, (255, 255, 255)));
-    let px = pixels(json!([
-        {"type": "line", "y": 50, "width": 100, "color": "#0000FF", "strokeWidth": 4},
-    ]));
+    let px = pixels(
+        json!([{"type": "line", "y": 50, "width": 100, "stroke": {"width": 4, "color": "#0000FF"}}]),
+    );
     assert_eq!((px(50, 50), px(50, 45)), (BLUE, (255, 255, 255)));
     // A solid icon fills with its color; its box is contained, centered.
     let px = pixels(json!([
@@ -133,10 +130,9 @@ fn ellipses_lines_and_icons_draw_where_their_box_says() {
 
 #[test]
 fn masks_fade_a_layer_and_focus_picks_what_a_crop_keeps() {
-    let px = pixels(json!([
-        {"type": "rect", "width": 100, "height": 100, "color": "#0000FF",
-         "mask": {"from": [0.5, 0], "to": [0.5, 1], "stops": [{"at": 0, "color": "#00000000"}, {"at": 1, "color": "#000000"}]}},
-    ]));
+    let px = pixels(
+        json!([{"type": "rect", "width": 100, "height": 100, "fill": "#0000FF", "mask": {"from": [0.5, 0], "to": [0.5, 1], "stops": [{"offset": 0, "color": "#00000000"}, {"offset": 1, "color": "#000000"}]}}]),
+    );
     // Transparent at the top, opaque at the bottom, half-way between.
     // (Pixel centers sit half a pixel into the gradient, so ±1.)
     let near = |(r, g, b): (u8, u8, u8), (x, y, z): (u8, u8, u8)| {
@@ -157,20 +153,20 @@ fn masks_fade_a_layer_and_focus_picks_what_a_crop_keeps() {
 #[test]
 fn text_can_be_filled_with_an_image_or_a_gradient() {
     let text = |extra: serde_json::Value| {
-        let mut t = json!({"type": "text", "text": "III", "fontSize": 90, "weight": 900, "color": "#00FF00"});
+        let mut t = json!({"type": "text", "text": "III", "fontSize": 90, "fontWeight": 900, "color": "#00FF00"});
         t.as_object_mut()
             .unwrap()
             .extend(extra.as_object().unwrap().clone());
         json!([t])
     };
     let image = two_tone(20, 20, skia_safe::Color::RED, skia_safe::Color::BLUE);
-    let px = pixels_with(text(json!({"fill": {"asset": "img"}})), &[("img", image)]);
+    let px = pixels_with(text(json!({"fill": {"image": "img"}})), &[("img", image)]);
     // The letters show the image's red and blue, never the text color.
     assert!(count(&px, |c| c == RED) > 50 && count(&px, |c| c == BLUE) > 50);
     assert_eq!(count(&px, |c| c.1 > 200 && c.0 < 50), 0);
 
     let px = pixels(text(
-        json!({"gradient": {"stops": [{"at": 0, "color": "#FF0000"}, {"at": 1, "color": "#0000FF"}]}}),
+        json!({"fill": {"gradient": {"angle": 90, "stops": ["#FF0000", "#0000FF"]}}}),
     ));
     assert!(
         count(&px, |c| c.0 > 200 && c.2 < 60) > 20 && count(&px, |c| c.2 > 200 && c.0 < 60) > 20
@@ -180,8 +176,7 @@ fn text_can_be_filled_with_an_image_or_a_gradient() {
 #[test]
 fn outlined_text_can_be_hollow() {
     let px = pixels(
-        json!([{"type": "text", "text": "III", "fontSize": 90, "weight": 900,
-        "color": "#00000000", "outline": {"width": 4, "color": "#FF0000"}}]),
+        json!([{"type": "text", "text": "III", "fontSize": 90, "fontWeight": 900, "color": "#00000000", "stroke": {"width": 4, "color": "#FF0000", "align": "center"}}]),
     );
     assert!(count(&px, |c| c == RED) > 50, "outline drawn");
     assert_eq!(
@@ -189,20 +184,19 @@ fn outlined_text_can_be_hollow() {
         0,
         "no dark fill"
     );
-    let filled = pixels(json!([{"type": "text", "text": "III", "fontSize": 90, "weight": 900}]));
+    let filled =
+        pixels(json!([{"type": "text", "text": "III", "fontSize": 90, "fontWeight": 900}]));
     assert!(count(&filled, |c| c == RED) == 0 && count(&filled, |c| c.0 < 30) > 200);
 }
 
 #[test]
 fn gradients_run_between_their_points() {
     let px = pixels(
-        json!([{"type": "rect", "width": 100, "height": 100, "gradient":
-        {"from": [0, 0.5], "to": [1, 0.5], "stops": [{"at": 0, "color": "#000000"}, {"at": 1, "color": "#FFFFFF"}]}}]),
+        json!([{"type": "rect", "width": 100, "height": 100, "fill": {"gradient": {"from": [0, 0.5], "to": [1, 0.5], "stops": [{"offset": 0, "color": "#000000"}, {"offset": 1, "color": "#FFFFFF"}]}}}]),
     );
     assert!(px(2, 50).0 < 20 && px(97, 50).0 > 235 && (px(50, 50).0 as i32 - 128).abs() < 10);
     let px = pixels(
-        json!([{"type": "rect", "width": 100, "height": 100, "gradient":
-        {"from": [0.5, 0], "to": [0.5, 1], "stops": [{"at": 0, "color": "#FF0000"}, {"at": 1, "color": "#0000FF"}]}}]),
+        json!([{"type": "rect", "width": 100, "height": 100, "fill": {"gradient": {"from": [0.5, 0], "to": [0.5, 1], "stops": [{"offset": 0, "color": "#FF0000"}, {"offset": 1, "color": "#0000FF"}]}}}]),
     );
     assert!(px(50, 2).0 > 240 && px(50, 97).2 > 240, "top to bottom");
 }
@@ -228,8 +222,7 @@ fn strokes_sit_inside_center_or_outside_the_edge() {
 fn rotation_turns_the_layer_and_its_children_about_the_center() {
     // A 60×10 bar through the middle, turned 90°, stands upright.
     let px = pixels(
-        json!([{"type": "frame", "x": 20, "y": 45, "width": 60, "height": 10, "rotation": 90,
-        "children": [{"type": "rect", "width": 60, "height": 10, "color": "#000000"}]}]),
+        json!([{"type": "frame", "x": 20, "y": 45, "width": 60, "height": 10, "rotate": 90, "children": [{"type": "rect", "width": 60, "height": 10, "fill": "#000000"}]}]),
     );
     assert_eq!(px(50, 25), (0, 0, 0));
     assert_eq!(px(25, 50), (255, 255, 255));
@@ -237,10 +230,9 @@ fn rotation_turns_the_layer_and_its_children_about_the_center() {
 
 #[test]
 fn blend_modes_composite_with_what_is_below() {
-    let px = pixels(json!([
-        {"type": "rect", "width": 100, "height": 100, "color": "#FF0000"},
-        {"type": "rect", "width": 50, "height": 100, "color": "#00FF00", "blendMode": "multiply"}
-    ]));
+    let px = pixels(
+        json!([{"type": "rect", "width": 100, "height": 100, "fill": "#FF0000"}, {"type": "rect", "width": 50, "height": 100, "blendMode": "multiply", "fill": "#00FF00"}]),
+    );
     assert_eq!(px(25, 50), (0, 0, 0), "red × green = black");
     assert_eq!(px(75, 50), (255, 0, 0));
 }
@@ -251,16 +243,13 @@ fn gpu_renders_match_the_cpu_closely() {
         eprintln!("no GPU on this machine; the CPU fallback covers renders");
         return;
     }
-    let scene: Scene = serde_json::from_value(json!({
-        "width": 200, "height": 100, "background": "#EEEEEE",
+    let scene: Scene = serde_json::from_value(json!({"width": 200,
+        "height": 100,
+        "background": "#EEEEEE",
         "sizes": [{"id": "a", "width": 200, "height": 100}],
         "layers": [
-            {"id": "r", "type": "rect", "x": 10, "y": 10, "width": 80, "height": 80, "cornerRadius": 12,
-             "gradient": {"stops": [{"at": 0, "color": "#D0202E"}, {"at": 1, "color": "#1B2A5C"}]}, "rotation": 10},
-            {"id": "t", "type": "text", "text": "GPU", "x": 110, "y": 20, "fontSize": 40, "weight": 800,
-             "outline": {"width": 2, "color": "#000000"}, "color": "#FFFFFF"}
-        ]
-    }))
+            {"id": "r", "type": "rect", "x": 10, "y": 10, "width": 80, "height": 80, "borderRadius": 12, "rotate": 10, "fill": {"gradient": {"stops": [{"offset": 0, "color": "#D0202E"}, {"offset": 1, "color": "#1B2A5C"}], "angle": 90}}},
+            {"id": "t", "type": "text", "text": "GPU", "x": 110, "y": 20, "fontSize": 40, "fontWeight": 800, "color": "#FFFFFF", "stroke": {"width": 2, "color": "#000000", "align": "center"}}]}))
     .unwrap();
     let dir = std::env::temp_dir();
     let cpu = render_png_on(&scene, &scene.sizes[0], &dir, Backend::Cpu).unwrap();

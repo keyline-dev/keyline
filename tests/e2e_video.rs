@@ -137,7 +137,7 @@ async fn three_clips_play_as_shots_with_titles_and_sound() {
         .ok("scene_describe", json!({"sceneId": id, "full": true}))
         .await;
     assert!(full.contains("one 1280×720 1s sound"), "{full}");
-    assert!(full.contains("video1 video 0,0 1280×720 fill"), "{full}");
+    assert!(full.contains("video1 video 0,0 1280×720 cover"), "{full}");
 
     // The first title flying in, the push, the wipe, the last title.
     for t in [0.3_f32, 0.8, 1.5, 2.2] {
@@ -160,12 +160,12 @@ async fn three_clips_play_as_shots_with_titles_and_sound() {
     let reply = mcp
         .ok(
             "render",
-            json!({"sceneId": id, "format": "webm", "audio": false}),
+            json!({"sceneId": id, "format": "webm", "muted": true}),
         )
         .await;
     let webm = reply.split_whitespace().nth(1).unwrap();
     assert!(webm.ends_with(".webm"), "{reply}");
-    assert_eq!(streams(webm), ["video"], "audio: false leaves sound out");
+    assert_eq!(streams(webm), ["video"], "muted leaves sound out");
     mcp.stop().await;
 }
 
@@ -190,8 +190,8 @@ async fn without_ffmpeg_video_is_refused_and_apng_still_works() {
     let id = created.split(' ').next().unwrap().to_owned();
     mcp.ok(
         "layer_add",
-        json!({"sceneId": id, "layers": [{"type": "rect", "width": 20, "height": 20,
-            "animate": {"rotation": [0, 90]}}]}),
+        json!({"sceneId": id,
+            "layers": [{"type": "rect", "width": 20, "height": 20, "animate": {"rotate": [0, 90]}}]}),
     )
     .await;
     let e = mcp

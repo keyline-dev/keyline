@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::Color;
-use super::defaults::{center, is_center, is_default, left_mid, right_mid};
+use super::defaults::{bottom_mid, center, is_center, is_default, top_mid};
 
 /// A gradient. Points are in the box, 0–1 on each axis, like a design
 /// tool's gradient handles: `from [0.5, 0]` → `to [0.5, 1]` runs top to bottom.
@@ -14,11 +14,11 @@ pub struct Gradient {
     /// `linear` (default), `radial` or `conic`.
     #[serde(default, rename = "type", skip_serializing_if = "is_default")]
     pub kind: GradientKind,
-    /// Linear: start point (left middle).
-    #[serde(default = "left_mid")]
+    /// Linear: start point (top middle, as CSS runs top to bottom).
+    #[serde(default = "top_mid")]
     pub from: [f32; 2],
-    /// Linear: end point (right middle).
-    #[serde(default = "right_mid")]
+    /// Linear: end point (bottom middle).
+    #[serde(default = "bottom_mid")]
     pub to: [f32; 2],
     /// Linear: direction in degrees as in CSS (0 = to top, 90 = to right);
     /// wins over `from`/`to`.
@@ -31,7 +31,7 @@ pub struct Gradient {
     /// an ellipse touching the box's edges).
     #[serde(default = "center", skip_serializing_if = "is_center")]
     pub radius: [f32; 2],
-    /// Color stops, at least two: `{at, color}`, or colors spread evenly.
+    /// Color stops, at least two: `{offset, color}`, or colors spread evenly.
     #[serde(deserialize_with = "stops")]
     pub stops: Vec<Stop>,
 }
@@ -53,14 +53,15 @@ pub enum GradientKind {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Stop {
-    /// Position along the gradient, 0–1.
+    /// Position along the gradient, 0–1 (SVG `offset`).
+    #[serde(rename = "offset")]
     pub at: f32,
     /// Color at that position.
     pub color: Color,
 }
 
-/// Stops as objects (`at`, or CSS's `offset`/`position`, 0–1 or "40%"),
-/// or as bare colors placed evenly from 0 to 1.
+/// Stops as objects (`offset`, 0–1 or "40%"), or as bare colors placed
+/// evenly from 0 to 1.
 fn stops<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Stop>, D::Error> {
     use serde::de::Error;
     let raw = Vec::<serde_json::Value>::deserialize(d)?;
@@ -81,10 +82,10 @@ fn stops<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Stop>, D::Error> 
             serde_json::Value::Object(o) => {
                 if let Some(k) = o
                     .keys()
-                    .find(|k| !["at", "offset", "position", "pos", "color"].contains(&k.as_str()))
+                    .find(|k| !["offset", "color"].contains(&k.as_str()))
                 {
                     return Err(D::Error::custom(format!(
-                        "stop {i}: unknown field {k}; use {{at, color}}"
+                        "stop {i}: unknown field {k}; use {{offset, color}}"
                     )));
                 }
                 let color = o
@@ -92,10 +93,7 @@ fn stops<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Stop>, D::Error> 
                     .and_then(|c| c.as_str())
                     .and_then(Color::parse)
                     .ok_or_else(|| D::Error::custom(format!("stop {i}: needs a color")))?;
-                let at = match ["at", "offset", "position", "pos"]
-                    .iter()
-                    .find_map(|k| o.get(*k))
-                {
+                let at = match o.get("offset") {
                     None => even(i),
                     Some(p) => super::de::float(p)
                         .or_else(|| {
@@ -136,9 +134,9 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn stops_take_css_names_and_percentages() {
+    fn stops_take_offsets_and_percentages() {
         let g: Gradient = serde_json::from_value(json!({"stops": [
-            {"offset": 0, "color": "#FFFFFF"}, {"position": "55%", "color": "#FFFFFFEE"}, {"at": 1, "color": "#FFFFFF00"}]}))
+            {"offset": 0, "color": "#FFFFFF"}, {"offset": "55%", "color": "#FFFFFFEE"}, {"offset": 1, "color": "#FFFFFF00"}]}))
         .unwrap();
         assert_eq!(
             g.stops.iter().map(|s| s.at).collect::<Vec<_>>(),
@@ -150,7 +148,7 @@ mod tests {
         .unwrap_err();
         assert!(
             e.to_string()
-                .contains("stop 0: unknown field stop; use {at, color}"),
+                .contains("stop 0: unknown field stop; use {offset, color}"),
             "{e}"
         );
     }
@@ -195,7 +193,7 @@ mod tests {
 
     #[test]
     fn short_form_gradients_round_trip_unchanged() {
-        let v = json!({"from": [0.0, 0.0], "to": [1.0, 1.0], "stops": [{"at": 0.0, "color": "#000000"}, {"at": 1.0, "color": "#FFFFFF"}]});
+        let v = json!({"from": [0.0, 0.0], "to": [1.0, 1.0], "stops": [{"offset": 0.0, "color": "#000000"}, {"offset": 1.0, "color": "#FFFFFF"}]});
         let g: Gradient = serde_json::from_value(v.clone()).unwrap();
         assert_eq!(serde_json::to_value(&g).unwrap(), v);
     }

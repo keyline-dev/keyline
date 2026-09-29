@@ -91,16 +91,17 @@ pub(super) fn arrange<'a>(
 }
 
 /// Each child's slot: named areas and explicit cells first, then the rest
-/// in order into the first free cells, row by row.
+/// in order into the first free cells, row by row, in their given row or
+/// column when only one is.
 fn place(flow: &[&Layer], grid: &Grid, n_cols: usize) -> Vec<Area> {
-    let spans = |l: &Layer| l.span.unwrap_or([1, 1]).map(|n| usize::from(n.max(1)));
+    let spans = |l: &Layer| l.span().map(|n| usize::from(n.max(1)));
     let fixed: Vec<Option<Area>> = flow
         .iter()
         .map(|l| {
             let [rs, cs] = spans(l);
             l.area.as_deref().and_then(|a| grid.area(a)).or_else(|| {
-                l.cell
-                    .map(|[r, c]| (usize::from(r.max(1)) - 1, usize::from(c.max(1)) - 1, rs, cs))
+                let [r, c] = l.cell();
+                Some((line(r?), line(c?), rs, cs))
             })
         })
         .collect();
@@ -115,16 +116,24 @@ fn place(flow: &[&Layer], grid: &Grid, n_cols: usize) -> Vec<Area> {
             f.unwrap_or_else(|| {
                 let [rs, cs] = spans(l);
                 let cs = cs.min(n_cols);
+                let [row, col] = l.cell().map(|v| v.map(line));
+                let rows = row.map_or(0..=usize::MAX, |r| r..=r);
+                let cols = col.map_or(0..=n_cols - cs, |c| c..=c);
                 // ponytail: first free cell from the top (CSS "dense"), not a moving cursor.
-                let slot = (0..)
-                    .flat_map(|r| (0..=n_cols - cs).map(move |c| (r, c, rs, cs)))
+                let slot = rows
+                    .flat_map(|r| cols.clone().map(move |c| (r, c, rs, cs)))
                     .find(|s| taken.free(*s))
-                    .unwrap_or((0, 0, rs, cs));
+                    .unwrap_or((row.unwrap_or(0), col.unwrap_or(0), rs, cs));
                 taken.take(slot);
                 slot
             })
         })
         .collect()
+}
+
+/// A grid line counted from 1, as an index from 0.
+fn line(n: u16) -> usize {
+    usize::from(n.max(1)) - 1
 }
 
 /// Which cells are taken, by row.

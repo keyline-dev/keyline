@@ -24,7 +24,7 @@
     "type": "rect",
     "width": "fill",
     "height": "fill",
-    "fills": [
+    "fill": [
      {
       "gradient": {
        "angle": 150,
@@ -44,11 +44,11 @@
     "width": 620,
     "height": 620,
     "place": "top-right",
-    "inset": [
+    "margin": [
      -160,
      -180
     ],
-    "fills": "#FFFFFF1A"
+    "fill": "#FFFFFF1A"
    },
    {
     "id": "blob2",
@@ -57,11 +57,11 @@
     "width": 520,
     "height": 520,
     "place": "bottom-left",
-    "inset": [
+    "margin": [
      -170,
      -150
     ],
-    "fills": "#FFFFFF12"
+    "fill": "#FFFFFF12"
    },
    {
     "id": "dots",
@@ -69,25 +69,24 @@
     "width": 260,
     "height": 180,
     "place": "bottom-right",
-    "inset": [
+    "margin": [
      70,
      90
     ],
-    "fills": {
+    "fill": {
      "pattern": "dots",
      "color": "#FFFFFF44",
      "size": 22
     },
-    "in": {
+    "enter": {
      "effect": "fade",
-     "at": 1.8,
+     "delay": 1.8,
      "duration": 0.8
     }
    },
    {
     "id": "hero",
     "type": "frame",
-    "clip": false,
     "width": 520,
     "height": 520,
     "hidden": true,
@@ -96,7 +95,7 @@
       "type": "ellipse",
       "width": "fill",
       "height": "fill",
-      "fills": [
+      "fill": [
        {
         "gradient": {
          "type": "radial",
@@ -112,7 +111,7 @@
       "type": "ellipse",
       "width": "fill",
       "height": "fill",
-      "strokes": {
+      "stroke": {
        "width": 3,
        "color": "#FFFFFF55",
        "dash": [
@@ -130,42 +129,39 @@
       "width": "56%",
       "height": "56%",
       "place": "center",
-      "rotation": -8,
-      "shadows": {
+      "rotate": -8,
+      "shadow": {
        "y": 16,
        "blur": 40,
        "color": "#2E0A4F66"
       }
      }
-    ]
+    ],
+    "clipsContent": false
    },
    {
     "id": "content",
     "type": "frame",
-    "clip": false,
     "width": "fill",
     "height": "fill",
-    "stack": {
-     "dir": "column",
-     "gap": 34,
-     "padding": 96,
-     "justify": "center"
-    },
+    "flexDirection": "column",
+    "gap": 34,
+    "padding": 96,
+    "alignItems": "flex-start",
+    "justifyContent": "center",
     "children": [
      {
       "id": "eyebrow",
       "type": "frame",
-      "fills": "#2E0A4F55",
-      "radius": "full",
-      "stack": {
-       "dir": "row",
-       "gap": 12,
-       "padding": [
-        12,
-        26
-       ],
-       "align": "center"
-      },
+      "fill": "#2E0A4F55",
+      "borderRadius": "full",
+      "flexDirection": "row",
+      "gap": 12,
+      "padding": [
+       12,
+       26
+      ],
+      "alignItems": "center",
       "children": [
        {
         "type": "icon",
@@ -176,17 +172,17 @@
        },
        {
         "type": "text",
-        "text": "NEW \u00b7 SUMMER DROP",
+        "text": "NEW · SUMMER DROP",
         "fontSize": 26,
-        "weight": 800,
+        "fontWeight": 800,
         "letterSpacing": 3,
         "color": "#FFFFFF",
         "trim": "cap"
        }
       ],
-      "in": {
+      "enter": {
        "effect": "fade-down",
-       "at": 0.1,
+       "delay": 0.1,
        "duration": 0.5,
        "distance": 24
       }
@@ -196,11 +192,11 @@
       "type": "text",
       "text": "Cold Brew<br>Season",
       "fontSize": 168,
-      "weight": 900,
+      "fontWeight": 900,
       "lineHeight": 0.92,
       "color": "#FFFFFF",
       "width": "fill",
-      "shadows": {
+      "shadow": {
        "y": 8,
        "blur": 30,
        "color": "#2E0A4F55"
@@ -208,13 +204,13 @@
       "split": "chars",
       "stagger": 0.035,
       "animate": {
-       "offset": {
+       "translate": {
         "from": [
          "random(-40, 40)",
          "random(90, 170)"
         ]
        },
-       "rotation": {
+       "rotate": {
         "from": "random(-30, 30)"
        },
        "scale": {
@@ -223,7 +219,7 @@
        "opacity": {
         "from": 0
        },
-       "at": 0.3,
+       "delay": 0.3,
        "duration": 0.8,
        "ease": "back.out"
       }
@@ -238,9 +234,9 @@
       "maxWidth": 760,
       "split": "words",
       "stagger": 0.05,
-      "in": {
+      "enter": {
        "effect": "fade-up",
-       "at": 1.2,
+       "delay": 1.2,
        "duration": 0.5,
        "distance": 20
       }
@@ -248,38 +244,33 @@
      {
       "id": "cta-row",
       "type": "frame",
-      "clip": false,
-      "stack": {
-       "dir": "row",
-       "gap": 28,
-       "align": "center"
-      },
+      "flexDirection": "row",
+      "gap": 28,
+      "alignItems": "center",
       "children": [
        {
         "id": "cta",
         "type": "frame",
-        "fills": "#FFFFFF",
-        "radius": "full",
-        "shadows": {
+        "fill": "#FFFFFF",
+        "borderRadius": "full",
+        "shadow": {
          "y": 12,
          "blur": 30,
          "color": "#2E0A4F44"
         },
-        "stack": {
-         "dir": "row",
-         "gap": 14,
-         "padding": [
-          24,
-          44
-         ],
-         "align": "center"
-        },
+        "flexDirection": "row",
+        "gap": 14,
+        "padding": [
+         24,
+         44
+        ],
+        "alignItems": "center",
         "children": [
          {
           "type": "text",
           "text": "Order now",
           "fontSize": 36,
-          "weight": 800,
+          "fontWeight": 800,
           "color": "$violet",
           "trim": "cap"
          },
@@ -291,9 +282,9 @@
           "height": 36
          }
         ],
-        "in": {
+        "enter": {
          "effect": "pop",
-         "at": 1.7,
+         "delay": 1.7,
          "duration": 0.5
         },
         "animate": {
@@ -302,7 +293,7 @@
           1.06,
           1
          ],
-         "at": 2.6,
+         "delay": 2.6,
          "duration": 1.2,
          "repeat": -1,
          "ease": "sine.inOut"
@@ -313,8 +304,7 @@
         "type": "frame",
         "width": 150,
         "height": 150,
-        "rotation": -12,
-        "clip": false,
+        "rotate": -12,
         "children": [
          {
           "type": "polygon",
@@ -322,34 +312,37 @@
           "innerRadius": 0.84,
           "width": "fill",
           "height": "fill",
-          "fills": "#FFE14D"
+          "fill": "#FFE14D"
          },
          {
           "type": "text",
           "text": "-20%",
           "fontSize": 40,
-          "weight": 900,
+          "fontWeight": 900,
           "color": "$ink",
           "place": "center"
          }
         ],
-        "in": {
+        "enter": {
          "effect": "zoom-in",
-         "at": 2.0,
+         "delay": 2.0,
          "duration": 0.4
         },
         "animate": {
-         "rotation": {
+         "rotate": {
           "from": -200
          },
-         "at": 2.0,
+         "delay": 2.0,
          "duration": 0.8,
          "ease": "back.out"
-        }
+        },
+        "clipsContent": false
        }
-      ]
+      ],
+      "clipsContent": false
      }
-    ]
+    ],
+    "clipsContent": false
    }
   ]
  }

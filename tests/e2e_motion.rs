@@ -26,22 +26,11 @@ async fn build(mcp: &Mcp) -> String {
         .unwrap()
         .to_owned();
     let reply = mcp
-        .ok("layer_add", json!({"sceneId": id, "layers": [
-            {"id": "title", "type": "text", "text": "Animate Anything", "fontSize": 48, "weight": 900,
-             "color": "#FFFCE1", "place": "top", "inset": [0, 60], "split": "chars", "stagger": 0.03,
-             "animate": {"offset": {"from": ["random(-200, 200)", "random(-120, 120)"]},
-                         "rotation": {"from": "random(-180, 180)"}, "opacity": {"from": 0},
-                         "duration": 0.6, "ease": "back.out"}},
-            {"id": "sub", "type": "text", "text": "rendered without a browser", "fontSize": 16,
-             "color": "#9D95FF", "place": "top", "inset": [0, 130], "split": "words", "stagger": 0.1,
-             "in": {"effect": "fade-up", "at": 0.6, "duration": 0.3, "distance": 12}},
-            {"id": "shapes", "type": "frame", "clip": false, "stack": {"dir": "row", "gap": 20},
-             "place": "bottom", "inset": 30, "stagger": 0.1, "in": {"effect": "pop", "at": 0.8, "duration": 0.3},
-             "children": [
-                {"type": "rect", "width": 24, "height": 24, "color": "#0AE448", "radius": 6},
-                {"type": "ellipse", "width": 24, "height": 24, "color": "#FEC5FB"},
-                {"type": "polygon", "sides": 5, "innerRadius": 0.45, "width": 24, "height": 24, "color": "#FF8709",
-                 "animate": {"rotation": [0, 360], "duration": 1, "repeat": -1, "ease": "none"}}]}]}))
+        .ok("layer_add", json!({"sceneId": id,
+            "layers": [
+                {"id": "title", "type": "text", "text": "Animate Anything", "fontSize": 48, "fontWeight": 900, "color": "#FFFCE1", "place": "top", "margin": [0, 60], "split": "chars", "stagger": 0.03, "animate": {"translate": {"from": ["random(-200, 200)", "random(-120, 120)"]}, "rotate": {"from": "random(-180, 180)"}, "opacity": {"from": 0}, "duration": 0.6, "ease": "back.out"}},
+                {"id": "sub", "type": "text", "text": "rendered without a browser", "fontSize": 16, "color": "#9D95FF", "place": "top", "margin": [0, 130], "split": "words", "stagger": 0.1, "enter": {"effect": "fade-up", "delay": 0.6, "duration": 0.3, "distance": 12}},
+                {"id": "shapes", "type": "frame", "flexDirection": "row", "gap": 20, "alignItems": "flex-start", "place": "bottom", "margin": 30, "stagger": 0.1, "enter": {"effect": "pop", "delay": 0.8, "duration": 0.3}, "children": [{"type": "rect", "width": 24, "height": 24, "borderRadius": 6, "fill": "#0AE448"}, {"type": "ellipse", "width": 24, "height": 24, "fill": "#FEC5FB"}, {"type": "polygon", "sides": 5, "innerRadius": 0.45, "width": 24, "height": 24, "animate": {"rotate": [0, 360], "duration": 1, "repeat": -1, "ease": "none"}, "fill": "#FF8709"}], "clipsContent": false}]}))
         .await;
     assert!(reply.starts_with("added title,sub,shapes v1 ok"), "{reply}");
     id

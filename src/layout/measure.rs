@@ -94,12 +94,12 @@ fn content(scene: &Scene, layer: &Layer, k: f32, parent: (f32, f32), known: Forc
     match &layer.kind {
         Kind::Frame {
             children,
-            stack: Some(s),
+            layout: crate::scene::FrameLayout { stack: Some(s), .. },
             ..
         } => stack::hug(scene, children, s, k, known),
         Kind::Frame {
             children,
-            grid: Some(g),
+            layout: crate::scene::FrameLayout { grid: Some(g), .. },
             ..
         } => {
             let [t, r, b, l] = g.padding.sides().map(|p| p * k);
@@ -110,15 +110,23 @@ fn content(scene: &Scene, layer: &Layer, k: f32, parent: (f32, f32), known: Forc
                 known.1.unwrap_or(c.1 + t + b),
             )
         }
-        Kind::Frame { children, .. } if hug(layer.width) || hug(layer.height) => {
+        // A frame of free children with no size wraps them, like a Figma
+        // group; on an axis they don't size (empty, hidden, all `fill`), it's
+        // a plain box.
+        Kind::Frame { children, .. }
+            if hug(layer.width)
+                || hug(layer.height)
+                || (!children.is_empty() && (layer.width.is_none() || layer.height.is_none())) =>
+        {
+            let wraps = |l: Option<Length>| hug(l) || (l.is_none() && !children.is_empty());
             let b = bounds(scene, children, k, (w.unwrap_or(0.0), h.unwrap_or(0.0)));
             (
-                if hug(layer.width) {
+                if wraps(layer.width) && b.0 > 0.0 {
                     b.0
                 } else {
                     DEFAULT_BOX * k
                 },
-                if hug(layer.height) {
+                if wraps(layer.height) && b.1 > 0.0 {
                     b.1
                 } else {
                     DEFAULT_BOX * k

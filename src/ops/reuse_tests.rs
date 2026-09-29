@@ -27,9 +27,9 @@ fn rect_color(s: &Scene, id: &str) -> Option<Color> {
     let mut out = None;
     s.walk(&mut |l| {
         if l.id == id
-            && let Kind::Rect { color, .. } = &l.kind
+            && let Some(crate::scene::OneOrMany::One(crate::scene::Paint::Solid(p))) = &l.look.fills
         {
-            out = *color;
+            out = Some(p.color);
         }
     });
     out
@@ -39,8 +39,8 @@ fn rect_color(s: &Scene, id: &str) -> Option<Color> {
 fn changing_a_token_updates_every_layer_bound_to_it() {
     let mut s = scene();
     add_layers(&mut s, with(json!({"brand": "#D0202E"}), json!({})), vec![
-        json!({"id": "a", "type": "rect", "color": "$brand"}),
-        json!({"id": "b", "type": "frame", "children": [{"id": "c", "type": "rect", "color": "$brand"}]}),
+        json!({"id": "a", "type": "rect", "fill": "$brand"}),
+        json!({"id": "b", "type": "frame", "children": [{"id": "c", "type": "rect", "fill": "$brand"}]}),
     ])
     .unwrap();
     assert_eq!(rect_color(&s, "a"), Color::parse("#D0202E"));
@@ -55,12 +55,11 @@ fn an_explicit_value_replaces_the_token_binding() {
     add_layers(
         &mut s,
         with(json!({"brand": "#D0202E"}), json!({})),
-        vec![json!({"id": "a", "type": "rect", "color": "$brand"})],
+        vec![json!({"id": "a", "type": "rect", "fill": "$brand"})],
     )
     .unwrap();
     let op: Op =
-        serde_json::from_value(json!({"target": {"id": "a"}, "set": {"color": "#000000"}}))
-            .unwrap();
+        serde_json::from_value(json!({"target": {"id": "a"}, "set": {"fill": "#000000"}})).unwrap();
     update_layers(&mut s, Shared::default(), &[op]).unwrap();
     update_layers(&mut s, with(json!({"brand": "#00FF00"}), json!({})), &[]).unwrap();
     assert_eq!(rect_color(&s, "a"), Color::parse("#000000"));
@@ -70,7 +69,7 @@ fn an_explicit_value_replaces_the_token_binding() {
 fn styles_apply_to_any_layer_and_a_later_style_wins() {
     let mut s = scene();
     let styles =
-        json!({"card": {"color": "#FFFFFF", "radius": 16}, "danger": {"color": "#FF0000"}});
+        json!({"card": {"fill": "#FFFFFF", "borderRadius": 16}, "danger": {"fill": "#FF0000"}});
     add_layers(
         &mut s,
         Shared {
@@ -79,7 +78,7 @@ fn styles_apply_to_any_layer_and_a_later_style_wins() {
         },
         vec![
             json!({"id": "a", "type": "rect", "style": ["card", "danger"]}),
-            json!({"id": "b", "type": "rect", "style": "card", "color": "#000000"}),
+            json!({"id": "b", "type": "rect", "style": "card", "fill": "#000000"}),
         ],
     )
     .unwrap();
@@ -105,7 +104,7 @@ fn styles_apply_to_any_layer_and_a_later_style_wins() {
 #[test]
 fn editing_a_component_changes_every_instance_and_detach_frees_them() {
     let mut s = scene();
-    let card = json!({"card": {"type": "frame", "children": [{"type": "rect", "role": "dot", "color": "#FF0000"}]}});
+    let card = json!({"card": {"type": "frame", "children": [{"type": "rect", "role": "dot", "fill": "#FF0000"}]}});
     add_layers(
         &mut s,
         with(json!({}), card),
@@ -115,7 +114,7 @@ fn editing_a_component_changes_every_instance_and_detach_frees_them() {
     let r = s.resolved();
     assert_eq!(rect_color(&r, "cards.1.dot"), Color::parse("#FF0000"));
     let op: Op = serde_json::from_value(
-        json!({"target": {"component": "card", "role": "dot"}, "set": {"color": "#0000FF"}}),
+        json!({"target": {"component": "card", "role": "dot"}, "set": {"fill": "#0000FF"}}),
     )
     .unwrap();
     update_layers(&mut s, Shared::default(), &[op]).unwrap();
@@ -148,7 +147,7 @@ fn unknown_tokens_and_components_say_what_exists() {
     let e = add_layers(
         &mut s,
         with(json!({"red": "#F00"}), json!({})),
-        vec![json!({"type": "rect", "color": "$blue"})],
+        vec![json!({"type": "rect", "fill": "$blue"})],
     )
     .unwrap_err();
     assert!(e.ends_with("unknown token $blue; tokens: red"), "{e}");
@@ -231,7 +230,7 @@ fn a_bad_at_key_inside_a_component_is_an_error() {
         &mut s,
         with(
             json!({}),
-            json!({"card": {"type": "rect", "at": {"skyy": {"hidden": true}}}}),
+            json!({"card": {"type": "rect", "media": {"skyy": {"hidden": true}}}}),
         ),
         vec![json!({"id": "c", "type": "use", "component": "card"})],
     )

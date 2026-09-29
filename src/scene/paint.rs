@@ -83,17 +83,18 @@ pub enum BlendMode {
     Luminosity,
 }
 
-/// How an image fills its box.
+/// How an image fills its box, CSS `object-fit`, plus `tile`.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Fit {
-    /// Cover the box, cropping the overflow (centered); also `cover`.
+    /// Cover the box, cropping the overflow around `focus` (the default).
     #[default]
-    #[serde(alias = "cover")]
-    Fill,
-    /// Contain within the box, letterboxed; also `contain`.
-    #[serde(alias = "contain")]
-    Fit,
+    Cover,
+    /// Contain within the box, letterboxed.
+    Contain,
+    /// Stretch to the box, ignoring the image's aspect ratio (CSS `fill`).
+    #[serde(rename = "fill")]
+    Stretch,
     /// Repeat the image at its own size × `tileScale`, from the top-left.
     Tile,
 }

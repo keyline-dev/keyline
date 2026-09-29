@@ -253,19 +253,15 @@ fn flex_item<'a>(
         Kind::Spacer { min_length } => Some(min_length * k),
         _ => None,
     };
-    let fill = (len_main == Some(Length::Fill) || spacer.is_some()) && inner_main.is_some();
+    // `flexGrow` alone, with no size along the stack, makes it fill.
+    let grows = len_main.is_none() && c.grow.is_some_and(|g| g > 0.0);
+    let fill =
+        (len_main == Some(Length::Fill) || spacer.is_some() || grows) && inner_main.is_some();
     let (min_side, max_side) = if row {
         (c.min_width, c.max_width)
     } else {
         (c.min_height, c.max_height)
     };
-    let min_main = spacer.or(min_side.map(|v| v * k)).unwrap_or_else(|| {
-        // Text gives way down to its longest word.
-        match (&c.kind, row) {
-            (Kind::Text { .. }, true) => Text::of(c, k).map_or(0.0, |t| t.min_width()),
-            _ => 0.0,
-        }
-    });
     let forced = if row {
         (main_forced, cross_forced)
     } else {
@@ -273,10 +269,26 @@ fn flex_item<'a>(
     };
     let natural = measure(scene, c, k, parent, forced, true);
     let (nat_main, cross) = if row { natural } else { (natural.1, natural.0) };
+    // Like CSS's `min-height: auto`: in a column, text and frames sized by
+    // their content keep its height; text in a row gives way down to its
+    // longest word. A `fill` or empty frame can shrink to nothing.
+    let by_content = matches!(len_main, None | Some(Length::Hug));
+    let min_main = spacer
+        .or(min_side.map(|v| v * k))
+        .unwrap_or_else(|| match (&c.kind, row) {
+            (Kind::Text { .. }, true) => Text::of(c, k).map_or(0.0, |t| t.min_width()),
+            (Kind::Text { .. }, false) if by_content => nat_main,
+            (Kind::Frame { children, .. }, false) if by_content && !children.is_empty() => nat_main,
+            _ => 0.0,
+        });
     Flex {
         layer: c,
         index,
-        main: if fill { min_main } else { nat_main },
+        main: if fill {
+            min_main
+        } else {
+            nat_main.max(min_main)
+        },
         cross,
         cross_forced,
         fill,

@@ -4,6 +4,7 @@
 mod guesses;
 #[cfg(test)]
 mod reuse_tests;
+mod scene_set;
 #[cfg(test)]
 mod tests;
 
@@ -46,6 +47,12 @@ pub enum Target {
         /// Style name.
         style: String,
     },
+    /// The scene itself (`{"scene": true}`): `set` changes its background,
+    /// sizes or timing.
+    Scene {
+        /// Always true.
+        scene: bool,
+    },
 }
 
 impl Target {
@@ -53,7 +60,7 @@ impl Target {
         match self {
             Target::Id { id } => l.id == *id,
             Target::Role { role } => l.role.as_deref() == Some(role),
-            Target::Style { .. } | Target::Component { .. } => false,
+            Target::Style { .. } | Target::Component { .. } | Target::Scene { .. } => false,
         }
     }
 }
@@ -64,6 +71,7 @@ impl std::fmt::Display for Target {
             Target::Id { id } => write!(f, "id {id}"),
             Target::Role { role } => write!(f, "role {role}"),
             Target::Style { style } => write!(f, "style {style}"),
+            Target::Scene { .. } => f.write_str("the scene"),
             Target::Component {
                 component,
                 role: None,
@@ -113,7 +121,9 @@ fn share(next: &mut Scene, shared: Shared) -> Result<(), String> {
         let Value::Object(mut style) = style else {
             return Err(format!("style {name} must be an object of layer fields"));
         };
-        guesses::fields(&mut style, None);
+        // `type` says what the style is for: it steers the guesses, then goes.
+        let kind = style.remove("type");
+        guesses::fields(&mut style, kind.as_ref().and_then(Value::as_str));
         next.styles.insert(name, style);
     }
     for (name, c) in shared.components {
@@ -198,6 +208,15 @@ pub fn update_layers(scene: &mut Scene, shared: Shared, ops: &[Op]) -> Result<Ve
             };
             crate::reuse::components::detach(&mut next, id).map_err(at)?;
             changed.push(id.clone());
+            continue;
+        }
+        if let Target::Scene { .. } = &op.target {
+            let set = op
+                .set
+                .as_ref()
+                .ok_or_else(|| at("the scene can only be set".into()))?;
+            scene_set::set_scene(&mut next, set).map_err(at)?;
+            changed.push("scene".into());
             continue;
         }
         if let Target::Component { component, role } = &op.target {

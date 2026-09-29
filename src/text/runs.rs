@@ -76,8 +76,8 @@ pub(super) fn build(
         let start = display.len();
         match case {
             TextCase::None => display.push_str(&run_text),
-            TextCase::Upper => display.push_str(&run_text.to_uppercase()),
-            TextCase::Lower => display.push_str(&run_text.to_lowercase()),
+            TextCase::Uppercase => display.push_str(&run_text.to_uppercase()),
+            TextCase::Lowercase => display.push_str(&run_text.to_lowercase()),
             TextCase::Capitalize => {
                 for ch in run_text.chars() {
                     if word_start && ch.is_alphabetic() {
@@ -144,7 +144,7 @@ mod tests {
             1.0,
         );
         assert_eq!(text, "Hello Big World");
-        let (text, _) = build("straße", &[], &base(), TextCase::Upper, 1.0);
+        let (text, _) = build("straße", &[], &base(), TextCase::Uppercase, 1.0);
         assert_eq!(text, "STRASSE");
     }
 }

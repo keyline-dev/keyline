@@ -26,7 +26,7 @@
      {
       "id": "text1",
       "place": "center",
-      "shadows": {
+      "shadow": {
        "x": 0.0,
        "y": 10.0,
        "blur": 40.0,
@@ -35,7 +35,7 @@
       "animate": {
        "duration": 0.5,
        "ease": "back.out",
-       "offset": {
+       "translate": {
         "from": [
          0.0,
          "random(80, 160)"
@@ -44,7 +44,7 @@
        "opacity": {
         "from": 0.0
        },
-       "rotation": {
+       "rotate": {
         "from": "random(-40, 40)"
        }
       },
@@ -53,7 +53,7 @@
       "type": "text",
       "text": "Render",
       "fontSize": 150.0,
-      "weight": 900,
+      "fontWeight": 900,
       "color": "#FFFFFF"
      }
     ]
@@ -81,14 +81,14 @@
      {
       "id": "text2",
       "place": "center",
-      "shadows": {
+      "shadow": {
        "x": 0.0,
        "y": 10.0,
        "blur": 40.0,
        "color": "#00000099"
       },
-      "in": {
-       "at": 0.15,
+      "enter": {
+       "delay": 0.15,
        "distance": 60.0,
        "duration": 0.45,
        "effect": "fade-up"
@@ -98,7 +98,7 @@
       "type": "text",
       "text": "Motion",
       "fontSize": 150.0,
-      "weight": 900,
+      "fontWeight": 900,
       "color": "#FFFFFF"
      }
     ]
@@ -126,14 +126,14 @@
      {
       "id": "text3",
       "place": "center",
-      "shadows": {
+      "shadow": {
        "x": 0.0,
        "y": 10.0,
        "blur": 40.0,
        "color": "#00000099"
       },
       "animate": {
-       "at": 0.1,
+       "delay": 0.1,
        "duration": 0.55,
        "ease": "expo.out",
        "opacity": {
@@ -148,7 +148,7 @@
       "type": "text",
       "text": "Anywhere",
       "fontSize": 150.0,
-      "weight": 900,
+      "fontWeight": 900,
       "color": "#FFFFFF"
      }
     ]
@@ -156,11 +156,11 @@
    {
     "id": "bar",
     "place": "bottom",
-    "inset": 48.0,
-    "fills": "#0E100FCC",
-    "radius": "full",
-    "in": {
-     "at": 0.3,
+    "margin": 48.0,
+    "fill": "#0E100FCC",
+    "borderRadius": "full",
+    "enter": {
+     "delay": 0.3,
      "duration": 0.5,
      "effect": "fade-up"
     },
@@ -177,22 +177,20 @@
      {
       "id": "text4",
       "type": "text",
-      "text": "keyline \u00b7 rendered without a browser",
+      "text": "keyline · rendered without a browser",
       "fontSize": 30.0,
-      "weight": 700,
+      "fontWeight": 700,
       "color": "#FFFFFF",
       "trim": "cap"
      }
     ],
-    "stack": {
-     "dir": "row",
-     "gap": 14.0,
-     "padding": [
-      16.0,
-      30.0
-     ],
-     "align": "center"
-    }
+    "flexDirection": "row",
+    "gap": 14.0,
+    "padding": [
+     16.0,
+     30.0
+    ],
+    "alignItems": "center"
    }
   ]
  }

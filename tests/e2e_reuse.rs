@@ -38,40 +38,10 @@ async fn build_reused_ad(mcp: &Mcp) -> String {
     let reply = mcp
         .ok("layer_add", json!({"sceneId": id,
             "tokens": {"navy": "#1B2A5C", "red": "#D0202E", "grey": "#6B7280"},
-            "styles": {
-                "accent": {"color": "$red"},
-                "name": {"fontSize": 36, "weight": 700, "color": "$navy", "align": "center"},
-                "office": {"fontSize": 30, "weight": 500, "color": "$grey", "align": "center"}
-            },
-            "components": {
-                "candidate": {"type": "frame", "stack": {"dir": "column", "gap": 4, "align": "center"}, "children": [
-                    {"type": "text", "role": "name", "text": "{name}", "style": "name"},
-                    {"type": "text", "role": "office", "text": "{office}", "style": "office"}]},
-                "step": {"type": "frame", "width": "fill", "stack": {"dir": "row", "gap": 16, "align": "center"}, "children": [
-                    {"type": "image", "asset": "check", "width": 40, "height": 40},
-                    {"type": "text", "role": "step", "text": "{text}", "fontSize": 32, "weight": 500, "color": "$navy", "width": "fill"}]}
-            },
-            "layers": [{"id": "page", "type": "frame", "width": "fill", "height": "fill",
-                "stack": {"dir": "column", "gap": 28, "padding": [48, 0]}, "children": [
-                {"id": "headline", "type": "text", "width": "fill", "padding": [0, 40], "fontSize": 64, "weight": 800,
-                 "color": "$navy", "align": "center", "textWrap": "balance",
-                 "text": "Proven <accent>RESULTS</accent> for <accent>WILLOWMERE</accent> Families"},
-                {"id": "photo", "type": "image", "asset": "photo", "width": "fill", "height": "fill", "minHeight": 120},
-                {"id": "cands", "type": "frame", "width": "fill", "stack": {"dir": ["row", "column"], "justify": "evenly", "gap": 12},
-                 "children": [{"id": "c", "type": "use", "component": "candidate", "each": [
-                    {"name": "Dana Levi", "office": "Mayor"}, {"name": "Omar Haddad", "office": "Council"},
-                    {"name": "Ruth Cohen", "office": "Council"}]}]},
-                {"id": "cta", "type": "frame", "width": "fill", "color": "$red",
-                 "stack": {"dir": "row", "gap": 16, "padding": 22, "justify": "center", "align": "center"}, "children": [
-                    {"type": "icon", "name": "mail", "color": "#FFFFFF", "width": 48, "height": 48},
-                    {"type": "text", "text": "VOTE BY MAIL", "fontSize": 48, "weight": 800, "color": "#FFFFFF"}]},
-                {"id": "steps", "type": "frame", "width": "fill", "stack": {"dir": "column", "gap": 12, "padding": [0, 60]}, "children": [
-                    {"id": "s", "type": "use", "component": "step", "each": [
-                        {"text": "Request your ballot by October 20"}, {"text": "Fill it out at home"},
-                        {"text": "Mail it back by November 3"}]}]},
-                {"id": "footer", "type": "text", "width": "fill", "text": "Paid for by Willowmere Forward · willowmereforward.org",
-                 "fontSize": 20, "color": "$grey", "align": "center", "at": {"tall": {"hidden": true}}}]}]
-        }))
+            "styles": {"accent": {"color": "$red"}, "name": {"fontSize": 36, "fontWeight": 700, "color": "$navy", "textAlign": "center"}, "office": {"fontSize": 30, "fontWeight": 500, "color": "$grey", "textAlign": "center"}},
+            "components": {"candidate": {"type": "frame", "flexDirection": "column", "gap": 4, "alignItems": "center", "children": [{"type": "text", "role": "name", "text": "{{name}}", "style": "name"}, {"type": "text", "role": "office", "text": "{{office}}", "style": "office"}]}, "step": {"type": "frame", "width": "fill", "flexDirection": "row", "gap": 16, "alignItems": "center", "children": [{"type": "image", "asset": "check", "width": 40, "height": 40}, {"type": "text", "role": "step", "text": "{{text}}", "fontSize": 32, "fontWeight": 500, "color": "$navy", "width": "fill"}]}},
+            "layers": [
+                {"id": "page", "type": "frame", "width": "fill", "height": "fill", "flexDirection": "column", "gap": 28, "padding": [48, 0], "alignItems": "flex-start", "children": [{"id": "headline", "type": "text", "width": "fill", "padding": [0, 40], "fontSize": 64, "fontWeight": 800, "color": "$navy", "textAlign": "center", "textWrap": "balance", "text": "Proven <accent>RESULTS</accent> for <accent>WILLOWMERE</accent> Families"}, {"id": "photo", "type": "image", "asset": "photo", "width": "fill", "height": "fill", "minHeight": 120}, {"id": "cands", "type": "frame", "width": "fill", "flexDirection": ["row", "column"], "gap": 12, "alignItems": "flex-start", "justifyContent": "space-evenly", "children": [{"id": "c", "type": "use", "component": "candidate", "each": [{"name": "Dana Levi", "office": "Mayor"}, {"name": "Omar Haddad", "office": "Council"}, {"name": "Ruth Cohen", "office": "Council"}]}]}, {"id": "cta", "type": "frame", "width": "fill", "fill": "$red", "flexDirection": "row", "gap": 16, "padding": 22, "alignItems": "center", "justifyContent": "center", "children": [{"type": "icon", "name": "mail", "color": "#FFFFFF", "width": 48, "height": 48}, {"type": "text", "text": "VOTE BY MAIL", "fontSize": 48, "fontWeight": 800, "color": "#FFFFFF"}]}, {"id": "steps", "type": "frame", "width": "fill", "flexDirection": "column", "gap": 12, "padding": [0, 60], "alignItems": "flex-start", "children": [{"id": "s", "type": "use", "component": "step", "each": [{"text": "Request your ballot by October 20"}, {"text": "Fill it out at home"}, {"text": "Mail it back by November 3"}]}]}, {"id": "footer", "type": "text", "width": "fill", "text": "Paid for by Willowmere Forward · willowmereforward.org", "fontSize": 20, "color": "$grey", "textAlign": "center", "media": {"tall": {"hidden": true}}}]}]}))
         .await;
     assert!(
         reply.lines().next().unwrap().starts_with("added page"),
@@ -119,7 +89,10 @@ async fn the_reference_ad_with_components_tokens_and_adaptive_layout() {
             json!({"sceneId": id, "tokens": {"red": "#B0101C"}, "ops": []}),
         )
         .await;
-    assert!(reply.contains("ok"), "{reply}");
+    assert!(
+        reply.starts_with("changed $red v") && reply.contains("ok"),
+        "{reply}"
+    );
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
     for l in rendered.lines().filter(|l| !l.starts_with(' ')) {
         let (size, path) = l.split_once(' ').unwrap();
@@ -197,21 +170,22 @@ async fn flat_gradients_and_tokens_in_spans_work_as_agents_write_them() {
     let reply = mcp
         .ok(
             "layer_add",
-            json!({"sceneId": id, "tokens": {"red": "#D0202E"}, "layers": [
-            {"type": "rect", "width": 400, "height": 80, "fills": [{"type": "linear", "angle": 180,
-             "stops": [{"color": "#FFFFFF", "pos": 0}, {"color": "#FFFFFF00", "pos": 1}]}]},
-            {"id": "t", "type": "text", "text": "Proven <span color=\"$red\">RESULTS</span>"}]}),
+            json!({"sceneId": id,
+                "tokens": {"red": "#D0202E"},
+                "layers": [
+                    {"type": "rect", "width": 400, "height": 80, "fill": [{"type": "linear", "angle": 180, "stops": [{"color": "#FFFFFF", "offset": 0}, {"color": "#FFFFFF00", "offset": 1}]}]},
+                    {"id": "t", "type": "text", "text": "Proven <span style=\"color:$red\">RESULTS</span>"}]}),
         )
         .await;
     assert!(reply.starts_with("added rect1,t v1 ok"), "{reply}");
     let e = mcp
         .call(
             "layer_add",
-            json!({"sceneId": id, "layers": [
-            {"type": "text", "text": "<span color=\"$blue\">x</span>"}]}),
+            json!({"sceneId": id,
+                "layers": [{"type": "text", "text": "<span style=\"color:$blue\">x</span>"}]}),
         )
         .await
         .unwrap_err();
-    assert!(e.contains("<span color=\"$blue\">: "), "{e}");
+    assert!(e.contains("<span style=\"color:$blue\">: "), "{e}");
     mcp.stop().await;
 }

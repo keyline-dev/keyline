@@ -15,8 +15,7 @@ mod tests;
 use skia_safe::textlayout::Paragraph;
 
 use crate::scene::{
-    Align, Dirs, Inset, Kind, Layer, Length, Pin, Place, Position, Resize, Scene, Size, Spot,
-    VAlign,
+    Align, Dirs, Kind, Layer, Length, Pin, Place, Position, Resize, Scene, Size, Spot, VAlign,
 };
 use crate::text::{Fit, Text};
 
@@ -61,6 +60,9 @@ pub struct Placed<'a> {
     /// What an adaptive layout chose at this size: a stack's direction
     /// when it had several, or the id of a `firstFit`'s child.
     pub chosen: Option<String>,
+    /// For a stack whose children don't fit even at their smallest: the
+    /// size it needs, px.
+    pub overflow: Option<(f32, f32)>,
 }
 
 impl Placed<'_> {
@@ -142,16 +144,31 @@ fn place_free<'a>(
         .iter()
         .filter(|l| !l.hidden)
         .map(|layer| {
-            let natural = measure(scene, layer, k, old, (None, None), false);
             let (hs, vs) = layer.place.map(Place::spots).unzip();
-            let inset = layer.inset.map_or((0.0, 0.0), Inset::xy);
+            // `[x, y]`: the same distance from both edges of an axis.
+            let (mx, my) = layer.inset.map_or((0.0, 0.0), |m| {
+                let (x, y) = m.xy();
+                (x * k, y * k)
+            });
+            // Placed and `fill`: measured at the size between its margins,
+            // so text wraps there before its height places it.
+            let between = |len: Option<Length>, new: f32, m: f32| {
+                (layer.place.is_some() && len == Some(Length::Fill))
+                    .then(|| (new - 2.0 * m).max(0.0))
+            };
+            let forced = (
+                between(layer.width, new.0, mx),
+                between(layer.height, new.1, my),
+            );
+            let natural = measure(scene, layer, k, old, forced, false);
             let (x, w) = free_axis(
                 FreeAxis {
                     pos: layer.x,
                     len: layer.width,
                     pin: layer.constraints.h.into(),
                     spot: hs,
-                    inset: inset.0 * k,
+                    inset: mx,
+                    range: (layer.min_width, layer.max_width),
                 },
                 natural.0,
                 old.0,
@@ -164,7 +181,8 @@ fn place_free<'a>(
                     len: layer.height,
                     pin: layer.constraints.v.into(),
                     spot: vs,
-                    inset: inset.1 * k,
+                    inset: my,
+                    range: (layer.min_height, layer.max_height),
                 },
                 natural.1,
                 old.1,
@@ -190,7 +208,10 @@ struct FreeAxis {
     len: Option<Length>,
     pin: Pin,
     spot: Option<Spot>,
+    /// The margin at both ends of the axis, px.
     inset: f32,
+    /// `min…`/`max…` on this axis, master px.
+    range: (Option<f32>, Option<f32>),
 }
 
 /// Position and length on one axis when the parent goes from `old` to
@@ -203,16 +224,30 @@ fn free_axis(a: FreeAxis, natural: f32, old: f32, new: f32, k: f32) -> (f32, f32
         a.pin
     };
     let (mut pos, mut len) = axis(pin, offset(a.pos, k, old), natural, old, new);
+    let m = a.inset;
     match a.len {
         Some(Length::Pct(p)) => len = p * new,
+        // Placed, it fills between its margins; otherwise the rest from `pos`.
+        Some(Length::Fill) if a.spot.is_some() => len = (new - 2.0 * m).max(0.0),
         Some(Length::Fill) => len = (new - pos).max(0.0),
         _ => {}
     }
+    // Min and max first, so a clamped layer is placed by its real size.
+    let (lo, hi) = a.range;
+    let clamped = len
+        .min(hi.map_or(f32::MAX, |v| v * k))
+        .max(lo.map_or(0.0, |v| v * k));
+    match pin {
+        Pin::End => pos += len - clamped,
+        Pin::Center => pos += (len - clamped) / 2.0,
+        _ => {}
+    }
+    len = clamped;
     if let Some(spot) = a.spot {
         pos = match spot {
-            Spot::Start => a.inset,
+            Spot::Start => m,
             Spot::Middle => (new - len) / 2.0,
-            Spot::End => new - len - a.inset,
+            Spot::End => new - len - m,
         };
     }
     (pos, len)
@@ -259,13 +294,17 @@ fn finish<'a>(
                 Resize::Fit | Resize::Fixed | Resize::Truncate => {}
             }
         }
-        t.layout((rect.w - pl - pr).max(0.0), (rect.h - pt - pb).max(0.0))
+        let (p, mut fit) = t.layout((rect.w - pl - pr).max(0.0), (rect.h - pt - pb).max(0.0));
+        // What the box needs, its padding included.
+        fit.need_height += pt + pb;
+        fit.one_line_width += pl + pr;
+        (p, fit)
     });
+    let mut overflow = None;
     let (children, chosen) = match &layer.kind {
         Kind::Frame {
             children,
-            stack,
-            grid,
+            layout: crate::scene::FrameLayout { stack, grid },
             ..
         } if stack.is_some() || grid.is_some() => {
             let padding = stack.as_ref().map_or_else(
@@ -277,6 +316,10 @@ fn finish<'a>(
             let (items, chosen) = match (stack, grid) {
                 (Some(s), _) => {
                     let a = stack::choose(scene, children, s, k, (Some(inner.0), Some(inner.1)));
+                    let need = (a.content.0 + l + r, a.content.1 + t + b);
+                    if need.0 > rect.w + 0.5 || need.1 > rect.h + 0.5 {
+                        overflow = Some((need.0.max(rect.w), need.1.max(rect.h)));
+                    }
                     let chosen =
                         matches!(s.dir, Dirs::FirstFit(_)).then(|| a.dir.name().to_owned());
                     (a.items, chosen)
@@ -362,6 +405,7 @@ fn finish<'a>(
         text,
         children,
         chosen,
+        overflow,
     }
 }
 

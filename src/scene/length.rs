@@ -83,7 +83,8 @@ impl std::str::FromStr for Length {
     }
 }
 
-/// An inset from the parent's edges: one value for both axes, or `[x, y]`.
+/// A placed layer's distance from its parent's edges: one value for both
+/// axes, or `[x, y]`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum Inset {
@@ -99,7 +100,7 @@ impl<'de> Deserialize<'de> for Inset {
         super::de::float(&v)
             .map(Inset::Both)
             .or_else(|| super::de::floats(&v).map(Inset::Axes))
-            .ok_or_else(|| super::de::expected("inset px or [x, y]", &v))
+            .ok_or_else(|| super::de::expected("margin px or [x, y]", &v))
     }
 }
 

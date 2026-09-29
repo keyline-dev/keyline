@@ -14,7 +14,7 @@ Each size may carry a **scale**, like a design tool's Scale tool: everything, fo
 
 ### Aspect classes
 
-Sizes fall into aspect classes: **landscape**, **square** or **portrait**, and within those **wide** or **tall** for the extremes. Any layer can change its fields for one class (`at`), so one `tall` entry covers every skyscraper the design is ever rendered at, including sizes added later. A change for one size id is the most specific and applies last. The thresholds are in [scene.md](scene.md#aspect-classes).
+Sizes fall into aspect classes: **landscape**, **square** or **portrait**, and within those **wide** or **tall** for the extremes. Any layer can change its fields for one class (`media`), so one `tall` entry covers every skyscraper the design is ever rendered at, including sizes added later. A change for one size id is the most specific and applies last. The thresholds are in [scene.md](scene.md#aspect-classes).
 
 ## How layout adapts
 
@@ -42,7 +42,7 @@ The server measures; the agent decides. Every edit's reply checks the design at 
 
 | Kind | Example | The agent should |
 |---|---|---|
-| Defect | `!overflow needs 400×124`, `!clipped by head: bottom 8px`, `!overlaps` | Fix it: it's objectively wrong |
+| Defect | `!truncated needs 400×124`, `!overflow needs 1080×1400`, `!clipped by head: bottom 8px`, `!overlaps` | Fix it: it's objectively wrong |
 | Advisory | `warn contrast 2.1:1 (WCAG 4.5)` | Judge it |
 | Fact | `smallest text: sky 8.4px (footer)`, `upscaled: photo 1.5x` | Decide whether it suits where the design runs |
 
@@ -58,7 +58,7 @@ A **token** is a named value (`navy: "#1B2A5C"`) that any field uses as `"$navy"
 
 ### Styles and components
 
-A **style** is a named set of layer fields, a look (`card`: fills, radius, shadow) that layers pull in; changing it changes every layer using it. A **component** is a named layer tree placed by `use` layers, once or once per data row; its **instances** stay linked to it, so one change updates them all.
+A **style** is a named set of layer fields, a look (`card`: fill, border radius, shadow) that layers pull in; changing it changes every layer using it. A **component** is a named layer tree placed by `use` layers, once or once per data row; its **instances** stay linked to it, so one change updates them all.
 
 ### Templates and variants
 

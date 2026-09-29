@@ -120,8 +120,8 @@ fn tag(s: &str) -> Option<(usize, Tag)> {
     }
     let mut style = Range::default();
     match name {
-        "b" => style.weight = Some(700),
-        "i" => style.italic = Some(true),
+        "b" | "strong" => style.weight = Some(700),
+        "i" | "em" => style.italic = Some(true),
         "u" => style.decoration = Some(crate::scene::Decoration::Underline),
         "s" => style.decoration = Some(crate::scene::Decoration::Strike),
         "sup" => style.shift = Some(crate::scene::Shift::Sup),
@@ -132,7 +132,10 @@ fn tag(s: &str) -> Option<(usize, Tag)> {
 }
 
 fn known(name: &str) -> bool {
-    matches!(name, "b" | "i" | "u" | "s" | "sup" | "sub" | "span")
+    matches!(
+        name,
+        "b" | "strong" | "i" | "em" | "u" | "s" | "sup" | "sub" | "span"
+    )
 }
 
 /// Checks every `<span>` in `text`, so one with bad attributes is an error
@@ -156,8 +159,8 @@ pub fn check(text: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// A `<span>`'s attributes as a styled range: any range field by its JSON
-/// name, values quoted or not.
+/// A `<span>`'s attributes as a styled range: its `style`, CSS
+/// declarations such as `color:#D0202E;font-weight:800`.
 fn span_style(attrs: &str) -> Result<Range, String> {
     let mut obj = Map::new();
     obj.insert("start".into(), 0.into());
@@ -166,7 +169,7 @@ fn span_style(attrs: &str) -> Result<Range, String> {
     while !rest.is_empty() {
         let (key, after) = rest
             .split_once('=')
-            .ok_or_else(|| format!("{rest}: attributes are name=value"))?;
+            .ok_or_else(|| format!("{rest}: attributes are name=\"value\""))?;
         let after = after.trim_start();
         let (value, next) = match after.chars().next().ok_or("an attribute has no value")? {
             q @ ('"' | '\'') => {
@@ -178,26 +181,66 @@ fn span_style(attrs: &str) -> Result<Range, String> {
             }
             _ => after.split_once(char::is_whitespace).unwrap_or((after, "")),
         };
-        obj.insert(key.trim().to_owned(), json_value(value));
+        if key.trim() != "style" {
+            return Err(format!(
+                "a span takes style=\"…\" (CSS: color, font-weight, font-style, font-size, font-family, text-decoration, background-color), not {}",
+                key.trim()
+            ));
+        }
+        for decl in value.split(';').map(str::trim).filter(|d| !d.is_empty()) {
+            let (prop, v) = decl
+                .split_once(':')
+                .ok_or_else(|| format!("{decl}: CSS declarations are property: value"))?;
+            let (field, v) = css_declaration(prop.trim(), v.trim())?;
+            obj.insert(field.into(), v);
+        }
         rest = next.trim_start();
     }
     serde_json::from_value(Value::Object(obj)).map_err(|e| e.to_string())
 }
 
-/// An attribute's text as JSON: numbers and booleans as such, else a string.
-fn json_value(v: &str) -> Value {
-    if let Ok(n) = v.parse::<i64>() {
-        return Value::from(n);
-    }
-    if let Ok(n) = v.parse::<f64>() {
-        return serde_json::Number::from_f64(n)
-            .map_or_else(|| Value::String(v.into()), Value::Number);
-    }
-    match v {
-        "true" => Value::Bool(true),
-        "false" => Value::Bool(false),
-        _ => Value::String(v.into()),
-    }
+/// One CSS declaration as a range field and its value.
+fn css_declaration(prop: &str, v: &str) -> Result<(&'static str, Value), String> {
+    let px = |v: &str| {
+        v.strip_suffix("px")
+            .unwrap_or(v)
+            .trim()
+            .parse::<f64>()
+            .map(Value::from)
+            .map_err(|_| format!("{prop}: {v} isn't a size"))
+    };
+    Ok(match prop {
+        "color" => ("color", v.into()),
+        "font-weight" => (
+            "fontWeight",
+            match v {
+                "bold" => 700.into(),
+                "normal" => 400.into(),
+                n => n
+                    .parse::<u64>()
+                    .map(Value::from)
+                    .map_err(|_| format!("font-weight: {n} isn't 100–900"))?,
+            },
+        ),
+        "font-style" => ("fontStyle", v.into()),
+        "font-size" => ("fontSize", px(v)?),
+        "font-family" => (
+            "fontFamily",
+            v.split(',')
+                .next()
+                .unwrap_or(v)
+                .trim()
+                .trim_matches(['"', '\''])
+                .into(),
+        ),
+        "text-decoration" | "text-decoration-line" => ("textDecoration", v.into()),
+        "background-color" | "background" => ("highlight", v.into()),
+        other => {
+            return Err(format!(
+                "a span's style takes color, font-weight, font-style, font-size, font-family, text-decoration or background-color, not {other}"
+            ));
+        }
+    })
 }
 
 /// Rewrites style-name tags (`<accent>…</accent>`) into spans with the
@@ -215,30 +258,35 @@ pub fn expand_styles(
         if !out.contains(&open) {
             continue;
         }
-        let attrs: Vec<String> = fields
+        let decls: Vec<String> = fields
             .iter()
-            .filter(|(k, _)| SPAN_FIELDS.contains(&k.as_str()))
-            .map(|(k, v)| match v {
-                Value::String(s) => format!("{k}=\"{s}\""),
-                other => format!("{k}={other}"),
+            .filter_map(|(k, v)| {
+                let (_, css) = SPAN_FIELDS.iter().find(|(f, _)| f == k)?;
+                let v = match (k.as_str(), v) {
+                    ("fontSize", Value::Number(n)) => format!("{n}px"),
+                    (_, Value::String(s)) => s.clone(),
+                    (_, Value::Number(n)) => n.to_string(),
+                    _ => return None,
+                };
+                Some(format!("{css}:{v}"))
             })
             .collect();
         out = out
-            .replace(&open, &format!("<span {}>", attrs.join(" ")))
+            .replace(&open, &format!("<span style=\"{}\">", decls.join(";")))
             .replace(&close, "</span>");
     }
     out
 }
 
-/// Style fields a span can take.
-const SPAN_FIELDS: &[&str] = &[
-    "color",
-    "weight",
-    "italic",
-    "fontSize",
-    "fontFamily",
-    "decoration",
-    "highlight",
+/// Style fields a span can take, with their CSS properties.
+const SPAN_FIELDS: &[(&str, &str)] = &[
+    ("color", "color"),
+    ("fontWeight", "font-weight"),
+    ("fontStyle", "font-style"),
+    ("fontSize", "font-size"),
+    ("fontFamily", "font-family"),
+    ("textDecoration", "text-decoration"),
+    ("highlight", "background-color"),
 ];
 
 #[cfg(test)]
@@ -249,15 +297,14 @@ mod tests {
     #[test]
     fn bad_spans_are_errors_and_other_angle_text_is_fine() {
         use super::check;
-        check(r##"Proven <span color="#D0202E" weight=800>RESULTS</span>"##).unwrap();
+        check(r##"Proven <span style="color:#D0202E;font-weight:800">RESULTS</span>"##).unwrap();
         check("a <spanish> b < c <span>x</span>").unwrap();
-        let e = check(r#"Proven <span color="$red">RESULTS</span>"#).unwrap_err();
-        assert!(e.starts_with(r#"<span color="$red">: "#), "{e}");
-        assert!(
-            check("<span weight>x</span>")
-                .unwrap_err()
-                .contains("name=value")
-        );
+        let e = check(r#"Proven <span style="color:$red">RESULTS</span>"#).unwrap_err();
+        assert!(e.starts_with(r#"<span style="color:$red">: "#), "{e}");
+        let e = check(r#"<span color="red">x</span>"#).unwrap_err();
+        assert!(e.contains("a span takes style="), "{e}");
+        let e = check(r#"<span style="font-weight">x</span>"#).unwrap_err();
+        assert!(e.contains("property: value"), "{e}");
     }
 
     #[test]
@@ -275,18 +322,20 @@ mod tests {
     }
 
     #[test]
-    fn spans_take_any_style_field_as_an_attribute() {
+    fn spans_take_css_in_their_style() {
         let (text, spans) = parse(
-            r##"<s>$49</s> <span color="#D0202E" weight=800 highlight='#FFE600'>$29</span><sup>99</sup>"##,
+            r##"<s>$49</s> <span style="color: #D0202E; font-weight: bold; background-color: #FFE600">$29</span><sup>99</sup>"##,
         );
         assert_eq!(text, "$49 $2999");
         assert_eq!(spans[0].decoration, Some(Decoration::Strike));
         assert_eq!(
             (spans[1].weight, spans[1].color.map(|c| c.to_string())),
-            (Some(800), Some("#D0202E".into()))
+            (Some(700), Some("#D0202E".into()))
         );
         assert!(spans[1].highlight.is_some());
         assert_eq!((spans[2].start, spans[2].shift), (7, Some(Shift::Sup)));
+        let (_, spans) = parse("<strong>a</strong><em>b</em>");
+        assert_eq!((spans[0].weight, spans[1].italic), (Some(700), Some(true)));
     }
 
     #[test]
@@ -309,13 +358,13 @@ mod tests {
     #[test]
     fn style_tags_expand_into_spans() {
         let styles = serde_json::from_value(
-            serde_json::json!({"accent": {"color": "#D0202E", "weight": 800, "letterSpacing": 2}}),
+            serde_json::json!({"accent": {"color": "#D0202E", "fontWeight": 800, "letterSpacing": 2}}),
         )
         .unwrap();
         let out = expand_styles("Proven <accent>RESULTS</accent>", &styles);
         assert_eq!(
             out,
-            r##"Proven <span color="#D0202E" weight=800>RESULTS</span>"##
+            r##"Proven <span style="color:#D0202E;font-weight:800">RESULTS</span>"##
         );
         let (text, spans) = parse(&out);
         assert_eq!(

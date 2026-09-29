@@ -100,8 +100,9 @@ pub(super) fn image_rect(
         };
     }
     let s = match fit {
-        Fit::Fill => (bx.w / iw).max(bx.h / ih),
-        Fit::Fit => (bx.w / iw).min(bx.h / ih),
+        Fit::Stretch => return bx,
+        Fit::Cover => (bx.w / iw).max(bx.h / ih),
+        Fit::Contain => (bx.w / iw).min(bx.h / ih),
         Fit::Tile => {
             return Rect {
                 x: bx.x,
@@ -123,7 +124,8 @@ pub(super) fn image_rect(
 /// How much an image is enlarged on screen relative to its pixels
 /// (`> 1` means upscaled, so blurry). SVGs never are; callers skip them.
 pub fn image_scale(bx: Rect, iw: f32, ih: f32, fit: Fit, crop: Option<&Crop>, tile: f32) -> f32 {
-    image_rect(bx, iw, ih, fit, crop, tile, CENTER).w / iw
+    let d = image_rect(bx, iw, ih, fit, crop, tile, CENTER);
+    (d.w / iw).max(d.h / ih)
 }
 
 /// Crop reported by `scene_describe`: the fraction of the image hidden on
@@ -182,7 +184,7 @@ mod tests {
                 r(0.0, 0.0, 100.0, 100.0),
                 400.0,
                 200.0,
-                Fit::Fill,
+                Fit::Cover,
                 None,
                 1.0,
                 CENTER
@@ -194,7 +196,7 @@ mod tests {
                 r(0.0, 0.0, 100.0, 100.0),
                 400.0,
                 200.0,
-                Fit::Fit,
+                Fit::Contain,
                 None,
                 1.0,
                 CENTER
@@ -202,7 +204,7 @@ mod tests {
             r(0.0, 25.0, 100.0, 50.0)
         );
         assert_eq!(
-            image_crop(r(0.0, 0.0, 100.0, 100.0), 400.0, 200.0, Fit::Fill, None),
+            image_crop(r(0.0, 0.0, 100.0, 100.0), 400.0, 200.0, Fit::Cover, None),
             (0.5, 0.0)
         );
     }
@@ -220,7 +222,7 @@ mod tests {
             r(10.0, 10.0, 100.0, 100.0),
             400.0,
             200.0,
-            Fit::Fill,
+            Fit::Cover,
             Some(&c),
             1.0,
             CENTER,
@@ -231,7 +233,7 @@ mod tests {
                 r(10.0, 10.0, 100.0, 100.0),
                 400.0,
                 200.0,
-                Fit::Fill,
+                Fit::Cover,
                 Some(&c)
             ),
             (0.5, 0.0)

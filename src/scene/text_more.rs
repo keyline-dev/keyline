@@ -13,19 +13,32 @@ use super::{Color, Padding};
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TextMore {
-    /// Italic (or oblique) face (false).
-    #[serde(default, skip_serializing_if = "is_false")]
+    /// `fontStyle`: `"italic"` for the italic face (`"normal"`).
+    #[serde(
+        rename = "fontStyle",
+        default,
+        skip_serializing_if = "is_false",
+        with = "font_style"
+    )]
     pub italic: bool,
-    /// Underline or strike through (none).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// `textDecoration`: `underline` or `line-through` (none).
+    #[serde(
+        rename = "textDecoration",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub decoration: Option<Decoration>,
     /// Line breaking: `balance` evens out line lengths, `pretty` avoids a
     /// lone last word (`wrap`).
     #[serde(default, skip_serializing_if = "is_default")]
     pub text_wrap: TextWrap,
-    /// Where text sits vertically in a box taller than it: `top`, `center`
-    /// or `bottom` (center for fit/fixed/truncate boxes; top otherwise).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// `textAlignVertical`: where text sits in a box taller than it, `top`,
+    /// `center` or `bottom` (center for a box with a height; top otherwise).
+    #[serde(
+        rename = "textAlignVertical",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub vertical_align: Option<VAlign>,
     /// `"cap"` trims the space above cap height and below the baseline, so
     /// text centers optically in pills and buttons.
@@ -57,6 +70,50 @@ pub struct TextMore {
     pub knockout: bool,
 }
 
+/// `fontStyle` as a flag: `"italic"` (or `"oblique"`) is true, `"normal"`
+/// false.
+pub(super) mod font_style {
+    use serde::{Deserialize, Deserializer, Serializer, de::Error};
+
+    fn read<E: Error>(s: &str) -> Result<bool, E> {
+        match s {
+            "italic" | "oblique" => Ok(true),
+            "normal" => Ok(false),
+            s => Err(E::custom(format!(
+                "fontStyle is italic or normal, not {s:?}"
+            ))),
+        }
+    }
+
+    pub(crate) fn serialize<S: Serializer>(italic: &bool, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(if *italic { "italic" } else { "normal" })
+    }
+
+    pub(crate) fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<bool, D::Error> {
+        read(&String::deserialize(d)?)
+    }
+
+    /// The same, for an optional field.
+    pub(crate) mod opt {
+        use serde::{Deserialize, Deserializer, Serializer};
+
+        pub(crate) fn serialize<S: Serializer>(v: &Option<bool>, s: S) -> Result<S::Ok, S::Error> {
+            match v {
+                Some(i) => super::serialize(i, s),
+                None => s.serialize_none(),
+            }
+        }
+
+        pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
+            d: D,
+        ) -> Result<Option<bool>, D::Error> {
+            Option::<String>::deserialize(d)?
+                .map(|s| super::read(&s))
+                .transpose()
+        }
+    }
+}
+
 fn is_zero_padding(p: &Padding) -> bool {
     p.sides() == [0.0; 4]
 }
@@ -67,7 +124,8 @@ fn is_zero_padding(p: &Padding) -> bool {
 pub enum Decoration {
     /// Underline.
     Underline,
-    /// Strike through (old prices).
+    /// Struck through (old prices).
+    #[serde(rename = "line-through")]
     Strike,
 }
 
@@ -90,8 +148,7 @@ pub enum TextWrap {
 pub enum VAlign {
     /// At the top.
     Top,
-    /// Centered; `middle` (CSS `vertical-align`) is read as this.
-    #[serde(alias = "middle")]
+    /// Centered.
     Center,
     /// At the bottom.
     Bottom,
@@ -128,10 +185,11 @@ pub struct Highlight {
     #[serde(skip_serializing_if = "is_four")]
     pub padding: f32,
     /// Corner radius, px (0).
-    #[serde(skip_serializing_if = "is_zero")]
+    #[serde(rename = "borderRadius", skip_serializing_if = "is_zero")]
     pub radius: f32,
-    /// `box` (default) or `brush` (a marker-pen stroke with rough edges).
-    #[serde(skip_serializing_if = "is_default")]
+    /// `shape`: `box` (default) or `brush` (a marker-pen stroke with rough
+    /// edges).
+    #[serde(rename = "shape", skip_serializing_if = "is_default")]
     pub style: HighlightStyle,
 }
 
@@ -163,9 +221,9 @@ impl<'de> Deserialize<'de> for Highlight {
             #[serde(default = "four")]
             padding: f32,
             #[serde(default)]
-            radius: f32,
+            border_radius: f32,
             #[serde(default)]
-            style: HighlightStyle,
+            shape: HighlightStyle,
         }
         fn four() -> f32 {
             4.0
@@ -184,8 +242,8 @@ impl<'de> Deserialize<'de> for Highlight {
                 .map(|f| Highlight {
                     color: f.color,
                     padding: f.padding,
-                    radius: f.radius,
-                    style: f.style,
+                    radius: f.border_radius,
+                    style: f.shape,
                 })
                 .map_err(|e| D::Error::custom(format!("highlight: {e}"))),
         }
@@ -198,9 +256,10 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn vertical_align_reads_css_middle_as_center() {
-        let v: VAlign = serde_json::from_value(json!("middle")).unwrap();
+    fn vertical_alignment_is_top_center_or_bottom() {
+        let v: VAlign = serde_json::from_value(json!("center")).unwrap();
         assert_eq!(v, VAlign::Center);
+        assert!(serde_json::from_value::<VAlign>(json!("middle")).is_err());
         assert_eq!(serde_json::to_value(v).unwrap(), "center");
     }
 
@@ -213,7 +272,7 @@ mod tests {
         assert_eq!(m.highlight.as_ref().map(|h| h.padding), Some(4.0));
         assert_eq!(m.padding.sides(), [4.0, 8.0, 4.0, 8.0]);
         let h: Highlight =
-            serde_json::from_value(json!({"color": "#000", "style": "brush"})).unwrap();
+            serde_json::from_value(json!({"color": "#000", "shape": "brush"})).unwrap();
         assert_eq!(h.style, HighlightStyle::Brush);
         assert_eq!(
             serde_json::to_value(TextMore::default()).unwrap(),

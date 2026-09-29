@@ -1,6 +1,6 @@
 //! Components: named layer trees placed by `use` layers. A `use` becomes one
 //! instance (its `props`), or one per entry of `each`, in the parent's
-//! flow. `{prop}` in a component's strings is filled from the instance's
+//! flow. `{{prop}}` in a component's strings is filled from the instance's
 //! props; the `use` layer's own fields (width, constraints, …) apply to
 //! each instance's root. Ids are the use's id, then the instance number
 //! (with `each`), then each inner layer's id or role: `cands.1.name`.
@@ -104,12 +104,12 @@ fn instances(scene: &Scene, u: &Layer, depth: usize) -> Result<Vec<Layer>, Strin
                 for (k, x) in &own {
                     o.insert(k.clone(), x.clone());
                 }
-                if let (Some(gap), Some(enter)) = (stagger, o.get("in")) {
+                if let (Some(gap), Some(enter)) = (stagger, o.get("enter")) {
                     let m: crate::anim::motion::Motion = serde_json::from_value(enter.clone())
                         .map_err(|e| format!("{}: in: {e}", u.id))?;
                     let delayed = serde_json::to_value(m.delayed(n as f32 * gap))
                         .map_err(|e| e.to_string())?;
-                    o.insert("in".into(), delayed);
+                    o.insert("enter".into(), delayed);
                 }
             }
             name(&mut v, &root);
@@ -119,25 +119,26 @@ fn instances(scene: &Scene, u: &Layer, depth: usize) -> Result<Vec<Layer>, Strin
         .collect()
 }
 
-/// Fills `{prop}` placeholders: a string that is only a placeholder takes
+/// Fills `{{prop}}` placeholders: a string that is only a placeholder takes
 /// the prop's value as is (a number stays a number); otherwise it's spliced
 /// into the text. Unknown placeholders are left alone.
 fn fill(v: &mut Value, props: &Map<String, Value>) {
     match v {
         Value::String(s) => {
-            if let Some(key) = s.strip_prefix('{').and_then(|r| r.strip_suffix('}'))
-                && let Some(p) = props.get(key)
+            // `{{name}}`, as in Mustache and Handlebars.
+            if let Some(key) = s.strip_prefix("{{").and_then(|r| r.strip_suffix("}}"))
+                && let Some(p) = props.get(key.trim())
             {
                 *v = p.clone();
                 return;
             }
-            if s.contains('{') {
+            if s.contains("{{") {
                 for (k, p) in props {
                     let text = match p {
                         Value::String(t) => t.clone(),
                         other => other.to_string(),
                     };
-                    *s = s.replace(&format!("{{{k}}}"), &text);
+                    *s = s.replace(&format!("{{{{{k}}}}}"), &text);
                 }
             }
         }
@@ -211,13 +212,11 @@ mod tests {
     use serde_json::json;
 
     fn scene(layers: serde_json::Value) -> Scene {
-        let mut v = json!({
-            "width": 400, "height": 400, "sizes": [{"id": "a", "width": 400, "height": 400}],
+        let mut v = json!({"width": 400,
+            "height": 400,
+            "sizes": [{"id": "a", "width": 400, "height": 400}],
             "tokens": {"red": "#D0202E"},
-            "components": {"card": {"type": "frame", "stack": {"dir": "column"}, "children": [
-                {"type": "text", "role": "name", "text": "{name}", "color": "$red"},
-                {"type": "text", "role": "office", "text": "Runs for {office}", "fontSize": "{size}"}]}}
-        });
+            "components": {"card": {"type": "frame", "flexDirection": "column", "alignItems": "flex-start", "children": [{"type": "text", "role": "name", "text": "{{name}}", "color": "$red"}, {"type": "text", "role": "office", "text": "Runs for {{office}}", "fontSize": "{{size}}"}]}}});
         v["layers"] = layers;
         serde_json::from_value(v).unwrap()
     }
@@ -253,8 +252,8 @@ mod tests {
 
     #[test]
     fn placeholders_keep_numbers_and_splice_into_text() {
-        let mut v = json!({"a": "{n}", "b": "{n} px", "c": "{missing}"});
+        let mut v = json!({"a": "{{n}}", "b": "{{n}} px", "c": "{{missing}}"});
         fill(&mut v, &serde_json::from_value(json!({"n": 3})).unwrap());
-        assert_eq!(v, json!({"a": 3, "b": "3 px", "c": "{missing}"}));
+        assert_eq!(v, json!({"a": 3, "b": "3 px", "c": "{{missing}}"}));
     }
 }

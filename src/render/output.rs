@@ -52,7 +52,8 @@ pub enum Format {
     /// Lossless, with transparency (default).
     #[default]
     Png,
-    /// Lossy, smallest for photos.
+    /// Lossy, smallest for photos; `jpg` too.
+    #[serde(alias = "jpg")]
     Jpeg,
     /// Lossy, smaller than JPEG at the same quality.
     Webp,

@@ -34,9 +34,7 @@ fn find<'a>(layers: &'a [Layer], id: &str) -> &'a Layer {
 #[test]
 fn a_layer_enters_and_leaves_on_the_timeline() {
     let s = scene(
-        json!([{"id": "t", "type": "rect", "width": 100, "height": 100,
-            "in": {"effect": "fade-up", "at": 1, "duration": 0.5, "ease": "none"},
-            "out": {"effect": "fade", "duration": 1, "ease": "none"}}]),
+        json!([{"id": "t", "type": "rect", "width": 100, "height": 100, "enter": {"effect": "fade-up", "delay": 1, "duration": 0.5, "ease": "none"}, "exit": {"effect": "fade", "duration": 1, "ease": "none"}}]),
         json!({}),
     );
     let at = |t: f32| find(&at_time(&s, t, &s.sizes[0]).layers, "t").clone();
@@ -57,10 +55,7 @@ fn a_layer_enters_and_leaves_on_the_timeline() {
 #[test]
 fn tracks_set_values_and_effects_apply_on_top() {
     let s = scene(
-        json!([{"id": "cta", "type": "rect", "color": "#000000", "width": 100, "height": 50,
-            "animate": [{"scale": [1, 1.2, 1], "duration": 2, "ease": "none", "repeat": -1},
-                        {"color": {"to": "#FF0000"}, "at": 1, "duration": 1, "ease": "none"}],
-            "in": {"effect": "fade", "duration": 1, "ease": "none"}}]),
+        json!([{"id": "cta", "type": "rect", "width": 100, "height": 50, "animate": [{"scale": [1, 1.2, 1], "duration": 2, "ease": "none", "repeat": -1}, {"color": {"to": "#FF0000"}, "delay": 1, "duration": 1, "ease": "none"}], "enter": {"effect": "fade", "duration": 1, "ease": "none"}, "fill": "#000000"}]),
         json!({}),
     );
     let l = |t: f32| find(&at_time(&s, t, &s.sizes[0]).layers, "cta").clone();
@@ -82,11 +77,7 @@ fn tracks_set_values_and_effects_apply_on_top() {
 #[test]
 fn a_staggering_frame_hands_its_entrance_to_its_children() {
     let s = scene(
-        json!([{"id": "row", "type": "frame", "stack": {"dir": "row"}, "stagger": 0.5,
-            "in": {"effect": "fade", "duration": 0.5, "ease": "none"},
-            "children": [{"id": "a", "type": "rect", "width": 50, "height": 50},
-                         {"id": "b", "type": "rect", "width": 50, "height": 50},
-                         {"id": "c", "type": "rect", "width": 50, "height": 50}]}]),
+        json!([{"id": "row", "type": "frame", "flexDirection": "row", "alignItems": "flex-start", "stagger": 0.5, "enter": {"effect": "fade", "duration": 0.5, "ease": "none"}, "children": [{"id": "a", "type": "rect", "width": 50, "height": 50}, {"id": "b", "type": "rect", "width": 50, "height": 50}, {"id": "c", "type": "rect", "width": 50, "height": 50}]}]),
         json!({}),
     );
     let t = at_time(&s, 0.75, &s.sizes[0]);
@@ -106,8 +97,7 @@ fn a_staggering_frame_hands_its_entrance_to_its_children() {
 #[test]
 fn use_instances_enter_one_after_another() {
     let s = scene(
-        json!([{"id": "cards", "type": "use", "component": "card", "stagger": 0.4,
-            "in": {"effect": "pop", "duration": 0.4, "ease": "none"}, "each": [{}, {}, {}]}]),
+        json!([{"id": "cards", "type": "use", "component": "card", "stagger": 0.4, "enter": {"effect": "pop", "duration": 0.4, "ease": "none"}, "each": [{}, {}, {}]}]),
         json!({"components": {"card": {"type": "rect", "width": 50, "height": 50}}}),
     );
     let t = at_time(&s, 0.4, &s.sizes[0]);
@@ -132,7 +122,7 @@ fn bad_timing_is_refused_in_one_line() {
     let s: Scene = serde_json::from_value(v.clone()).unwrap();
     assert!(s.validate().unwrap_err().contains("duration must be > 0"));
     v["duration"] = json!(2);
-    v["layers"] = json!([{"type": "rect", "in": "slide-in"}]);
+    v["layers"] = json!([{"type": "rect", "enter": "slide-in"}]);
     let e = serde_json::from_value::<Scene>(v).unwrap_err();
     assert!(e.to_string().contains("unknown effect"), "{e}");
 }

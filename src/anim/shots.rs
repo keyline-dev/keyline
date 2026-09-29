@@ -264,7 +264,7 @@ fn wipe(angle: f32, edge: f32, before: bool) -> Option<crate::scene::Mask> {
         ("#00000000", "#000000")
     };
     serde_json::from_value(json!({"angle": angle, "stops": [
-        {"at": 0, "color": a}, {"at": e, "color": a}, {"at": e, "color": b}, {"at": 1, "color": b}]}))
+        {"offset": 0, "color": a}, {"offset": e, "color": a}, {"offset": e, "color": b}, {"offset": 1, "color": b}]}))
     .ok()
 }
 

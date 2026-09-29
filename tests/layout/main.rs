@@ -81,8 +81,7 @@ pub(crate) fn check(b: &BTreeMap<String, Rect>, id: &str, want: (f32, f32, f32, 
 /// A 200 × 100 rect at 100, 50 with the given constraints.
 pub(crate) fn pinned(h: &str, v: &str) -> Scene {
     scene(
-        json!([{"id": "r", "type": "rect", "x": 100, "y": 50, "width": 200, "height": 100,
-                  "constraints": {"h": h, "v": v}}]),
+        json!([{"id": "r", "type": "rect", "x": 100, "y": 50, "width": 200, "height": 100, "constraints": {"horizontal": h, "vertical": v}}]),
     )
 }
 

@@ -5,10 +5,7 @@ use serde_json::json;
 
 fn framed(child_h: &str, child_v: &str) -> Scene {
     scene(
-        json!([{"id": "f", "type": "frame", "x": 100, "y": 100, "width": 400, "height": 200,
-        "constraints": {"h": "stretch", "v": "stretch"},
-        "children": [{"id": "c", "type": "rect", "x": 10, "y": 10, "width": 50, "height": 50,
-                      "constraints": {"h": child_h, "v": child_v}}]}]),
+        json!([{"id": "f", "type": "frame", "x": 100, "y": 100, "width": 400, "height": 200, "constraints": {"horizontal": "stretch", "vertical": "stretch"}, "children": [{"id": "c", "type": "rect", "x": 10, "y": 10, "width": 50, "height": 50, "constraints": {"horizontal": child_h, "vertical": child_v}}]}]),
     )
 }
 
@@ -51,10 +48,7 @@ fn children_stretch_and_scale_with_their_frame() {
 #[test]
 fn a_frame_that_keeps_its_size_keeps_its_children() {
     let s = scene(
-        json!([{"id": "f", "type": "frame", "x": 700, "y": 300, "width": 200, "height": 100,
-        "constraints": {"h": "right", "v": "bottom"},
-        "children": [{"id": "c", "type": "rect", "x": 150, "y": 50, "width": 40, "height": 40,
-                      "constraints": {"h": "right", "v": "bottom"}}]}]),
+        json!([{"id": "f", "type": "frame", "x": 700, "y": 300, "width": 200, "height": 100, "constraints": {"horizontal": "right", "vertical": "bottom"}, "children": [{"id": "c", "type": "rect", "x": 150, "y": 50, "width": 40, "height": 40, "constraints": {"horizontal": "right", "vertical": "bottom"}}]}]),
     );
     let b = boxes(&s, &size("s", 1200.0, 600.0, 1.0));
     check(&b, "f", (900.0, 400.0, 200.0, 100.0));
@@ -64,12 +58,7 @@ fn a_frame_that_keeps_its_size_keeps_its_children() {
 #[test]
 fn nesting_three_levels_deep_composes() {
     let s = scene(
-        json!([{"id": "a", "type": "frame", "width": 1000, "height": 500,
-        "constraints": {"h": "stretch", "v": "stretch"},
-        "children": [{"id": "b", "type": "frame", "x": 100, "y": 100, "width": 800, "height": 300,
-            "constraints": {"h": "stretch", "v": "stretch"},
-            "children": [{"id": "c", "type": "rect", "x": 700, "y": 250, "width": 100, "height": 50,
-                          "constraints": {"h": "right", "v": "bottom"}}]}]}]),
+        json!([{"id": "a", "type": "frame", "width": 1000, "height": 500, "constraints": {"horizontal": "stretch", "vertical": "stretch"}, "children": [{"id": "b", "type": "frame", "x": 100, "y": 100, "width": 800, "height": 300, "constraints": {"horizontal": "stretch", "vertical": "stretch"}, "children": [{"id": "c", "type": "rect", "x": 700, "y": 250, "width": 100, "height": 50, "constraints": {"horizontal": "right", "vertical": "bottom"}}]}]}]),
     );
     let b = boxes(&s, &size("s", 1400.0, 700.0, 1.0));
     check(&b, "a", (0.0, 0.0, 1400.0, 700.0));

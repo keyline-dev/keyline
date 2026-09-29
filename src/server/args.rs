@@ -13,7 +13,7 @@ pub struct SceneCreateArgs {
     /// Master size, px; the first size's when omitted.
     pub(super) width: Option<f32>,
     pub(super) height: Option<f32>,
-    /// Target sizes: {id, width, height, scale, safe}, a preset (instagram-portrait|-square|-story,
+    /// Target sizes: {id, width, height, scale, safeArea}, a preset (instagram-portrait|-square|-story,
     /// facebook-feed, linkedin-post, x-post, youtube-thumbnail, iab-medium-rectangle|-leaderboard|-skyscraper|-half-page,
     /// a4-portrait) or "WxH". `scale` (default 1) shrinks everything, fonts included, before constraints apply.
     #[serde(default)]
@@ -25,7 +25,7 @@ pub struct SceneCreateArgs {
     /// The template's variables to set: {name: value}
     #[serde(default)]
     pub(super) tokens: serde_json::Map<String, Value>,
-    /// Hex color, default #FFFFFF.
+    /// Any CSS color (#FFFFFF).
     pub(super) background: Option<String>,
     /// Seconds: makes it move
     pub(super) duration: Option<f32>,
@@ -101,8 +101,9 @@ pub struct RenderArgs {
     #[serde(default)]
     pub(super) preview: bool,
     pub(super) time: Option<f32>,
-    /// false leaves the clips' sound out of mp4/webm
-    pub(super) audio: Option<bool>,
+    /// true leaves the clips' sound out of mp4/webm
+    #[serde(default)]
+    pub(super) muted: bool,
     /// Variants: one render per row of token values, e.g. [{"headline": "Sale"}]
     #[serde(default)]
     pub(super) rows: Vec<serde_json::Map<String, Value>>,

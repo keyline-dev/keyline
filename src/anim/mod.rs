@@ -19,10 +19,10 @@ use track::{Track, Val};
 pub struct LayerTime {
     /// How it enters: an effect name or `{effect, at, duration, ease,
     /// distance}`. Hidden before it.
-    #[serde(rename = "in", default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "enter", default, skip_serializing_if = "Option::is_none")]
     pub enter: Option<Motion>,
     /// How it leaves; gone after it. Ends with the scene unless timed.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "exit", default, skip_serializing_if = "Option::is_none")]
     pub out: Option<Motion>,
     /// Keyframe tracks: `{"scale": [1, 1.06, 1], "repeat": -1}`, or a list.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -154,7 +154,7 @@ fn set_tracks(l: &mut Layer, track: &Track, t: f32, seed: u32) {
         l.opacity,
     );
     l.rotation = num(
-        track.value("rotation", Val::Num(l.rotation), t, seed),
+        track.value("rotate", Val::Num(l.rotation), t, seed),
         l.rotation,
     );
     l.look.scale = num(
@@ -166,7 +166,7 @@ fn set_tracks(l: &mut Layer, track: &Track, t: f32, seed: u32) {
         l.look.blur,
     );
     l.look.offset = pair(
-        track.value("offset", Val::Pair(l.look.offset), t, seed),
+        track.value("translate", Val::Pair(l.look.offset), t, seed),
         l.look.offset,
     );
     l.look.skew = pair(

@@ -3,7 +3,7 @@
 
 use super::Color;
 
-pub(super) fn white() -> Color {
+pub(crate) fn white() -> Color {
     Color(0xFFFF_FFFF)
 }
 pub(super) fn black() -> Color {
@@ -39,11 +39,11 @@ pub(super) fn inter() -> String {
 pub(super) fn is_inter(v: &String) -> bool {
     v == "Inter"
 }
-pub(super) fn left_mid() -> [f32; 2] {
-    [0.0, 0.5]
+pub(super) fn top_mid() -> [f32; 2] {
+    [0.5, 0.0]
 }
-pub(super) fn right_mid() -> [f32; 2] {
-    [1.0, 0.5]
+pub(super) fn bottom_mid() -> [f32; 2] {
+    [0.5, 1.0]
 }
 pub(super) fn center() -> [f32; 2] {
     [0.5, 0.5]

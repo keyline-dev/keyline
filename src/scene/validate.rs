@@ -60,7 +60,7 @@ impl Scene {
                 && (start < 0.0 || delay < 0.0 || !(0.01..=100.0).contains(&speed))
             {
                 shot_error = Some(format!(
-                    "{}: start and delay are 0 s or more, speed 0.01 to 100",
+                    "{}: trimStart and delay are 0 s or more, playbackRate 0.01 to 100",
                     l.id
                 ));
             }
@@ -68,6 +68,7 @@ impl Scene {
         if let Some(e) = shot_error {
             return Err(e);
         }
+        self.check_units()?;
         let resolved = self.try_resolved()?;
         let resolved = resolved.as_ref().unwrap_or(self);
         let mut result = Ok(());
@@ -96,6 +97,41 @@ impl Scene {
             resolved.for_size(size).validate_resolved()?;
         }
         Ok(())
+    }
+
+    /// Values whose unit was likely mistaken: a `lineHeight` in px, or a
+    /// motion duration in ms.
+    fn check_units(&self) -> Result<(), String> {
+        let length = crate::anim::shots::length(self);
+        let mut err = None;
+        self.walk(&mut |l| {
+            if let Kind::Text {
+                line_height: Some(h),
+                ..
+            } = l.kind
+                && h > 4.0
+            {
+                err.get_or_insert(format!(
+                    "{}: lineHeight is × fontSize (1.2); for {h}px, divide by fontSize",
+                    l.id
+                ));
+            }
+            let Some(len) = length else { return };
+            let mut long = l.time.enter.iter().chain(&l.time.out).map(|m| m.duration);
+            let tracks = l.time.animate.as_ref().map_or(&[][..], |a| a.as_slice());
+            // A value in ms: 100 or more, and longer than the scene.
+            let ms = |d: &f32| *d >= 100.0 && *d > len;
+            if let Some(d) = long
+                .find(ms)
+                .or_else(|| tracks.iter().map(|t| t.duration).find(ms))
+            {
+                err.get_or_insert(format!(
+                    "{}: a {d} s motion in a {len} s scene; durations are seconds, not ms",
+                    l.id
+                ));
+            }
+        });
+        err.map_or(Ok(()), Err)
     }
 
     fn validate_resolved(&self) -> Result<(), String> {
@@ -158,7 +194,11 @@ impl Scene {
                 super::check::stroke(s)?;
             }
         }
-        if let Kind::Frame { stack: Some(s), .. } = &l.kind {
+        if let Kind::Frame {
+            layout: crate::scene::FrameLayout { stack: Some(s), .. },
+            ..
+        } = &l.kind
+        {
             if s.gap.is_negative() || s.padding.sides().iter().any(|p| *p < 0.0) {
                 return Err("stack gap and padding must be >= 0".into());
             }
@@ -167,8 +207,7 @@ impl Scene {
             }
         }
         if let Kind::Frame {
-            stack,
-            grid,
+            layout: crate::scene::FrameLayout { stack, grid },
             children,
             ..
         } = &l.kind
@@ -186,14 +225,12 @@ impl Scene {
                             g.areas.join(" / ")
                         ));
                     }
-                    let out_of_range = |v: Option<[u16; 2]>| {
-                        v.is_some_and(|pair| {
-                            pair.iter().any(|n| *n == 0 || usize::from(*n) > MAX_TRACKS)
-                        })
-                    };
-                    if out_of_range(child.cell) || out_of_range(child.span) {
+                    let out_of_range = |n: u16| n == 0 || usize::from(n) > MAX_TRACKS;
+                    if child.cell().into_iter().flatten().any(out_of_range)
+                        || child.span().into_iter().any(out_of_range)
+                    {
                         return Err(format!(
-                            "{}: cell and span count from 1, up to {MAX_TRACKS}",
+                            "{}: gridRow and gridColumn count from 1, up to {MAX_TRACKS}",
                             child.id
                         ));
                     }
@@ -334,11 +371,11 @@ fn check_lengths(l: &Layer) -> Result<(), String> {
     if l.aspect_ratio.is_some_and(|r| r <= 0.0) {
         return Err("aspectRatio must be > 0".into());
     }
-    if l.grow < 0.0 {
-        return Err("grow must be >= 0".into());
+    if l.grow.is_some_and(|g| g < 0.0) {
+        return Err("flexGrow must be >= 0".into());
     }
     if l.inset.is_some() && l.place.is_none() {
-        return Err("inset needs place".into());
+        return Err("margin needs place; in a stack, space children with gap or padding".into());
     }
     if let Kind::Spacer { min_length } = l.kind
         && min_length < 0.0

@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn masks_read_every_form_and_write_them_back() {
         for v in [
-            json!({"from": [0.5, 0.0], "to": [0.5, 1.0], "stops": [{"at": 0.0, "color": "#000000"}, {"at": 1.0, "color": "#00000000"}]}),
+            json!({"from": [0.5, 0.0], "to": [0.5, 1.0], "stops": [{"offset": 0.0, "color": "#000000"}, {"offset": 1.0, "color": "#00000000"}]}),
             json!("ellipse"),
             json!({"path": "M0 0 L1 1", "invert": true}),
             json!({"layer": "logo"}),

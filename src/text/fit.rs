@@ -19,7 +19,7 @@ impl Text<'_> {
                 (w, p.height().ceil())
             }
             Resize::AutoHeight => {
-                let mut p = self.paragraph(self.font_size, None);
+                let mut p = self.paragraph(self.font_size, self.max_lines);
                 p.layout(width);
                 (width, p.height().ceil())
             }
@@ -34,7 +34,7 @@ impl Text<'_> {
 
     /// Height of the text wrapped at `width`, at its font size.
     pub fn height_at(&self, width: f32) -> f32 {
-        let mut p = self.paragraph(self.font_size, None);
+        let mut p = self.paragraph(self.font_size, self.max_lines);
         p.layout(width);
         p.height().ceil()
     }
@@ -85,7 +85,8 @@ impl Text<'_> {
                 self.font_size,
                 Some(self.truncated_lines(self.font_size, width, height)),
             ),
-            _ => (self.font_size, None),
+            // Its own box: `maxLines` still cuts it, with an ellipsis.
+            _ => (self.font_size, self.max_lines),
         };
         let mut p = self.paragraph(size, max_lines);
         p.layout(width);
@@ -93,14 +94,22 @@ impl Text<'_> {
         if wrap_width < width {
             p.layout(wrap_width);
         }
+        let truncated = max_lines.is_some() && p.did_exceed_max_lines();
+        // Cut text reports what it needs uncut, at its size: the fix.
+        let whole = truncated.then(|| {
+            let mut q = self.paragraph(size, None);
+            q.layout(wrap_width);
+            q
+        });
+        let whole = whole.as_ref().unwrap_or(&p);
         let fit = Fit {
             font_size: size,
             overflow: matches!(self.resize, Resize::Fit | Resize::Fixed | Resize::Truncate)
                 && (p.height() > height + 0.5 || p.longest_line() > width + 0.5),
-            truncated: max_lines.is_some() && p.did_exceed_max_lines(),
+            truncated,
             lines: p.line_number(),
-            need_height: p.height().ceil(),
-            one_line_width: p.max_intrinsic_width().ceil(),
+            need_height: whole.height().ceil(),
+            one_line_width: whole.max_intrinsic_width().ceil(),
             line_limit: max_lines,
             wrap_width,
         };

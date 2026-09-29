@@ -54,12 +54,13 @@ A **layer line** is `id type x,y w×h`, in px at that size, then:
 
 | Marker | Kind | Means |
 |---|---|---|
-| `!overflow needs W×H (one line: W wide)` | defect | Text doesn't fit its box even at its smallest allowed size |
-| `!truncated` | defect | Text was cut with an ellipsis |
+| `!truncated needs W×H (one line: W wide)` | defect | Text doesn't fit its box, even at its smallest allowed size (cut with an ellipsis, or spilling out); it needs a box of W×H (px at that size), or W wide on one line |
+| `!truncated at maxLines N` | defect | Text was cut at its `maxLines`; allow more lines or widen the box |
+| `!overflow needs W×H` | defect | A stack's children don't fit it even at their smallest; the stack needs W×H. The children it pushes out aren't listed one by one |
 | `!clipped by <frame or canvas>: <side> <px>` | defect | Part of the layer falls outside what shows |
 | `!hidden` | defect | The layer is entirely outside what shows |
 | `!overlaps <ids>` | defect | Text ink overlaps other text |
-| `!unsafe` | defect | Text sits under the size's `safe` insets |
+| `!unsafe` | defect | Text sits under the size's `safeArea` |
 | `warn contrast R:1 (WCAG N)` | advisory | Text contrast against what's behind it is below the WCAG level for its size |
 
 Defects need fixing; advisories need judgment ([concepts](concepts.md#checks-defects-advisories-facts)). In a scene of [shots](scene.md#shots-and-transitions), every shot is checked, each with the layers around it.
@@ -176,6 +177,7 @@ Each op has a `target` and exactly one action:
 | `{"style": "title"}` | A named style; `set` creates or changes it, so every layer using it follows |
 | `{"component": "card"}` | A component's tree; every instance follows |
 | `{"component": "card", "role": "name"}` | One layer inside a component's tree |
+| `{"scene": true}` | The scene itself; `set` takes `background`, `sizes`, `width`, `height`, `duration`, `fps`, `loop` |
 
 | Action | Does |
 |---|---|
@@ -204,7 +206,7 @@ Reply: `ok`, or one [problem line](#problem-lines) per problem. With `full`, the
 ```text
 assets photo 864×530
 instagram-portrait 1080×1350
- photo image 0,0 1080×810 fill crop 18%w upscaled 1.5x
+ photo image 0,0 1080×810 cover crop 18%w upscaled 1.5x
  headline text 60,900 960×174 72px 2L
  cta text 60,1180 600×60 48px
 ```
@@ -220,7 +222,7 @@ instagram-portrait 1080×1350
 | `maxKB` | number | | File-size cap: JPEG and WebP lower their quality, APNG and GIF their frame rate, until the file fits |
 | `preview` | boolean | false | Also returns one small image of all sizes side by side |
 | `time` | number | | Seconds into a moving scene: a still at that moment |
-| `audio` | boolean | true | `false` leaves the clips' sound out of `mp4` and `webm` |
+| `muted` | boolean | false | `true` leaves every clip's sound out of `mp4` and `webm` (a clip's own `muted` leaves out one) |
 | `rows` | array of objects | | [Variants](#templates-and-variants): one render per row of token values |
 
 Reply: per size, the size id and the file's path ([Output files](#output-files)), then its [drawn-text lines](#drawn-text-lines). With `maxKB`, the path is followed by `quality N` or `fps N` when it was lowered, or `!too-big N KB` when even the lowest setting doesn't fit. With `rows`, each line starts with `r<row>`. With `preview`, the reply also carries the preview as an image.
@@ -246,7 +248,7 @@ A template is a scene file ([its format](scene.md#template-files)) that `scene_c
 | `mp4` | H.264 video, plays everywhere. Needs [ffmpeg](#ffmpeg) |
 | `webm` | VP9 video. Needs [ffmpeg](#ffmpeg) |
 
-The animated and video formats need a scene that moves (a `duration`, or shots); `time` can't be combined with them. Frames are drawn in memory, several at once, and APNG and GIF frames store only the part that changed. MP4 encodes on the GPU when ffmpeg has a hardware encoder that works on the machine (VideoToolbox on macOS; NVENC, Quick Sync or AMF elsewhere), else with `libx264`; `KEYLINE_MCP_ENCODER` picks one. The clips' own sound comes along, AAC in MP4 and Opus in WebM, unless `audio` is `false`.
+The animated and video formats need a scene that moves (a `duration`, or shots); `time` can't be combined with them. Frames are drawn in memory, several at once, and APNG and GIF frames store only the part that changed. MP4 encodes on the GPU when ffmpeg has a hardware encoder that works on the machine (VideoToolbox on macOS; NVENC, Quick Sync or AMF elsewhere), else with `libx264`; `KEYLINE_MCP_ENCODER` picks one. The clips' own sound comes along, AAC in MP4 and Opus in WebM, unless `muted` is `true`.
 
 ## Server configuration
 
@@ -255,7 +257,7 @@ The animated and video formats need a scene that moves (a `duration`, or shots);
 | Flag | Does |
 |---|---|
 | `--allow-read <folder>` | Lets `asset_add` and `scene_create` read local files inside this folder (repeatable). Without it, `path` isn't offered to the agent at all |
-| `--no-motion` | Leaves motion out of the tools: `duration`, `fps`, `loop`, `time`, `audio`, video, shots and the motion fields. Fewer tokens per turn, for stills-only use |
+| `--no-motion` | Leaves motion out of the tools: `duration`, `fps`, `loop`, `time`, `muted`, video, shots and the motion fields. Fewer tokens per turn, for stills-only use |
 | `-h`, `--help` | Prints the flags and environment variables |
 
 ### Environment variables
@@ -306,7 +308,7 @@ Errors come back as an MCP tool error (`isError: true`) with one line of text th
 /Users/me/secret.png is outside the folders the server may read (--allow-read)
 layers[0]: unknown field(s) fontsize for text layer; did you mean fontsize → fontSize
 ops[0]: no layer with id nope
-text1: <span color="$blue">: bad color "$blue", want #RRGGBB
+text1: <span style="color:$blue">: bad color "$blue", want #RRGGBB, rgba(…), hsl(…) or a CSS name
 row 2: no token headlin; tokens: accent, headline
 layers[0]: token $big doesn't suit fontSize: invalid type: string "huge", expected f32
 give exactly one of url, path or base64

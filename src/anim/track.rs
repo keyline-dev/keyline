@@ -2,8 +2,8 @@
 //!
 //! ```json
 //! {"scale": [1, 1.06, 1], "duration": 1.6, "repeat": -1, "ease": "sine.inOut"}
-//! {"rotation": {"to": 8}, "at": 2, "duration": 0.4, "ease": "back.out"}
-//! {"rotation": {"from": "random(-90, 90)"}, "offset": {"from": ["random(-300, 300)", 0]}}
+//! {"rotate": {"to": 8}, "delay": 2, "duration": 0.4, "ease": "back.out"}
+//! {"rotate": {"from": "random(-90, 90)"}, "translate": {"from": ["random(-300, 300)", 0]}}
 //! ```
 //!
 //! `random(lo, hi)` is GSAP's: each target (a layer, or each piece of split
@@ -33,9 +33,9 @@ pub enum Val {
 pub const PROPS: &[(&str, Kind)] = &[
     ("opacity", Kind::Num),
     ("scale", Kind::Num),
-    ("rotation", Kind::Num),
+    ("rotate", Kind::Num),
     ("blur", Kind::Num),
-    ("offset", Kind::Pair),
+    ("translate", Kind::Pair),
     ("skew", Kind::Pair),
     ("color", Kind::Color),
 ];
@@ -271,7 +271,7 @@ fn keys(prop: &str, kind: Kind, v: &Value) -> Result<Keys, String> {
     }
 }
 
-const TIMING: &[&str] = &["times", "at", "duration", "ease", "repeat", "yoyo"];
+const TIMING: &[&str] = &["times", "delay", "duration", "ease", "repeat", "yoyo"];
 
 impl<'de> Deserialize<'de> for Track {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -309,7 +309,7 @@ impl<'de> Deserialize<'de> for Track {
                         .collect()
                 })
                 .unwrap_or_default(),
-            at: num("at", 0.0),
+            at: num("delay", 0.0),
             duration: num("duration", 1.0),
             ease: o
                 .get("ease")
@@ -361,7 +361,7 @@ impl Serialize for Track {
             o.insert("times".into(), serde_json::json!(times));
         }
         if self.at != 0.0 {
-            o.insert("at".into(), serde_json::json!(short(self.at)));
+            o.insert("delay".into(), serde_json::json!(short(self.at)));
         }
         if self.duration != 1.0 {
             o.insert("duration".into(), serde_json::json!(short(self.duration)));
@@ -401,14 +401,14 @@ mod tests {
 
     #[test]
     fn values_spread_over_the_duration_and_hold_at_the_ends() {
-        let t = track(json!({"scale": [1, 2, 1], "at": 1, "duration": 2, "ease": "none"}));
+        let t = track(json!({"scale": [1, 2, 1], "delay": 1, "duration": 2, "ease": "none"}));
         let s = |secs: f32| num(t.value("scale", Val::Num(1.0), secs, 0));
         assert_eq!(s(0.0), 1.0, "holds the first value before it starts");
         assert_eq!(s(1.5), 1.5);
         assert_eq!(s(2.0), 2.0);
         assert_eq!(s(2.5), 1.5);
         assert_eq!(s(9.0), 1.0, "holds the last value after it ends");
-        assert!(t.value("rotation", Val::Num(0.0), 1.5, 0).is_none());
+        assert!(t.value("rotate", Val::Num(0.0), 1.5, 0).is_none());
     }
 
     #[test]
@@ -425,12 +425,12 @@ mod tests {
     #[test]
     fn from_to_defaults_to_the_layers_own_value_and_colors_blend() {
         let t = track(
-            json!({"rotation": {"from": -40}, "offset": {"to": [0, -20]}, "ease": "none",
+            json!({"rotate": {"from": -40}, "translate": {"to": [0, -20]}, "ease": "none",
             "color": ["#000000", "#FF0000"]}),
         );
-        assert_eq!(num(t.value("rotation", Val::Num(10.0), 0.5, 0)), -15.0);
+        assert_eq!(num(t.value("rotate", Val::Num(10.0), 0.5, 0)), -15.0);
         assert_eq!(
-            t.value("offset", Val::Pair([0.0, 0.0]), 0.5, 0),
+            t.value("translate", Val::Pair([0.0, 0.0]), 0.5, 0),
             Some(Val::Pair([0.0, -10.0]))
         );
         assert_eq!(
@@ -441,18 +441,18 @@ mod tests {
 
     #[test]
     fn random_values_differ_per_target_and_repeat_per_render() {
-        let t = track(json!({"rotation": {"from": "random(-90, 90)"}, "ease": "none"}));
-        let r = |seed: u32| num(t.value("rotation", Val::Num(0.0), 0.0, seed));
+        let t = track(json!({"rotate": {"from": "random(-90, 90)"}, "ease": "none"}));
+        let r = |seed: u32| num(t.value("rotate", Val::Num(0.0), 0.0, seed));
         assert_eq!(r(1), r(1), "the same target, the same value");
         assert_ne!(r(1), r(2), "another target, another value");
         assert!((1..50).map(r).all(|v| (-90.0..=90.0).contains(&v)));
         assert_eq!(
-            num(t.value("rotation", Val::Num(0.0), 1.0, 7)),
+            num(t.value("rotate", Val::Num(0.0), 1.0, 7)),
             0.0,
             "ends at its own value"
         );
         let saved = serde_json::to_value(&t).unwrap();
-        assert_eq!(saved["rotation"]["from"], json!("random(-90, 90)"));
+        assert_eq!(saved["rotate"]["from"], json!("random(-90, 90)"));
     }
 
     #[test]
@@ -470,7 +470,7 @@ mod tests {
                 .starts_with("can't animate fontSize; animate opacity"),
             "{e}"
         );
-        let e = serde_json::from_value::<Track>(json!({"offset": [1, 2, 3]})).unwrap_err();
+        let e = serde_json::from_value::<Track>(json!({"translate": [1, 2, 3]})).unwrap_err();
         assert!(e.to_string().contains("[x, y] pairs"), "{e}");
         let e = serde_json::from_value::<Track>(json!({"duration": 2})).unwrap_err();
         assert!(e.to_string().starts_with("animate needs a property"), "{e}");
@@ -485,7 +485,7 @@ mod tests {
             json!(1.6),
             "written as given, not as f32 stores it"
         );
-        assert!(saved.get("at").is_none() && saved.get("times").is_none());
+        assert!(saved.get("delay").is_none() && saved.get("times").is_none());
         assert_eq!(
             track(saved.clone()),
             track(serde_json::to_value(track(saved)).unwrap())

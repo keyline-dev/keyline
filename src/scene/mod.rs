@@ -8,6 +8,7 @@ mod constraints;
 mod de;
 mod defaults;
 mod fill;
+mod frame_layout;
 mod gradient;
 mod grid;
 mod keys;
@@ -33,8 +34,9 @@ pub use constraints::{Constraints, HConstraint, Pin, VConstraint};
 pub use fill::{
     Adjust, Common, GradientFill, ImagePaint, NoisePaint, Paint, PatternKind, PatternPaint, Solid,
 };
+pub use frame_layout::FrameLayout;
 pub use gradient::{Gradient, GradientKind, Stop};
-pub use grid::{Area, Grid, MAX_TRACKS, Track, Tracks};
+pub use grid::{Area, Grid, GridLine, MAX_TRACKS, Track, Tracks};
 pub use keys::check_keys;
 pub use kind::{Arc, FillRule, FitPath, IconSet, Kind};
 pub use layer::{Layer, StyleRef};
@@ -51,7 +53,8 @@ pub use text_more::{
     Decoration, Direction, Highlight, HighlightStyle, TextMore, TextWrap, Trim, VAlign,
 };
 
-use defaults::{is_false, is_one, one, white};
+pub(crate) use defaults::white;
+use defaults::{is_false, is_one, one};
 
 /// Version of the scene format; bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 0;
@@ -120,7 +123,7 @@ pub struct Size {
     pub scale: f32,
     /// Insets the platform covers, px `[top, right, bottom, left]` (a
     /// story's UI bars); `scene_describe` flags text inside them (0).
-    #[serde(default, skip_serializing_if = "is_zero4")]
+    #[serde(rename = "safeArea", default, skip_serializing_if = "is_zero4")]
     pub safe: [f32; 4],
 }
 
@@ -174,7 +177,8 @@ impl Scene {
     }
 }
 
-fn thirty() -> f32 {
+/// The default frame rate, 30 fps.
+pub(crate) fn thirty() -> f32 {
     30.0
 }
 

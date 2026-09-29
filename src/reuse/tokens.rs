@@ -129,10 +129,10 @@ fn unknown(name: &str, tokens: &BTreeMap<String, Value>) -> String {
     }
 }
 
-/// Replaces tokens used as markup attribute values in text, as in
-/// `<span color="$red">`; the rest of the text is never scanned.
+/// Replaces tokens used as values in a span's CSS, as in
+/// `<span style="color:$red">`; the rest of the text is never scanned.
 pub fn in_markup(text: &mut String, tokens: &BTreeMap<String, Value>) {
-    if !text.contains("=$") && !text.contains("=\"$") && !text.contains("='$") {
+    if !text.contains(":$") {
         return;
     }
     for (name, v) in tokens {
@@ -141,12 +141,9 @@ pub fn in_markup(text: &mut String, tokens: &BTreeMap<String, Value>) {
             Value::Number(n) => n.to_string(),
             _ => continue,
         };
-        for q in ['"', '\''] {
-            *text = text.replace(&format!("={q}${name}{q}"), &format!("={q}{value}{q}"));
-        }
-        // Unquoted, ended by a space or the tag's end.
-        for end in [' ', '>', '/'] {
-            *text = text.replace(&format!("=${name}{end}"), &format!("=\"{value}\"{end}"));
+        // Ended by the next declaration, the attribute's quote, or a space.
+        for end in [';', '"', '\'', ' '] {
+            *text = text.replace(&format!(":${name}{end}"), &format!(":{value}{end}"));
         }
     }
 }
@@ -288,19 +285,13 @@ mod tests {
     }
 
     #[test]
-    fn tokens_fill_markup_attributes_only() {
+    fn tokens_fill_span_css_only() {
         let tokens = serde_json::from_value(json!({"red": "#D0202E", "big": 60})).unwrap();
-        let mut t = r#"Pay $red <span color="$red" fontSize='$big'>now</span>"#.to_owned();
+        let mut t = r#"Pay $red <span style="color:$red;font-size:$big">now</span>"#.to_owned();
         in_markup(&mut t, &tokens);
         assert_eq!(
             t,
-            r##"Pay $red <span color="#D0202E" fontSize='60'>now</span>"##
-        );
-        let mut t = "<span color=$red>A</span> <span weight=700 color=$red>B</span>".to_owned();
-        in_markup(&mut t, &tokens);
-        assert_eq!(
-            t,
-            r##"<span color="#D0202E">A</span> <span weight=700 color="#D0202E">B</span>"##
+            r##"Pay $red <span style="color:#D0202E;font-size:60">now</span>"##
         );
     }
 }

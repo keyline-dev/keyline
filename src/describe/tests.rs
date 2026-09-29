@@ -15,17 +15,14 @@ fn scene(layers: serde_json::Value) -> Scene {
 
 #[test]
 fn one_line_per_layer_per_size() {
-    let s = scene(json!([
-        {"id": "photo", "type": "image", "asset": "img", "width": 400, "height": 200},
-        {"id": "bar", "type": "frame", "y": 150, "width": 400, "height": 50, "children": [
-            {"id": "r", "type": "rect", "width": 400, "height": 50, "color": "#FF0000"}
-        ]}
-    ]));
+    let s = scene(
+        json!([{"id": "photo", "type": "image", "asset": "img", "width": 400, "height": 200}, {"id": "bar", "type": "frame", "y": 150, "width": 400, "height": 50, "children": [{"id": "r", "type": "rect", "width": 400, "height": 50, "fill": "#FF0000"}]}]),
+    );
     let d = describe(&s, None, true, None).unwrap();
     assert_eq!(d.lines().count(), 9, "{d}");
     assert!(
         d.starts_with(
-            "assets img 400×400\nwide 400×200\n photo image 0,0 400×200 fill crop 50%h\n"
+            "assets img 400×400\nwide 400×200\n photo image 0,0 400×200 cover crop 50%h\n"
         ),
         "{d}"
     );
@@ -46,14 +43,12 @@ fn one_line_per_layer_per_size() {
 
 #[test]
 fn warns_on_overflow_clipping_and_hidden_layers() {
-    let s = scene(json!([
-        {"id": "long", "type": "text", "text": "a very long headline that will not fit", "fontSize": 30, "resize": "fixed", "width": 100, "height": 30},
-        {"id": "edge", "type": "text", "text": "edge", "x": 380, "fontSize": 30},
-        {"id": "gone", "type": "rect", "x": 500, "width": 10, "height": 10}
-    ]));
+    let s = scene(
+        json!([{"id": "long", "type": "text", "text": "Supercalifragilisticexpialidocious", "fontSize": 30, "width": 100, "height": 30}, {"id": "edge", "type": "text", "text": "edge", "x": 380, "fontSize": 30}, {"id": "gone", "type": "rect", "x": 500, "width": 10, "height": 10}]),
+    );
     let d = describe(&s, Some("wide"), true, None).unwrap();
     assert!(
-        d.contains("long text 0,0 100×30 30px") && d.contains("!overflow needs 100×"),
+        d.contains("long text 0,0 100×30 15px (max 30)") && d.contains("!truncated needs 100×"),
         "{d}"
     );
     assert!(
@@ -109,10 +104,9 @@ fn overlapping_text_is_a_defect() {
 fn tightly_set_lines_only_overlap_if_their_glyphs_do() {
     // "Monica" over "JETHANI": the line boxes overlap by a few pixels of
     // ascent and descent space, the letters don't.
-    let s = scene(json!([
-        {"id": "first", "type": "text", "text": "Monica", "y": 20, "fontSize": 26, "weight": 800},
-        {"id": "last", "type": "text", "text": "JETHANI", "y": 50, "fontSize": 44, "weight": 900}
-    ]));
+    let s = scene(
+        json!([{"id": "first", "type": "text", "text": "Monica", "y": 20, "fontSize": 26, "fontWeight": 800}, {"id": "last", "type": "text", "text": "JETHANI", "y": 50, "fontSize": 44, "fontWeight": 900}]),
+    );
     assert_eq!(warnings(&s, None), None);
 }
 
@@ -132,24 +126,19 @@ fn small_text_and_upscaling_are_facts_not_warnings() {
     );
     let d = describe(&s, Some("wide"), true, None).unwrap();
     assert!(
-        d.contains("big image 0,100 800×100 fill crop 88%h upscaled 2.0x"),
+        d.contains("big image 0,100 800×100 cover crop 88%h upscaled 2.0x"),
         "{d}"
     );
 }
 
 #[test]
 fn warns_on_low_contrast_against_what_is_behind() {
-    let s: Scene = serde_json::from_value(json!({
-        "width": 400, "height": 100, "background": "#FFFFFF",
+    let s: Scene = serde_json::from_value(json!({"width": 400,
+        "height": 100,
+        "background": "#FFFFFF",
         "sizes": [{"id": "a", "width": 400, "height": 100}],
-        "layers": [
-            {"id": "panel", "type": "rect", "width": 200, "height": 100, "color": "#1B2A5C"},
-            // Navy on navy: unreadable. White on navy and navy on white: fine.
-            {"id": "dim", "type": "text", "text": "Dim", "x": 10, "y": 10, "fontSize": 16, "color": "#22335F"},
-            {"id": "lit", "type": "text", "text": "Lit", "x": 10, "y": 50, "fontSize": 16, "color": "#FFFFFF"},
-            {"id": "ink", "type": "text", "text": "Ink", "x": 250, "y": 10, "fontSize": 16, "color": "#1B2A5C"}
-        ]
-    }))
+        "layers": [{"id": "panel", "type": "rect", "width": 200, "height": 100, "fill": "#1B2A5C"}, // Navy on navy: unreadable. White on navy and navy on white: fine.
+            {"id": "dim", "type": "text", "text": "Dim", "x": 10, "y": 10, "fontSize": 16, "color": "#22335F"}, {"id": "lit", "type": "text", "text": "Lit", "x": 10, "y": 50, "fontSize": 16, "color": "#FFFFFF"}, {"id": "ink", "type": "text", "text": "Ink", "x": 250, "y": 10, "fontSize": 16, "color": "#1B2A5C"}]}))
     .unwrap();
     let w = warnings(&s, Some(&std::env::temp_dir())).unwrap();
     assert_eq!(w.lines().count(), 1, "{w}");
@@ -163,19 +152,11 @@ fn warns_on_low_contrast_against_what_is_behind() {
 
 #[test]
 fn faint_text_is_judged_as_drawn() {
-    let s: Scene = serde_json::from_value(json!({
-        "width": 400, "height": 100,
+    let s: Scene = serde_json::from_value(json!({"width": 400,
+        "height": 100,
         "sizes": [{"id": "a", "width": 400, "height": 100}],
-        "layers": [
-            {"id": "panel", "type": "rect", "width": 400, "height": 100, "color": "#1B2A5C"},
-            // White, but at 1/8 alpha, or inside a 10% frame: barely visible.
-            {"id": "alpha", "type": "text", "text": "Faint", "x": 10, "y": 10, "color": "#FFFFFF20"},
-            {"id": "box", "type": "frame", "x": 200, "width": 200, "height": 100, "opacity": 0.1, "children": [
-                {"id": "nested", "type": "text", "text": "Faint", "x": 10, "y": 10, "color": "#FFFFFF"}
-            ]},
-            {"id": "solid", "type": "text", "text": "Clear", "x": 10, "y": 50, "color": "#FFFFFF"}
-        ]
-    }))
+        "layers": [{"id": "panel", "type": "rect", "width": 400, "height": 100, "fill": "#1B2A5C"}, // White, but at 1/8 alpha, or inside a 10% frame: barely visible.
+            {"id": "alpha", "type": "text", "text": "Faint", "x": 10, "y": 10, "color": "#FFFFFF20"}, {"id": "box", "type": "frame", "x": 200, "width": 200, "height": 100, "opacity": 0.1, "children": [{"id": "nested", "type": "text", "text": "Faint", "x": 10, "y": 10, "color": "#FFFFFF"}]}, {"id": "solid", "type": "text", "text": "Clear", "x": 10, "y": 50, "color": "#FFFFFF"}]}))
     .unwrap();
     let w = warnings(&s, Some(&std::env::temp_dir())).unwrap();
     assert_eq!(w.lines().count(), 2, "{w}");
@@ -203,16 +184,11 @@ fn text_report_shows_only_wrapped_shrunk_or_cut_text() {
 
 #[test]
 fn every_shot_is_checked_not_only_the_one_shown_at_rest() {
-    let s = scene(json!([
-        {"id": "s1", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 1},
-         "children": [{"id": "a", "type": "text", "text": "fine", "fontSize": 30}]},
-        {"id": "s2", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 1},
-         "children": [{"id": "b", "type": "text", "text": "a very long headline that will not fit",
-                       "fontSize": 30, "resize": "fixed", "width": 100, "height": 30}]},
-        {"id": "logo", "type": "text", "text": "logo", "x": 380, "fontSize": 30}
-    ]));
+    let s = scene(
+        json!([{"id": "s1", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 1}, "children": [{"id": "a", "type": "text", "text": "fine", "fontSize": 30}]}, {"id": "s2", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 1}, "children": [{"id": "b", "type": "text", "text": "a very long headline that will not fit", "fontSize": 30, "width": 100, "height": 30}]}, {"id": "logo", "type": "text", "text": "logo", "x": 380, "fontSize": 30}]),
+    );
     let w = warnings(&s.resolved(), None).unwrap();
-    assert!(w.contains("wide b ") && w.contains("!overflow"), "{w}");
+    assert!(w.contains("wide b ") && w.contains("!truncated"), "{w}");
     assert_eq!(w.matches("logo").count(), 2, "listed once per size: {w}");
 }
 
@@ -225,5 +201,5 @@ fn a_video_is_cropped_and_scaled_like_an_image() {
         serde_json::from_value(json!({"duration": 2, "fps": 30, "audio": true})).unwrap();
     let d = describe(&s, Some("wide"), true, None).unwrap();
     assert!(d.contains("assets img 400×400 2s sound"), "{d}");
-    assert!(d.contains(" clip video 0,0 400×200 fill crop 50%h"), "{d}");
+    assert!(d.contains(" clip video 0,0 400×200 cover crop 50%h"), "{d}");
 }

@@ -88,8 +88,7 @@ fn shrinking_moves_right_and_center_pins_back() {
 #[test]
 fn stretch_never_goes_below_zero() {
     let s = scene(
-        json!([{"id": "r", "type": "rect", "x": 10, "y": 10, "width": 100, "height": 50,
-                          "constraints": {"h": "stretch", "v": "stretch"}}]),
+        json!([{"id": "r", "type": "rect", "x": 10, "y": 10, "width": 100, "height": 50, "constraints": {"horizontal": "stretch", "vertical": "stretch"}}]),
     );
     check(
         &boxes(&s, &size("s", 800.0, 400.0, 1.0)),

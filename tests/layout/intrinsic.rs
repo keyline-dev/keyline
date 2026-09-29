@@ -65,8 +65,7 @@ fn a_line_missing_a_side_has_zero_length_on_it() {
 #[test]
 fn a_stretched_line_grows_with_its_parent() {
     let s = scene(
-        json!([{"id": "l", "type": "line", "x": 100, "y": 250, "width": 800,
-                          "constraints": {"h": "stretch", "v": "center"}}]),
+        json!([{"id": "l", "type": "line", "x": 100, "y": 250, "width": 800, "constraints": {"horizontal": "stretch", "vertical": "center"}}]),
     );
     check(
         &boxes(&s, &size("s", 1200.0, 600.0, 1.0)),
@@ -78,7 +77,7 @@ fn a_stretched_line_grows_with_its_parent() {
 #[test]
 fn rotation_never_changes_the_layout_box() {
     let s = scene(
-        json!([{"id": "r", "type": "rect", "x": 100, "y": 50, "width": 200, "height": 100, "rotation": 45}]),
+        json!([{"id": "r", "type": "rect", "x": 100, "y": 50, "width": 200, "height": 100, "rotate": 45}]),
     );
     check(
         &boxes(&s, &size("s", 1000.0, 500.0, 1.0)),

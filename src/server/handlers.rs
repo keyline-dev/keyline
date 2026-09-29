@@ -166,7 +166,7 @@ impl Server {
                     let backend = self.backend;
                     let (format, quality, max_kb) = (a.format, a.quality.unwrap_or(90), a.max_kb);
                     let time = a.time;
-                    let sound = a.audio.unwrap_or(true);
+                    let sound = !a.muted;
                     tokio::task::spawn_blocking(move || {
                         // A still of a moment: the scene as it is then, at this
                         // size (slides travel this size's width).

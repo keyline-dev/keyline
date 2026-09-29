@@ -26,7 +26,7 @@ fn auto_width_text_measures_itself() {
 fn auto_width_text_keeps_its_width_when_pinned_right() {
     let s = scene(json!([text(
         "t",
-        json!({"x": 100, "y": 50, "constraints": {"h": "right"}})
+        json!({"x": 100, "y": 50, "constraints": {"horizontal": "right"}})
     )]));
     let a = boxes(&s, &size("s", 1000.0, 500.0, 1.0))["t"];
     let b = boxes(&s, &size("s", 1200.0, 500.0, 1.0))["t"];
@@ -38,7 +38,7 @@ fn auto_width_text_keeps_its_width_when_pinned_right() {
 fn auto_width_text_stays_centered_when_stretched() {
     let s = scene(json!([text(
         "t",
-        json!({"x": 100, "y": 50, "constraints": {"h": "stretch"}})
+        json!({"x": 100, "y": 50, "constraints": {"horizontal": "stretch"}})
     )]));
     let a = boxes(&s, &size("s", 1000.0, 500.0, 1.0))["t"];
     let b = boxes(&s, &size("s", 1200.0, 500.0, 1.0))["t"];
@@ -64,7 +64,7 @@ fn auto_height_text_wraps_at_its_width_and_grows_down() {
 fn auto_height_text_rewraps_when_its_width_stretches() {
     let s = scene(json!([text(
         "t",
-        json!({"x": 0, "width": 300, "constraints": {"h": "stretch"},
+        json!({"x": 0, "width": 300, "constraints": {"horizontal": "stretch"},
         "text": "Hello layout, this wraps onto several lines"})
     )]));
     let narrow = boxes(&s, &size("s", 1000.0, 500.0, 1.0))["t"];
@@ -104,8 +104,7 @@ fn text_measures_smaller_under_the_scale_tool() {
 #[test]
 fn a_hugging_stack_adds_up_its_texts() {
     let s = scene(
-        json!([{"id": "f", "type": "frame", "stack": {"dir": "row", "gap": 12, "padding": 6},
-        "children": [text("a", json!({})), text("b", json!({"text": "World"}))]}]),
+        json!([{"id": "f", "type": "frame", "flexDirection": "row", "gap": 12, "padding": 6, "alignItems": "flex-start", "children": [text("a", json!({})), text("b", json!({"text": "World"}))]}]),
     );
     let b = boxes(&s, &size("s", 1000.0, 500.0, 1.0));
     let (a, w, f) = (b["a"], b["b"], b["f"]);
@@ -182,9 +181,48 @@ fn markup_does_not_change_the_measured_text() {
     let plain = scene(json!([text("t", json!({"text": "Proven RESULTS"}))]));
     let marked = scene(json!([text(
         "t",
-        json!({"text": "Proven <span color=\"#D0202E\">RESULTS</span>"})
+        json!({"text": "Proven <span style=\"color:#D0202E\">RESULTS</span>"})
     )]));
     let a = boxes(&plain, &size("s", 1000.0, 500.0, 1.0))["t"];
     let b = boxes(&marked, &size("s", 1000.0, 500.0, 1.0))["t"];
     assert_eq!((a.w, a.h), (b.w, b.h));
+}
+
+#[test]
+fn max_lines_cuts_text_that_only_has_a_width() {
+    // B1: two lines and an ellipsis, reported, not five.
+    let s = scene(
+        json!([{"id": "t", "type": "text", "width": 200, "fontSize": 30, "maxLines": 2,
+        "text": "one two three four five six seven eight nine ten eleven twelve"}]),
+    );
+    let d = keyline_mcp::describe::describe(&s, None, true, None).unwrap();
+    let line = d
+        .lines()
+        .find(|l| l.trim_start().starts_with("t "))
+        .unwrap();
+    assert!(
+        line.contains(" 2L") && line.contains("!truncated at maxLines 2"),
+        "{d}"
+    );
+}
+
+#[test]
+fn text_that_needs_more_room_is_measured_with_its_padding() {
+    // The needed height is the box's, padding included, so setting it fits.
+    let s = scene(
+        json!([{"id": "t", "type": "text", "width": 200, "height": 40, "padding": 20, "fontSize": 30,
+        "text": "one two three four five six"}]),
+    );
+    let d = keyline_mcp::describe::describe(&s, None, true, None).unwrap();
+    let need: f32 = d
+        .split("needs 200×")
+        .nth(1)
+        .and_then(|r| r.split(' ').next())
+        .unwrap()
+        .parse()
+        .unwrap();
+    let mut fixed = s.clone();
+    fixed.layers[0].height = Some(keyline_mcp::scene::Length::Px(need));
+    let d = keyline_mcp::describe::describe(&fixed, None, true, None).unwrap();
+    assert!(!d.contains("!truncated"), "{d}");
 }

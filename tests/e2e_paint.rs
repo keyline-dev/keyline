@@ -34,42 +34,19 @@ async fn the_paint_kit_renders_at_every_size() {
     )
     .await;
     let reply = mcp
-        .ok("layer_add", json!({"sceneId": id, "layers": [
-            {"id": "bg", "type": "rect", "width": "fill", "height": "fill",
-             "fills": [{"gradient": {"angle": 135, "stops": ["#1B2A5C", "#D0202E"]}}, {"noise": 0.08, "seed": 3}]},
-            {"id": "stripes", "type": "rect", "y": 700, "width": "fill", "height": 100,
-             "constraints": {"v": "bottom"}, "fills": {"pattern": "stripes", "color": "#FFFFFF22", "size": 24, "angle": 45}},
-            {"id": "card", "type": "frame", "x": 60, "y": 60, "width": 420, "height": 300, "radius": 28,
-             "fills": "#FFFFFF", "shadows": [{"y": 18, "blur": 40, "color": "#00000066"}],
-             "children": [
-                {"id": "avatar", "type": "ellipse", "x": 30, "y": 30, "width": 120, "height": 120,
-                 "fills": {"image": "photo", "fit": "cover"}, "strokes": {"width": 6, "color": "#D0202E", "align": "outside"}},
-                {"id": "gray", "type": "image", "asset": "photo", "x": 180, "y": 30, "width": 210, "height": 120,
-                 "radius": [24, 0, 24, 0], "adjust": {"grayscale": 1, "contrast": 0.2}},
-                {"id": "headline", "type": "text", "x": 30, "y": 180, "width": 360, "text": "Bold paint", "fontSize": 56, "weight": 900,
-                 "fills": {"gradient": {"stops": ["#D0202E", "#1B2A5C"]}}, "strokes": {"width": 2, "color": "#1B2A5C"}},
-                {"id": "divider", "type": "line", "x": 30, "y": 270, "width": 330,
-                 "strokes": {"width": 3, "color": "#1B2A5C", "dash": [12, 8], "cap": "round", "end": "triangle"}}
-             ]},
-            {"id": "glass", "type": "rect", "x": 380, "y": 280, "width": 360, "height": 220, "radius": 32,
-             "backdropBlur": 24, "fills": "#FFFFFF33", "strokes": {"width": 1.5, "color": "#FFFFFF88"},
-             "shadows": {"blur": 0, "spread": 0, "x": 0, "y": 0, "color": "#FFFFFF55", "inset": true}},
-            {"id": "seal", "type": "polygon", "sides": 16, "innerRadius": 0.82, "width": 170, "height": 170,
-             "place": "top-right", "inset": 50, "color": "#FFD700", "radius": 6,
-             "shadows": {"y": 6, "blur": 12, "color": "#0000004D"}},
-            {"id": "sale", "type": "text", "text": "SALE", "fontSize": 40, "weight": 900, "color": "#1B2A5C",
-             "place": "top-right", "inset": [80, 113], "rotation": -12},
-            {"id": "ribbon", "type": "path", "shape": "ribbon", "x": 60, "y": 420, "width": 280, "height": 70, "color": "#FFD700",
-             "fitPath": "stretch"},
-            {"id": "heart", "type": "path", "shape": "heart", "x": 90, "y": 540, "width": 110, "height": 110,
-             "fills": {"gradient": {"type": "radial", "stops": ["#FF7A8A", "#D0202E"]}}, "skew": [-8, 0]},
-            {"id": "gauge-track", "type": "ellipse", "x": 250, "y": 530, "width": 140, "height": 140,
-             "color": "#FFFFFF33", "arc": {"inner": 0.78}},
-            {"id": "gauge", "type": "ellipse", "x": 250, "y": 530, "width": 140, "height": 140,
-             "fills": {"gradient": {"type": "conic", "stops": ["#FFD700", "#D0202E"]}}, "arc": {"start": 0, "end": 250, "inner": 0.78}},
-            {"id": "portrait", "type": "image", "asset": "photo", "x": 440, "y": 540, "width": 300, "height": 200,
-             "mask": {"shape": "blob-3"}, "flipX": true}
-        ]}))
+        .ok("layer_add", json!({"sceneId": id,
+            "layers": [
+                {"id": "bg", "type": "rect", "width": "fill", "height": "fill", "fill": [{"gradient": {"angle": 135, "stops": ["#1B2A5C", "#D0202E"]}}, {"noise": 0.08, "seed": 3}]},
+                {"id": "stripes", "type": "rect", "y": 700, "width": "fill", "height": 100, "constraints": {"vertical": "bottom"}, "fill": {"pattern": "stripes", "color": "#FFFFFF22", "size": 24, "angle": 45}},
+                {"id": "card", "type": "frame", "x": 60, "y": 60, "width": 420, "height": 300, "borderRadius": 28, "fill": "#FFFFFF", "shadow": [{"y": 18, "blur": 40, "color": "#00000066"}], "children": [{"id": "avatar", "type": "ellipse", "x": 30, "y": 30, "width": 120, "height": 120, "fill": {"image": "photo", "fit": "cover"}, "stroke": {"width": 6, "color": "#D0202E", "align": "outside"}}, {"id": "gray", "type": "image", "asset": "photo", "x": 180, "y": 30, "width": 210, "height": 120, "borderRadius": [24, 0, 24, 0], "filter": {"grayscale": 1, "contrast": 1.2}}, {"id": "headline", "type": "text", "x": 30, "y": 180, "width": 360, "text": "Bold paint", "fontSize": 56, "fontWeight": 900, "fill": {"gradient": {"stops": ["#D0202E", "#1B2A5C"], "angle": 90}}, "stroke": {"width": 2, "color": "#1B2A5C"}}, {"id": "divider", "type": "line", "x": 30, "y": 270, "width": 330, "stroke": {"width": 3, "color": "#1B2A5C", "dash": [12, 8], "cap": "round", "markerEnd": "triangle"}}]},
+                {"id": "glass", "type": "rect", "x": 380, "y": 280, "width": 360, "height": 220, "borderRadius": 32, "backdropBlur": 24, "fill": "#FFFFFF33", "stroke": {"width": 1.5, "color": "#FFFFFF88"}, "shadow": {"blur": 0, "spread": 0, "x": 0, "y": 0, "color": "#FFFFFF55", "inset": true}},
+                {"id": "seal", "type": "polygon", "sides": 16, "innerRadius": 0.82, "width": 170, "height": 170, "place": "top-right", "margin": 50, "borderRadius": 6, "shadow": {"y": 6, "blur": 12, "color": "#0000004D"}, "fill": "#FFD700"},
+                {"id": "sale", "type": "text", "text": "SALE", "fontSize": 40, "fontWeight": 900, "color": "#1B2A5C", "place": "top-right", "margin": [80, 113], "rotate": -12},
+                {"id": "ribbon", "type": "path", "shape": "ribbon", "x": 60, "y": 420, "width": 280, "height": 70, "fill": "#FFD700", "fit": "fill"},
+                {"id": "heart", "type": "path", "shape": "heart", "x": 90, "y": 540, "width": 110, "height": 110, "fill": {"gradient": {"type": "radial", "stops": ["#FF7A8A", "#D0202E"]}}, "skew": [-8, 0]},
+                {"id": "gauge-track", "type": "ellipse", "x": 250, "y": 530, "width": 140, "height": 140, "arc": {"inner": 0.78}, "fill": "#FFFFFF33"},
+                {"id": "gauge", "type": "ellipse", "x": 250, "y": 530, "width": 140, "height": 140, "fill": {"gradient": {"type": "conic", "stops": ["#FFD700", "#D0202E"]}}, "arc": {"start": 0, "end": 250, "inner": 0.78}},
+                {"id": "portrait", "type": "image", "asset": "photo", "x": 440, "y": 540, "width": 300, "height": 200, "mask": {"shape": "blob-3"}, "flipX": true}]}))
         .await;
     assert!(
         reply
@@ -110,9 +87,9 @@ async fn bad_paint_gets_one_line_errors() {
             e
         }
     };
-    let e = err(json!({"type": "rect", "fills": {"colour": "#000"}})).await;
+    let e = err(json!({"type": "rect", "fill": {"colour": "#000"}})).await;
     assert!(e.contains("a fill is a color, or an object with"), "{e}");
-    let e = err(json!({"type": "rect", "fills": {"image": "nope"}})).await;
+    let e = err(json!({"type": "rect", "fill": {"image": "nope"}})).await;
     assert!(e.contains("unknown asset nope"), "{e}");
     let e = err(json!({"type": "path", "shape": "unicorn"})).await;
     assert!(
@@ -123,7 +100,7 @@ async fn bad_paint_gets_one_line_errors() {
     assert!(e.contains("mask layer ghost not found"), "{e}");
     let e = err(json!({"type": "polygon", "sides": 2})).await;
     assert!(e.contains("polygon sides must be >= 3"), "{e}");
-    let e = err(json!({"type": "rect", "radius": "round"})).await;
+    let e = err(json!({"type": "rect", "borderRadius": "round"})).await;
     assert!(e.contains("\"full\""), "{e}");
     mcp.stop().await;
 }
@@ -146,18 +123,14 @@ async fn torn_edges_rough_strokes_and_halftone_look_hand_made() {
         json!({"sceneId": id, "id": "photo", "base64": b64(&photo_png())}),
     )
     .await;
-    mcp.ok("layer_add", json!({"sceneId": id, "layers": [
-        {"type": "rect", "width": "fill", "height": "fill", "color": "#F4F1EA"},
-        {"id": "photo", "type": "image", "asset": "photo", "x": 40, "y": 40, "width": 320, "height": 220,
-         "edges": {"sides": ["bottom", "right"], "depth": 14, "seed": 2}},
-        {"id": "label", "type": "rect", "x": 60, "y": 290, "width": 280, "height": 60, "color": "#D0202E",
-         "edges": {"depth": 6, "seed": 5}},
-        {"id": "ring", "type": "ellipse", "x": 400, "y": 60, "width": 160, "height": 120,
-         "strokes": {"width": 5, "color": "#1B2A5C", "rough": 3, "seed": 1, "align": "center"}},
-        {"id": "arrow", "type": "line", "x": 400, "y": 240, "width": 150, "height": 80,
-         "strokes": {"width": 4, "color": "#1B2A5C", "rough": 2, "cap": "round", "end": "arrow"}},
-        {"id": "dots", "type": "image", "asset": "photo", "x": 400, "y": 200, "width": 60, "height": 40,
-         "adjust": {"halftone": 5, "tint": "#D0202E"}}]}))
+    mcp.ok("layer_add", json!({"sceneId": id,
+        "layers": [
+            {"type": "rect", "width": "fill", "height": "fill", "fill": "#F4F1EA"},
+            {"id": "photo", "type": "image", "asset": "photo", "x": 40, "y": 40, "width": 320, "height": 220, "edges": {"sides": ["bottom", "right"], "depth": 14, "seed": 2}},
+            {"id": "label", "type": "rect", "x": 60, "y": 290, "width": 280, "height": 60, "edges": {"depth": 6, "seed": 5}, "fill": "#D0202E"},
+            {"id": "ring", "type": "ellipse", "x": 400, "y": 60, "width": 160, "height": 120, "stroke": {"width": 5, "color": "#1B2A5C", "roughness": 3, "seed": 1, "align": "center"}},
+            {"id": "arrow", "type": "line", "x": 400, "y": 240, "width": 150, "height": 80, "stroke": {"width": 4, "color": "#1B2A5C", "roughness": 2, "cap": "round", "markerEnd": "arrow"}},
+            {"id": "dots", "type": "image", "asset": "photo", "x": 400, "y": 200, "width": 60, "height": 40, "filter": {"halftone": 5, "tint": "#D0202E"}}]}))
         .await;
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
     let path = rendered.lines().next().unwrap().split_once(' ').unwrap().1;

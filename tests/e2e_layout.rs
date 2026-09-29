@@ -52,24 +52,16 @@ async fn one_master_adapts_to_every_size_without_at() {
     )
     .await;
     let candidate = |name: &str| {
-        json!({"type": "frame", "stack": {"dir": "column", "align": "center"}, "children": [
-            {"type": "text", "text": name, "fontSize": 40, "weight": 700}]})
+        json!({"type": "frame",
+            "flexDirection": "column",
+            "alignItems": "center",
+            "children": [{"type": "text", "text": name, "fontSize": 40, "fontWeight": 700}]})
     };
     let reply = mcp
-        .ok("layer_add", json!({"sceneId": id, "layers": [
-            {"id": "page", "type": "frame", "width": "fill", "height": "fill",
-             "stack": {"dir": "column", "gap": 24, "padding": 40}, "children": [
-                {"id": "headline", "type": "firstFit", "width": "fill", "children": [
-                    {"id": "long", "type": "text", "text": "Results for Willowmere", "fontSize": 64, "weight": 800},
-                    {"id": "short", "type": "text", "text": "Results", "fontSize": 64, "weight": 800}]},
-                {"id": "photo", "type": "image", "asset": "photo", "width": "fill", "height": "fill", "minHeight": 80},
-                {"id": "cands", "type": "frame", "width": "fill", "stack": {"dir": ["row", "column"], "justify": "evenly", "gap": 16},
-                 "children": [candidate("Dana Levi"), candidate("Omar Haddad"), candidate("Ruth Cohen")]},
-                {"id": "footer", "type": "text", "text": "Paid for by Willowmere Forward", "fontSize": 24,
-                 "at": {"tall": {"hidden": true}}}]},
-            {"id": "badge", "type": "ellipse", "width": 120, "height": 120, "color": "#D0202E",
-             "place": "top-right", "inset": 24}
-        ]}))
+        .ok("layer_add", json!({"sceneId": id,
+            "layers": [
+                {"id": "page", "type": "frame", "width": "fill", "height": "fill", "flexDirection": "column", "gap": 24, "padding": 40, "alignItems": "flex-start", "children": [{"id": "headline", "type": "firstFit", "width": "fill", "children": [{"id": "long", "type": "text", "text": "Results for Willowmere", "fontSize": 64, "fontWeight": 800}, {"id": "short", "type": "text", "text": "Results", "fontSize": 64, "fontWeight": 800}]}, {"id": "photo", "type": "image", "asset": "photo", "width": "fill", "height": "fill", "minHeight": 80}, {"id": "cands", "type": "frame", "width": "fill", "flexDirection": ["row", "column"], "gap": 16, "alignItems": "flex-start", "justifyContent": "space-evenly", "children": [candidate("Dana Levi"), candidate("Omar Haddad"), candidate("Ruth Cohen")]}, {"id": "footer", "type": "text", "text": "Paid for by Willowmere Forward", "fontSize": 24, "media": {"tall": {"hidden": true}}}]},
+                {"id": "badge", "type": "ellipse", "width": 120, "height": 120, "fill": "#D0202E", "place": "top-right", "margin": 24}]}))
         .await;
     assert!(
         reply
@@ -133,7 +125,7 @@ async fn bad_layout_values_get_one_line_errors() {
     assert_eq!(e.lines().count(), 1, "{e}");
     let e = err(json!({"type": "rect", "place": "somewhere"})).await;
     assert!(e.contains("expected one of `top-left`"), "{e}");
-    let e = err(json!({"type": "rect", "at": {"tiny": {"width": 5}}})).await;
+    let e = err(json!({"type": "rect", "media": {"tiny": {"width": 5}}})).await;
     assert!(e.contains("no size or aspect class tiny"), "{e}");
     let e = err(json!({"type": "spacer", "minLenght": 5})).await;
     assert!(
@@ -157,10 +149,10 @@ async fn presets_name_sizes_and_story_safe_zones_are_checked() {
         .next()
         .unwrap()
         .to_owned();
-    mcp.ok("layer_add", json!({"sceneId": id, "layers": [
-        {"id": "title", "type": "text", "text": "Under the story bar", "fontSize": 48, "place": "top", "inset": [0, 100]},
-        {"id": "cta", "type": "text", "text": "Safe", "fontSize": 48, "place": "center"}
-    ]}))
+    mcp.ok("layer_add", json!({"sceneId": id,
+        "layers": [
+            {"id": "title", "type": "text", "text": "Under the story bar", "fontSize": 48, "place": "top", "margin": [0, 100]},
+            {"id": "cta", "type": "text", "text": "Safe", "fontSize": 48, "place": "center"}]}))
     .await;
     let d = format!(
         "\n{}",
@@ -214,21 +206,22 @@ async fn a_grid_collage_rearranges_per_aspect_with_one_at() {
     )
     .await;
     let tile = |area: &str, color: &str| {
-        json!({"id": area, "type": "frame", "area": area, "color": color, "radius": 16,
-        "stack": {"dir": "column", "justify": "center", "align": "center"},
-        "children": [{"type": "text", "text": area.to_uppercase(), "fontSize": 56, "weight": 800, "color": "#FFFFFF"}]})
+        json!({"id": area,
+            "type": "frame",
+            "gridArea": area,
+            "fill": color,
+            "borderRadius": 16,
+            "flexDirection": "column",
+            "alignItems": "center",
+            "justifyContent": "center",
+            "children": [
+                {"type": "text", "text": area.to_uppercase(), "fontSize": 56, "fontWeight": 800, "color": "#FFFFFF"}]})
     };
     mcp.ok(
         "layer_add",
-        json!({"sceneId": id, "layers": [
-        {"id": "grid", "type": "frame", "width": "fill", "height": "fill", "color": "#F4F1EA",
-         "grid": {"columns": "2fr 1fr", "rows": "2fr 1fr", "gap": 24, "padding": 24,
-                  "areas": ["photo side", "cta side"]},
-         "at": {"wide": {"grid": {"columns": "2fr 1fr 1fr", "rows": "1fr", "gap": 24, "padding": 24,
-                                  "areas": ["photo cta side"]}}},
-         "children": [
-            {"id": "photo", "type": "image", "asset": "photo", "area": "photo", "radius": 16},
-            tile("cta", "#D0202E"), tile("side", "#1B2A5C")]}]}),
+        json!({"sceneId": id,
+            "layers": [
+                {"id": "grid", "type": "frame", "width": "fill", "height": "fill", "fill": "#F4F1EA", "gridTemplateColumns": "2fr 1fr", "gridTemplateRows": "2fr 1fr", "gridTemplateAreas": ["photo side", "cta side"], "gap": 24, "padding": 24, "media": {"wide": {"gridTemplateColumns": "2fr 1fr 1fr", "gridTemplateRows": "1fr", "gridTemplateAreas": ["photo cta side"], "gap": 24, "padding": 24}}, "children": [{"id": "photo", "type": "image", "asset": "photo", "gridArea": "photo", "borderRadius": 16}, tile("cta", "#D0202E"), tile("side", "#1B2A5C")]}]}),
     )
     .await;
     let d = format!(

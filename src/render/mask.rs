@@ -57,7 +57,7 @@ impl Ctx<'_> {
                 coverage(canvas, &mask, |c| c.draw_path(&path, &opaque()));
             }
             MaskSource::Image(id) => {
-                let img = self.image_paint(id, p.rect, Fit::Fill, None, 1.0, [0.5, 0.5])?;
+                let img = self.image_paint(id, p.rect, Fit::Cover, None, 1.0, [0.5, 0.5])?;
                 coverage(canvas, &mask, |c| c.draw_rect(r, &img));
             }
             MaskSource::Layer(id) => {

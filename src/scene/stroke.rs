@@ -2,50 +2,85 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::defaults::{is_default, is_false, is_zero};
+use super::defaults::{is_false, is_zero};
 use super::{Color, Gradient};
 
-/// An outline; `color` or `gradient` paints it (black when neither). A
-/// color string is a 1 px stroke: `"stroke": "#000"`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+/// An outline, SVG-style; `color` paints it with a color or
+/// `{"gradient": {…}}` (black by default). A color string is a 1 px stroke:
+/// `"stroke": "#000"`.
+#[derive(Debug, Clone, PartialEq)]
 pub struct Stroke {
-    /// Width, px; `[top, right, bottom, left]` on rects for per-side borders.
+    /// Width, px; `[top, right, bottom, left]` on rects for per-side borders (1).
     pub width: StrokeWidth,
     /// Solid color.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
     /// Gradient; wins over `color`.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub gradient: Option<Gradient>,
     /// Inside, centered on, or outside the edge (inside; open lines center).
-    #[serde(skip_serializing_if = "is_default")]
     pub align: StrokeAlign,
     /// Dash and gap lengths, px, repeating (solid when empty).
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub dash: Vec<f32>,
     /// Line ends: `butt` (default), `round` (dotted with a 0 dash), `square`.
-    #[serde(skip_serializing_if = "is_default")]
     pub cap: Cap,
     /// Corners: `miter` (default), `round`, `bevel`.
-    #[serde(skip_serializing_if = "is_default")]
     pub join: Join,
-    /// Marker at the start of a line or path.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// `markerStart`: a marker at the start of a line or path.
     pub start: Option<Marker>,
-    /// Marker at the end of a line or path.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// `markerEnd`: a marker at the end of a line or path.
     pub end: Option<Marker>,
-    /// Hand-drawn jitter, px: the path wobbles this far off its line (0).
-    #[serde(skip_serializing_if = "is_zero")]
+    /// `roughness`: hand-drawn jitter, px; the path wobbles this far off its
+    /// line (0).
     pub rough: f32,
-    /// Varies the `rough` jitter; the same seed draws the same wobble (0).
-    #[serde(skip_serializing_if = "is_zero_u32")]
+    /// Varies the `roughness` jitter; the same seed draws the same wobble (0).
     pub seed: u32,
 }
 
-fn is_zero_u32(v: &u32) -> bool {
-    *v == 0
+impl Serialize for Stroke {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        use serde_json::{Map, Value, json};
+        let mut o = Map::new();
+        if self.width != StrokeWidth::All(1.0) {
+            o.insert("width".into(), val::<_, S::Error>(&self.width)?);
+        }
+        if let Some(g) = &self.gradient {
+            o.insert(
+                "color".into(),
+                json!({ "gradient": val::<_, S::Error>(&g)? }),
+            );
+        } else if let Some(c) = self.color {
+            o.insert("color".into(), Value::String(c.to_string()));
+        }
+        if self.align != StrokeAlign::default() {
+            o.insert("align".into(), val::<_, S::Error>(&self.align)?);
+        }
+        if !self.dash.is_empty() {
+            o.insert("dash".into(), json!(self.dash));
+        }
+        if self.cap != Cap::default() {
+            o.insert("cap".into(), val::<_, S::Error>(&self.cap)?);
+        }
+        if self.join != Join::default() {
+            o.insert("join".into(), val::<_, S::Error>(&self.join)?);
+        }
+        if let Some(m) = self.start {
+            o.insert("markerStart".into(), val::<_, S::Error>(&m)?);
+        }
+        if let Some(m) = self.end {
+            o.insert("markerEnd".into(), val::<_, S::Error>(&m)?);
+        }
+        if self.rough != 0.0 {
+            o.insert("roughness".into(), json!(self.rough));
+        }
+        if self.seed != 0 {
+            o.insert("seed".into(), json!(self.seed));
+        }
+        o.serialize(s)
+    }
+}
+
+/// `x` as a JSON value, for [`Stroke`]'s hand-written form.
+fn val<T: Serialize, E: serde::ser::Error>(x: &T) -> Result<serde_json::Value, E> {
+    serde_json::to_value(x).map_err(E::custom)
 }
 
 /// One stroke width, or one per side of a rect.
@@ -81,11 +116,10 @@ impl StrokeWidth {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct StrokeFields {
+    #[serde(default = "one_width")]
     width: StrokeWidth,
     #[serde(default)]
-    color: Option<Color>,
-    #[serde(default)]
-    gradient: Option<Gradient>,
+    color: Option<serde_json::Value>,
     #[serde(default)]
     align: StrokeAlign,
     #[serde(default)]
@@ -95,13 +129,17 @@ struct StrokeFields {
     #[serde(default)]
     join: Join,
     #[serde(default)]
-    start: Option<Marker>,
+    marker_start: Option<Marker>,
     #[serde(default)]
-    end: Option<Marker>,
+    marker_end: Option<Marker>,
     #[serde(default)]
-    rough: f32,
+    roughness: f32,
     #[serde(default)]
     seed: u32,
+}
+
+fn one_width() -> StrokeWidth {
+    StrokeWidth::All(1.0)
 }
 
 impl<'de> Deserialize<'de> for Stroke {
@@ -115,17 +153,36 @@ impl<'de> Deserialize<'de> for Stroke {
         }
         let f: StrokeFields =
             serde_json::from_value(v).map_err(|e| D::Error::custom(format!("stroke: {e}")))?;
+        // `color` is a color, or a paint object with a gradient.
+        let (color, gradient) = match f.color {
+            None => (None, None),
+            Some(serde_json::Value::String(s)) => (
+                Some(Color::parse(&s).ok_or_else(|| D::Error::custom(format!("bad color {s}")))?),
+                None,
+            ),
+            Some(serde_json::Value::Object(mut o)) if o.contains_key("gradient") => {
+                let g = o.remove("gradient").unwrap_or_default();
+                let g = serde_json::from_value(g)
+                    .map_err(|e| D::Error::custom(format!("stroke gradient: {e}")))?;
+                (None, Some(g))
+            }
+            Some(other) => {
+                return Err(D::Error::custom(format!(
+                    "stroke color is a color or {{\"gradient\": …}}, not {other}"
+                )));
+            }
+        };
         Ok(Stroke {
             width: f.width,
-            color: f.color,
-            gradient: f.gradient,
+            color,
+            gradient,
             align: f.align,
             dash: f.dash,
             cap: f.cap,
             join: f.join,
-            start: f.start,
-            end: f.end,
-            rough: f.rough,
+            start: f.marker_start,
+            end: f.marker_end,
+            rough: f.roughness,
             seed: f.seed,
         })
     }

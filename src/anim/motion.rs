@@ -1,5 +1,5 @@
-//! Named enter and exit effects: `"in": "fade-up"`,
-//! `"out": {"effect": "fade", "at": 7}`. An effect moves a layer between an
+//! Named enter and exit effects: `"enter": "fade-up"`,
+//! `"exit": {"effect": "fade", "delay": 7}`. An effect moves a layer between an
 //! "away" state (transparent, shifted, shrunk or blurred) and where it rests.
 
 use serde::{Deserialize, Serialize};
@@ -101,7 +101,7 @@ impl Effect {
 }
 
 /// An effect with its timing: `"fade-up"`, or
-/// `{"effect": "pop", "at": 1.2, "duration": 0.5, "ease": "back.out", "distance": 60}`.
+/// `{"effect": "pop", "delay": 1.2, "duration": 0.5, "ease": "back.out", "distance": 60}`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Motion {
     /// Which effect.
@@ -184,10 +184,10 @@ impl<'de> Deserialize<'de> for Motion {
             }),
             Value::Object(o) => {
                 if let Some(k) = o.keys().find(|k| {
-                    !["effect", "at", "duration", "ease", "distance"].contains(&k.as_str())
+                    !["effect", "delay", "duration", "ease", "distance"].contains(&k.as_str())
                 }) {
                     return Err(D::Error::custom(format!(
-                        "unknown field {k}; use effect, at, duration, ease, distance"
+                        "unknown field {k}; use effect, delay, duration, ease, distance"
                     )));
                 }
                 let num = |k: &str| o.get(k).and_then(Value::as_f64).map(|n| n as f32);
@@ -196,7 +196,7 @@ impl<'de> Deserialize<'de> for Motion {
                         o.get("effect")
                             .ok_or_else(|| D::Error::custom("needs an effect"))?,
                     )?,
-                    at: num("at"),
+                    at: num("delay"),
                     duration: num("duration").unwrap_or(DURATION),
                     ease: o
                         .get("ease")
@@ -207,7 +207,7 @@ impl<'de> Deserialize<'de> for Motion {
                 })
             }
             _ => Err(D::Error::custom(
-                "an effect name, or {effect, at, duration, ease, distance}",
+                "an effect name, or {effect, delay, duration, ease, distance}",
             )),
         }
     }
@@ -228,7 +228,7 @@ impl Serialize for Motion {
             serde_json::to_value(self.effect).map_err(serde::ser::Error::custom)?,
         );
         if let Some(at) = self.at {
-            o.insert("at".into(), short(at).into());
+            o.insert("delay".into(), short(at).into());
         }
         if self.duration != DURATION {
             o.insert("duration".into(), short(self.duration).into());
@@ -257,7 +257,7 @@ mod tests {
 
     #[test]
     fn entering_goes_from_away_to_rest() {
-        let m = motion(json!({"effect": "fade-up", "at": 1, "duration": 0.5, "ease": "none"}));
+        let m = motion(json!({"effect": "fade-up", "delay": 1, "duration": 0.5, "ease": "none"}));
         assert_eq!(m.enter(0.0).opacity, 0.0, "hidden before it starts");
         assert_eq!(m.enter(0.0).offset, [0.0, 40.0], "below its place");
         let mid = m.enter(1.25);
@@ -271,7 +271,7 @@ mod tests {
         assert_eq!(m.leave(0.0, 8.0), Away::REST);
         assert_eq!(m.leave(8.0, 8.0).opacity, 0.0, "gone at the end");
         assert!(m.leave(7.7, 8.0).opacity > 0.0 && m.leave(7.7, 8.0).opacity < 1.0);
-        let early = motion(json!({"effect": "fade", "at": 2, "ease": "none"}));
+        let early = motion(json!({"effect": "fade", "delay": 2, "ease": "none"}));
         assert_eq!(early.leave(3.0, 8.0).opacity, 0.0);
     }
 
@@ -301,10 +301,10 @@ mod tests {
             serde_json::to_value(motion(json!("pop"))).unwrap(),
             json!("pop")
         );
-        let full = json!({"effect": "fade-left", "at": 1.2, "distance": 80});
+        let full = json!({"effect": "fade-left", "delay": 1.2, "distance": 80});
         let saved = serde_json::to_value(motion(full.clone())).unwrap();
         assert_eq!(motion(saved.clone()), motion(full));
-        assert_eq!(saved["at"], json!(1.2));
+        assert_eq!(saved["delay"], json!(1.2));
         let e = serde_json::from_value::<Motion>(json!("slide-in")).unwrap_err();
         assert!(e.to_string().starts_with("unknown effect"), "{e}");
     }

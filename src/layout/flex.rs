@@ -12,14 +12,15 @@ pub(super) fn grow(line: &mut [Flex], mut free: f32) {
         let weight: f32 = line
             .iter()
             .filter(|f| f.fill && f.main < f.max_main)
-            .map(|f| f.layer.grow.max(0.0))
+            .map(|f| f.layer.grow.unwrap_or(1.0).max(0.0))
             .sum();
         if free <= 0.01 || weight <= 0.0 {
             return;
         }
         let mut given = 0.0;
         for f in line.iter_mut().filter(|f| f.fill && f.main < f.max_main) {
-            let add = (free * f.layer.grow.max(0.0) / weight).min(f.max_main - f.main);
+            let add =
+                (free * f.layer.grow.unwrap_or(1.0).max(0.0) / weight).min(f.max_main - f.main);
             f.main += add;
             given += add;
         }

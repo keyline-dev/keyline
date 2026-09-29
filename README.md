@@ -57,6 +57,7 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 - **Few, batched tools:** six tools, not one per property; one call can build a whole ad.
 - **Short replies:** edits return the changed ids, a version, and `ok` or the problems, never the scene.
 - **Defaults left out:** a typical layer is 4–6 fields.
+- **Standard names:** CSS names and values wherever CSS has the concept (flexbox and grid fields on frames, `fontWeight`, `borderRadius`, `rgba()` colors), so the model writes a scene right the first time. The layout itself is keyline's own, documented, not browser-exact.
 - **Semantic targets:** layers are addressed by `role`, so the agent never reads the scene to find an id.
 - **Verification without pixels:** defects to fix, advisories to judge and facts to weigh, each with the measurement that fixes it ([how](docs/concepts.md#checks-defects-advisories-facts)).
 - **Names, not inventions:** icons, shapes, styles, tokens and components by name. Icons alone took rebuilding a real flyer from $0.22–0.62 to $0.15–0.19 per run.
@@ -66,8 +67,8 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 ## Features
 
 - **Layers:** `text`, `image` (PNG, JPEG, SVG), `video`, `icon`, `rect`, `ellipse` (and arcs and rings), `polygon` (and stars), `path` (SVG path data or a named shape), `line`, `frame` (nesting, clipping, stacks, grids), `spacer`, `firstFit`, and `use` for components
-- **Layout:** stacks (rows and columns with gap, padding, alignment, justification and wrapping; `fill`, `grow` and priorities), grids (CSS-style tracks, named areas, spans), `hug`/`fill`/percentage sizes with min/max and aspect ratio, direction lists and `firstFit` that pick what fits, constraints, placement at nine spots, a scale factor per size, per-size and per-aspect changes (`at`), size presets for common social and ad formats, and safe areas a platform covers
-- **Text:** fit, wrap or one line; inline markup (`<b>`, `<i>`, `<span color=…>`, style names as tags); weights, italics, letter spacing, line height, case; balanced or pretty wrapping; highlights behind words; underline and strike; text on a curve; dot leaders; text filled with an image, pattern or gradient; outlines; text that knocks out its frame. Fonts work like CSS web fonts: name any [Google Fonts](https://fonts.google.com) family and the server downloads it on first use and caches it (tracked in `fonts/index.json`); [Inter](https://rsms.me/inter/) is bundled, and you can add your own font files
+- **Layout:** stacks (CSS flexbox: rows and columns with gap, padding, alignment, justification and wrapping; `fill`, `flexGrow` and priorities), grids (CSS grid: tracks, named areas, spans), `hug`/`fill`/percentage sizes with min/max and aspect ratio, direction lists and `firstFit` that pick what fits, constraints, placement at nine spots, a scale factor per size, per-size and per-aspect changes (`media`), size presets for common social and ad formats, and safe areas a platform covers
+- **Text:** fit, wrap or one line; inline markup (`<b>`, `<i>`, `<span style=…>`, style names as tags); weights, italics, letter spacing, line height, case; balanced or pretty wrapping; highlights behind words; underline and strike; text on a curve; dot leaders; text filled with an image, pattern or gradient; outlines; text that knocks out its frame. Fonts work like CSS web fonts: name any [Google Fonts](https://fonts.google.com) family and the server downloads it on first use and caches it (tracked in `fonts/index.json`); [Inter](https://rsms.me/inter/) is bundled, and you can add your own font files
 - **Paint:** stacked fills (solid, linear/radial/conic gradients, images, patterns, film grain), strokes (inside, center or outside, per side, dashed, with arrowheads, hand-drawn), shadows (outer and inner, following a cutout's or text's shape), blur and backdrop blur, masks (gradient, shape, path, another layer or an image), torn edges, 16 blend modes, corner radius, rotation, skew, flips
 - **Images:** fill, fit, crop or tile, with a focus point that stays in view; adjustments (brightness, contrast, saturation, grayscale, sepia, hue, duotone, tint, halftone)
 - **Icons:** about 5,000 built in, by name: [Lucide](https://lucide.dev) outline icons and [Font Awesome Free](https://fontawesome.com) solid, regular and brand icons, in any color
@@ -146,18 +147,61 @@ A typical call:
 {
   "sceneId": "s5b0a42a5e",
   "layers": [
-    { "id": "headline", "type": "text",
-      "x": 60, "y": 40, "width": 960, "fontSize": 64, "weight": 800, "align": "center",
-      "color": "#1B2A5C", "text": "Proven <span color=\"#D0202E\">RESULTS</span> for WILLOWMERE Families",
-      "constraints": { "h": "stretch", "v": "top" } },
-    { "type": "image", "asset": "photo", "y": 220, "width": 1080, "height": 460,
-      "constraints": { "h": "stretch", "v": "stretch" } },
-    { "id": "cta", "type": "frame", "y": 830, "width": 1080, "height": 100, "color": "#D0202E",
-      "constraints": { "h": "stretch", "v": "bottom" },
+    {
+      "id": "headline",
+      "type": "text",
+      "x": 60,
+      "y": 40,
+      "width": 960,
+      "fontSize": 64,
+      "fontWeight": 800,
+      "textAlign": "center",
+      "color": "#1B2A5C",
+      "text": "Proven <span style=\"color:#D0202E\">RESULTS</span> for WILLOWMERE Families",
+      "constraints": {
+        "horizontal": "stretch",
+        "vertical": "top"
+      }
+    },
+    {
+      "type": "image",
+      "asset": "photo",
+      "y": 220,
+      "width": 1080,
+      "height": 460,
+      "constraints": {
+        "horizontal": "stretch",
+        "vertical": "stretch"
+      }
+    },
+    {
+      "id": "cta",
+      "type": "frame",
+      "y": 830,
+      "width": 1080,
+      "height": 100,
+      "fill": "#D0202E",
+      "constraints": {
+        "horizontal": "stretch",
+        "vertical": "bottom"
+      },
       "children": [
-        { "id": "cta-text", "type": "text", "text": "VOTE BY MAIL", "x": 394, "y": 21, "fontSize": 48,
-          "weight": 800, "color": "#FFFFFF", "constraints": { "h": "center", "v": "center" } }
-      ] }
+        {
+          "id": "cta-text",
+          "type": "text",
+          "text": "VOTE BY MAIL",
+          "x": 394,
+          "y": 21,
+          "fontSize": 48,
+          "fontWeight": 800,
+          "color": "#FFFFFF",
+          "constraints": {
+            "horizontal": "center",
+            "vertical": "center"
+          }
+        }
+      ]
+    }
   ]
 }
 ```

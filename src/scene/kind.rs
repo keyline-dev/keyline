@@ -7,8 +7,8 @@ use super::defaults::{
     is_one, is_sixteen, is_true, is_w400, is_zero, one, sixteen, w400, yes,
 };
 use super::{
-    Adjust, Align, Color, Crop, Fit, Gradient, Grid, ImageFill, Layer, Outline, Range, Resize,
-    Shadow, Stack, Stroke, TextCase, TextMore,
+    Adjust, Align, Color, Crop, Fit, Gradient, ImageFill, Layer, Outline, Range, Resize, Shadow,
+    Stroke, TextCase, TextMore,
 };
 
 // ponytail: serde can't combine `deny_unknown_fields` with `flatten`, so
@@ -37,7 +37,7 @@ pub enum Kind {
         focus: [f32; 2],
         /// Color adjustments (brightness, contrast, saturate, grayscale,
         /// sepia, hue, duotone, tint).
-        #[serde(default, skip_serializing_if = "Adjust::is_none")]
+        #[serde(rename = "filter", default, skip_serializing_if = "Adjust::is_none")]
         adjust: Adjust,
     },
     /// A video clip, drawn like an image: each moment shows the clip's
@@ -56,23 +56,33 @@ pub enum Kind {
         #[serde(default = "center", skip_serializing_if = "is_center")]
         focus: [f32; 2],
         /// Color adjustments, applied to every frame.
-        #[serde(default, skip_serializing_if = "Adjust::is_none")]
+        #[serde(rename = "filter", default, skip_serializing_if = "Adjust::is_none")]
         adjust: Adjust,
-        /// Where in the clip to begin, seconds (0).
-        #[serde(default, skip_serializing_if = "is_zero")]
+        /// `trimStart`: where in the clip to begin, seconds (0).
+        #[serde(rename = "trimStart", default, skip_serializing_if = "is_zero")]
         start: f32,
         /// When the clip starts playing in the scene, seconds (0); before,
         /// its first frame holds.
         #[serde(default, skip_serializing_if = "is_zero")]
         delay: f32,
-        /// Playback speed: 0.5 is slow motion (1).
-        #[serde(default = "one", skip_serializing_if = "is_one")]
+        /// `playbackRate`: 0.5 is slow motion (1).
+        #[serde(
+            rename = "playbackRate",
+            default = "one",
+            skip_serializing_if = "is_one"
+        )]
         speed: f32,
         /// Repeat the clip until the scene ends (false: its last frame holds).
         #[serde(rename = "loop", default, skip_serializing_if = "is_false")]
         looping: bool,
-        /// Play the clip's own sound in video output (true).
-        #[serde(default = "yes", skip_serializing_if = "is_true")]
+        /// `muted`: `true` leaves the clip's own sound out of video output;
+        /// it plays by default.
+        #[serde(
+            rename = "muted",
+            default = "yes",
+            skip_serializing_if = "is_true",
+            with = "sound"
+        )]
         audio: bool,
     },
     /// Text, sized by its box like iOS `UILabel`.
@@ -83,26 +93,35 @@ pub enum Kind {
         /// Colored character spans.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         ranges: Vec<Range>,
-        /// Inferred from the box when omitted; see [`Layer::text_resize`].
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        /// Always inferred from the box; see [`Layer::text_resize`].
+        #[serde(skip)]
         resize: Option<Resize>,
         /// Line cap for fit and truncate; unlimited when omitted.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         max_lines: Option<usize>,
-        /// `fit` shrinks the font down to `fontSize × minFontScale`.
-        #[serde(default = "half", skip_serializing_if = "is_half")]
+        /// Text in a fixed box shrinks down to `fontSize × minimumScaleFactor`
+        /// (0.5); 1 keeps its size.
+        #[serde(
+            rename = "minimumScaleFactor",
+            default = "half",
+            skip_serializing_if = "is_half"
+        )]
         min_font_scale: f32,
-        /// End cut-off text with "…" (true) or just cut it (false).
-        #[serde(default = "yes", skip_serializing_if = "is_true")]
+        /// Cut-off text ends with "…".
+        #[serde(skip, default = "yes")]
         ellipsis: bool,
         /// Font size, px; the maximum when fitting.
         #[serde(default = "sixteen", skip_serializing_if = "is_sixteen")]
         font_size: f32,
-        /// Font weight, 100–900.
-        #[serde(default = "w400", skip_serializing_if = "is_w400")]
+        /// Font weight, 100–900 (400).
+        #[serde(
+            rename = "fontWeight",
+            default = "w400",
+            skip_serializing_if = "is_w400"
+        )]
         weight: u16,
-        /// Horizontal alignment.
-        #[serde(default, skip_serializing_if = "is_default")]
+        /// Horizontal alignment (left).
+        #[serde(rename = "textAlign", default, skip_serializing_if = "is_default")]
         align: Align,
         /// Base text color; ranges override it.
         #[serde(default = "black", skip_serializing_if = "is_black")]
@@ -116,20 +135,23 @@ pub enum Kind {
         /// Line height as a multiple of the font size; the font's own when omitted.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         line_height: Option<f32>,
-        /// Case transform applied when drawing.
-        #[serde(default, skip_serializing_if = "is_default")]
+        /// Case transform applied when drawing (none).
+        #[serde(rename = "textTransform", default, skip_serializing_if = "is_default")]
         text_case: TextCase,
-        /// Drop shadow behind the glyphs.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        // ponytail: the four below are the old per-text paints, now always
+        // unset (text takes the common `fill`, `stroke` and `shadow`); delete
+        // them with their drawing code.
+        /// Unused.
+        #[serde(skip)]
         shadow: Option<Shadow>,
-        /// Fill the letters with an image instead of `color`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        /// Unused.
+        #[serde(skip)]
         fill: Option<ImageFill>,
-        /// Fill the letters with a gradient instead of `color`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        /// Unused.
+        #[serde(skip)]
         gradient: Option<Gradient>,
-        /// An outline around the letters, drawn over the fill.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        /// Unused.
+        #[serde(skip)]
         outline: Option<Outline>,
         /// Italic, decoration, wrapping, vertical alignment, trim,
         /// highlight, direction, features, padding, curve, leader, knockout.
@@ -140,29 +162,29 @@ pub enum Kind {
     #[serde(rename_all = "camelCase")]
     Rect {
         /// Solid fill; none when omitted.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         color: Option<Color>,
         /// Gradient fill; wins over `color`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         gradient: Option<Gradient>,
         /// Outline.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         stroke: Option<Stroke>,
         /// Corner radius, px.
-        #[serde(default, skip_serializing_if = "is_zero")]
+        #[serde(skip)]
         corner_radius: f32,
     },
     /// A filled ellipse inscribed in the box.
     #[serde(rename_all = "camelCase")]
     Ellipse {
         /// Solid fill; none when omitted.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         color: Option<Color>,
         /// Gradient fill; wins over `color`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         gradient: Option<Gradient>,
         /// Outline.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         stroke: Option<Stroke>,
         /// Part of the ellipse: a pie, a ring or a ring segment.
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -173,13 +195,13 @@ pub enum Kind {
     #[serde(rename_all = "camelCase")]
     Polygon {
         /// Solid fill; none when omitted.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         color: Option<Color>,
         /// Gradient fill; wins over `color`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         gradient: Option<Gradient>,
         /// Outline.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         stroke: Option<Stroke>,
         /// Number of corners (or star points), 3 or more (3).
         #[serde(default = "three", skip_serializing_if = "is_three")]
@@ -193,13 +215,13 @@ pub enum Kind {
     #[serde(rename_all = "camelCase")]
     Path {
         /// Solid fill; none when omitted.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         color: Option<Color>,
         /// Gradient fill; wins over `color`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         gradient: Option<Gradient>,
         /// Outline.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         stroke: Option<Stroke>,
         /// SVG path data.
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -211,7 +233,7 @@ pub enum Kind {
         #[serde(default, skip_serializing_if = "is_default")]
         fill_rule: FillRule,
         /// Keep the path's aspect ratio (`contain`) or stretch it to the box.
-        #[serde(default, skip_serializing_if = "is_default")]
+        #[serde(rename = "fit", default, skip_serializing_if = "is_default")]
         fit_path: FitPath,
     },
     /// A straight line from the box's top-left corner to its bottom-right:
@@ -219,10 +241,10 @@ pub enum Kind {
     #[serde(rename_all = "camelCase")]
     Line {
         /// Line color (default black).
-        #[serde(default = "black", skip_serializing_if = "is_black")]
+        #[serde(skip, default = "black")]
         color: Color,
         /// Thickness, px (default 1).
-        #[serde(default = "one", skip_serializing_if = "is_one")]
+        #[serde(skip, default = "one")]
         stroke_width: f32,
     },
     /// A built-in icon by name, drawn in one color and contained in the box.
@@ -246,27 +268,30 @@ pub enum Kind {
         /// Child layers, drawn bottom to top.
         #[serde(default)]
         children: Vec<Layer>,
-        /// Clip children to the frame's box (default true).
-        #[serde(default = "yes", skip_serializing_if = "is_true")]
+        /// `clipsContent`: children are clipped to the frame (true, as in
+        /// Figma); false lets them show outside it.
+        #[serde(
+            rename = "clipsContent",
+            default = "yes",
+            skip_serializing_if = "is_true"
+        )]
         clip: bool,
         /// Background fill; none when omitted.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         color: Option<Color>,
         /// Background gradient; wins over `color`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         gradient: Option<Gradient>,
         /// Outline, drawn above the children.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(skip)]
         stroke: Option<Stroke>,
         /// Corner radius, px; also rounds the clip.
-        #[serde(default, skip_serializing_if = "is_zero")]
+        #[serde(skip)]
         corner_radius: f32,
-        /// Lay children out in a row or column instead of by their x and y.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        stack: Option<Stack>,
-        /// Lay children out in rows and columns, like CSS grid.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        grid: Option<Grid>,
+        /// Its layout: `flexDirection` (a stack) or grid templates (a grid),
+        /// with `gap`, `padding` and alignment; free when neither.
+        #[serde(flatten)]
+        layout: super::FrameLayout,
     },
     /// Flexible empty space in a stack: it takes the free space, like
     /// SwiftUI's `Spacer`. Outside a stack it's an empty box.
@@ -414,8 +439,22 @@ pub enum FitPath {
     /// Scaled evenly to fit, centered.
     #[default]
     Contain,
-    /// Stretched to the box on each axis.
+    /// Stretched to the box on each axis (CSS `object-fit: fill`).
+    #[serde(rename = "fill")]
     Stretch,
+}
+
+/// `muted` as a sound flag: `muted: true` is no sound.
+mod sound {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub(super) fn serialize<S: Serializer>(audio: &bool, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_bool(!audio)
+    }
+
+    pub(super) fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<bool, D::Error> {
+        bool::deserialize(d).map(|muted| !muted)
+    }
 }
 
 fn three() -> u32 {

@@ -1,4 +1,4 @@
-//! The scene as drawn: text styles and per-size `at` changes applied.
+//! The scene as drawn: text styles and per-size `media` changes applied.
 
 use super::{Kind, Layer, Scene, Size, check_keys};
 
@@ -8,7 +8,6 @@ pub(super) const UNSTYLABLE: &[&str] = &[
     "type",
     "text",
     "children",
-    "at",
     "style",
     "component",
     "props",
@@ -84,11 +83,11 @@ pub(super) fn patched(l: &Layer, key: &str) -> Result<Option<Layer>, String> {
     let Some(patch) = l.at.get(key) else {
         return Ok(None);
     };
-    if let Some(k) = ["id", "type", "children", "at"]
+    if let Some(k) = ["id", "type", "children", "media"]
         .iter()
         .find(|k| patch.contains_key(**k))
     {
-        return Err(format!("at.{key} can't change {k}"));
+        return Err(format!("media.{key} can't change {k}"));
     }
     let mut v = serde_json::to_value(l).map_err(|e| e.to_string())?;
     crate::ops::merge_patch(&mut v, &serde_json::Value::Object(patch.clone()));
@@ -214,12 +213,13 @@ mod tests {
 
     #[test]
     fn at_changes_a_layer_for_one_size_only() {
-        let mut s: Scene = serde_json::from_value(serde_json::json!({
-            "width": 100, "height": 100,
-            "sizes": [{"id": "a", "width": 100, "height": 100}, {"id": "b", "width": 50, "height": 100}],
-            "layers": [{"id": "t", "type": "text", "text": "Hi", "fontSize": 10,
-                        "at": {"b": {"fontSize": 20, "color": "#FF0000"}}}]
-        }))
+        let mut s: Scene = serde_json::from_value(serde_json::json!({"width": 100,
+            "height": 100,
+            "sizes": [
+                {"id": "a", "width": 100, "height": 100},
+                {"id": "b", "width": 50, "height": 100}],
+            "layers": [
+                {"id": "t", "type": "text", "text": "Hi", "fontSize": 10, "media": {"b": {"fontSize": 20, "color": "#FF0000"}}}]}))
         .unwrap();
         s.validate().unwrap();
         let size = |id: &str| match &s
@@ -246,7 +246,11 @@ mod tests {
         s.layers[0]
             .at
             .insert("b".into(), bad.as_object().unwrap().clone());
-        assert!(s.validate().unwrap_err().contains("at.b can't change type"));
+        assert!(
+            s.validate()
+                .unwrap_err()
+                .contains("media.b can't change type")
+        );
         let typo = serde_json::json!({"fontsize": 20});
         s.layers[0]
             .at
@@ -256,14 +260,13 @@ mod tests {
 
     #[test]
     fn styles_fill_in_what_a_text_layer_leaves_out() {
-        let mut s: Scene = serde_json::from_value(serde_json::json!({
-            "width": 100, "height": 100, "sizes": [{"id": "a", "width": 100, "height": 100}],
-            "styles": {"label": {"fontSize": 30, "weight": 700, "color": "#FF0000"}},
+        let mut s: Scene = serde_json::from_value(serde_json::json!({"width": 100,
+            "height": 100,
+            "sizes": [{"id": "a", "width": 100, "height": 100}],
+            "styles": {"label": {"fontSize": 30, "fontWeight": 700, "color": "#FF0000"}},
             "layers": [
                 {"id": "a", "type": "text", "text": "A", "style": "label"},
-                {"id": "b", "type": "text", "text": "B", "style": "label", "color": "#0000FF"}
-            ]
-        }))
+                {"id": "b", "type": "text", "text": "B", "style": "label", "color": "#0000FF"}]}))
         .unwrap();
         s.validate().unwrap();
         let r = s.resolved();
@@ -291,12 +294,13 @@ mod tests {
 
     #[test]
     fn at_applies_aspect_classes_broadest_first_then_the_size_id() {
-        let s: Scene = serde_json::from_value(serde_json::json!({
-            "width": 100, "height": 100,
-            "sizes": [{"id": "sky", "width": 100, "height": 400}, {"id": "sq", "width": 100, "height": 100}],
-            "layers": [{"id": "t", "type": "text", "text": "Hi", "fontSize": 10,
-                        "at": {"portrait": {"fontSize": 20, "weight": 700}, "tall": {"fontSize": 30}, "sky": {"weight": 800}}}]
-        }))
+        let s: Scene = serde_json::from_value(serde_json::json!({"width": 100,
+            "height": 100,
+            "sizes": [
+                {"id": "sky", "width": 100, "height": 400},
+                {"id": "sq", "width": 100, "height": 100}],
+            "layers": [
+                {"id": "t", "type": "text", "text": "Hi", "fontSize": 10, "media": {"portrait": {"fontSize": 20, "fontWeight": 700}, "tall": {"fontSize": 30}, "sky": {"fontWeight": 800}}}]}))
         .unwrap();
         s.validate().unwrap();
         let get = |i: usize| match &s.for_size(&s.sizes[i]).layers[0].kind {

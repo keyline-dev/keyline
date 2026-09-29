@@ -1,7 +1,7 @@
 //! The server's verification, so the agent can check a design without
 //! looking at pixels. Three kinds of output:
 //!
-//! - defects, `!overflow` etc.: objectively broken, always fix;
+//! - defects, `!truncated` etc.: objectively broken, always fix;
 //! - advisories, `warn contrast`: a standard says it's weak; the agent decides;
 //! - facts ([`facts`]): smallest text and image upscaling per size, with no
 //!   threshold, because what's too small or too soft depends on the medium.
@@ -31,7 +31,7 @@ use skia_safe::Pixmap;
 
 use crate::layout::{Placed, Rect, layout};
 use crate::render::{image_crop, image_scale, render_image};
-use crate::scene::{Fit, Kind, Scene};
+use crate::scene::{Fit, Kind, Position, Scene};
 
 use contrast::contrast;
 use overlap::{ink, overlaps};
@@ -109,6 +109,7 @@ pub fn describe(
                     h: size.height,
                 },
                 by: "canvas",
+                quiet: false,
             };
             let mut lines = Vec::new();
             // After the first shot, only the shot is new: the layers around it
@@ -191,6 +192,9 @@ struct Checks<'s, 'i> {
 struct Clip<'a> {
     rect: Rect,
     by: &'a str,
+    /// Inside a stack already reported `!overflow`: its children falling
+    /// outside it are that one problem, not one each.
+    quiet: bool,
 }
 
 /// `opacity` is the product of the ancestors' opacities.
@@ -224,11 +228,18 @@ fn line(
         let _ = write!(out, " rot {}°", n(l.rotation));
     }
     // What an adaptive layout picked here: a stack's direction, a firstFit's child.
+    if let Some((w, h)) = p.overflow {
+        let _ = write!(out, " !overflow needs {}×{}", n(w), n(h));
+    }
     if let Some(c) = &p.chosen {
         let _ = write!(out, " → {c}");
     }
     match &l.kind {
-        Kind::Text { font_size, .. } => {
+        Kind::Text {
+            font_size,
+            max_lines,
+            ..
+        } => {
             let max = font_size * p.k;
             if let Some((_, fit)) = &p.text {
                 let _ = write!(out, " {}px", n(fit.font_size));
@@ -238,17 +249,18 @@ fn line(
                 if fit.lines > 1 {
                     let _ = write!(out, " {}L", fit.lines);
                 }
-                if fit.overflow {
+                // Text that doesn't fit its box, cut or not: one marker.
+                // Cut at `maxLines`, the fix is more lines or a wider box.
+                if fit.truncated && max_lines.is_some_and(|m| fit.lines >= m) {
+                    let _ = write!(out, " !truncated at maxLines {}", fit.lines);
+                } else if fit.truncated || fit.overflow {
                     let _ = write!(
                         out,
-                        " !overflow needs {}×{} (one line: {} wide)",
+                        " !truncated needs {}×{} (one line: {} wide)",
                         n(r.w),
                         n(fit.need_height),
                         n(fit.one_line_width)
                     );
-                }
-                if fit.truncated {
-                    out.push_str(" !truncated");
                 }
             }
             if checks.safe.is_some_and(|safe| !contains(safe, r)) {
@@ -267,8 +279,9 @@ fn line(
             if let Some(a) = checks.scene.assets.get(asset) {
                 let (cw, ch) = image_crop(r, a.width, a.height, fit, crop);
                 out.push_str(match fit {
-                    Fit::Fill => " fill",
-                    Fit::Fit => " fit",
+                    Fit::Cover => " cover",
+                    Fit::Contain => " contain",
+                    Fit::Stretch => " fill",
                     Fit::Tile => " tile",
                 });
                 if cw >= 0.005 {
@@ -298,7 +311,10 @@ fn line(
         }
         _ => r,
     };
-    if intersect(shown, visible).is_none() {
+    // Pushed out of an overflowing stack: reported once, on the stack. A
+    // spacer draws nothing, so an empty one hides nothing.
+    if clip.quiet {
+    } else if intersect(shown, visible).is_none() && !matches!(l.kind, Kind::Spacer { .. }) {
         out.push_str(" !hidden");
     } else if matches!(l.kind, Kind::Text { .. }) && !contains(visible, r) {
         let _ = write!(out, " !clipped by {}:", clip.by);
@@ -321,11 +337,17 @@ fn line(
                 ..r
             }),
             by: &l.id,
+            quiet: clip.quiet,
         },
         _ => clip,
     };
     for c in &p.children {
-        line(lines, checks, c, inner, depth + 1, opacity);
+        let pushed = p.overflow.is_some() && c.layer.position != Position::Absolute;
+        let own = Clip {
+            quiet: inner.quiet || pushed,
+            ..inner
+        };
+        line(lines, checks, c, own, depth + 1, opacity);
     }
 }
 

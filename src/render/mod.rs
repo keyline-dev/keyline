@@ -302,7 +302,7 @@ impl Ctx<'_> {
                     .ok_or_else(|| anyhow!("no {set} icon {name}"))?;
                 let aspect = crate::icons::aspect(*set, name).unwrap_or(1.0);
                 // Contained in the box, centered, like `fit: fit`.
-                let d = image_rect(p.rect, aspect, 1.0, Fit::Fit, None, 1.0, CENTER);
+                let d = image_rect(p.rect, aspect, 1.0, Fit::Contain, None, 1.0, CENTER);
                 let pw = (d.w * self.px).ceil().clamp(1.0, MAX_SVG_PX) as u32;
                 let ph = (d.h * self.px).ceil().clamp(1.0, MAX_SVG_PX) as u32;
                 let img =
