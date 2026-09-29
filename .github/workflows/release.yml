@@ -197,3 +197,41 @@ jobs:
           reply=$(echo "$init" | docker run -i --rm "ghcr.io/keyline-dev/keyline-mcp:${GITHUB_REF_NAME#v}" | head -n 1)
           echo "$reply"
           echo "$reply" | grep -q '"serverInfo"'
+
+  # The official MCP registry, last: a version can't be published twice.
+  # Signed in as this repo through GitHub OIDC, so no secret.
+  registry:
+    needs: [plugin, desktop, docker]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: server.json for this release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=${GITHUB_REF_NAME#v}
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern SHA256SUMS
+          sha=$(grep " keyline-mcp-$v.mcpb\$" SHA256SUMS | cut -d' ' -f1)
+          image=ghcr.io/keyline-dev/keyline-mcp:$v
+          jq --arg v "$v" --arg sha "$sha" --arg image "$image" \
+            --arg mcpb "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/keyline-mcp-$v.mcpb" '
+            .version = $v
+            | .packages |= map(
+                if .registryType == "mcpb" then .identifier = $mcpb | .fileSha256 = $sha
+                else .identifier = $image end)' server.json > out.json
+          # The registry checks the image's label, so it must be public.
+          if ! docker manifest inspect "$image" > /dev/null 2>&1; then
+            echo "::warning::$image isn't public yet: listing the .mcpb only. Make the package public in the org's package settings."
+            jq '.packages |= map(select(.registryType != "oci"))' out.json > server.json
+          else
+            mv out.json server.json
+          fi
+          cat server.json
+      - name: Publish
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish

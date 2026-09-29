@@ -1,0 +1,28 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.keyline-dev/keyline",
+  "title": "keyline",
+  "description": "Design engine for agents: layouts, ads and posts rendered to images and video at every size",
+  "websiteUrl": "https://keyline.dev",
+  "repository": {
+    "url": "https://github.com/keyline-dev/keyline",
+    "source": "github"
+  },
+  "version": "0.5.0",
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/keyline-dev/keyline/releases/download/v0.5.0/keyline-mcp-0.5.0.mcpb",
+      "fileSha256": "set by the release workflow",
+      "transport": { "type": "stdio" }
+    },
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/keyline-dev/keyline-mcp:0.5.0",
+      "runtimeArguments": [
+        { "type": "named", "name": "-v", "value": "keyline:/data" }
+      ],
+      "transport": { "type": "stdio" }
+    }
+  ]
+}
