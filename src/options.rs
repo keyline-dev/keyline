@@ -86,6 +86,10 @@ impl Options {
         let mut o = Options::default();
         let mut args = args.into_iter().peekable();
         while let Some(arg) = args.next() {
+            // A client's setting left empty can arrive as "".
+            if arg.is_empty() {
+                continue;
+            }
             if !arg.starts_with('-') {
                 o.operands.push(arg);
                 continue;
@@ -99,7 +103,9 @@ impl Options {
                 // list (Claude Desktop's folder picker); none is fine.
                 o.allow_read.extend(inline.map(PathBuf::from));
                 while let Some(dir) = args.next_if(|a| !a.starts_with('-')) {
-                    o.allow_read.push(dir.into());
+                    if !dir.is_empty() {
+                        o.allow_read.push(dir.into());
+                    }
                 }
                 continue;
             }
@@ -181,9 +187,11 @@ mod tests {
         let o = parse(&[
             "--allow-read",
             "/a",
+            "",
             "/b",
             "--no-motion=false",
             "--allow-read",
+            "",
         ])
         .unwrap();
         assert_eq!(o.allow_read, [PathBuf::from("/a"), PathBuf::from("/b")]);

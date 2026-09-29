@@ -1,0 +1,48 @@
+{
+  "manifest_version": "0.3",
+  "name": "keyline",
+  "display_name": "keyline",
+  "version": "0.5.0",
+  "description": "Design with Claude: layouts, ads and social posts rendered to PNG, JPEG, WebP, PDF, APNG, GIF and video at every size.",
+  "long_description": "keyline is a design engine Claude drives over MCP. Claude builds a scene of text, images, shapes and layout; keyline measures it (text that doesn't fit, layers cut off, low contrast), so Claude fixes problems before rendering, and renders every size you ask for. No browser; one native binary.",
+  "author": {
+    "name": "keyline",
+    "url": "https://keyline.dev"
+  },
+  "homepage": "https://keyline.dev",
+  "documentation": "https://github.com/keyline-dev/keyline#readme",
+  "support": "https://github.com/keyline-dev/keyline/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/keyline-dev/keyline"
+  },
+  "license": "PolyForm-Shield-1.0.0",
+  "keywords": ["design", "images", "ads", "social media", "render"],
+  "server": {
+    "type": "binary",
+    "entry_point": "server/keyline-mcp",
+    "mcp_config": {
+      "command": "${__dirname}/server/keyline-mcp",
+      "args": ["--no-motion=${user_config.stills_only}", "--allow-read", "${user_config.folders}"]
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin"]
+  },
+  "user_config": {
+    "folders": {
+      "type": "directory",
+      "title": "Folders keyline may read",
+      "description": "Claude can add images and templates from these folders by path, without passing their bytes through the chat.",
+      "multiple": true,
+      "required": false
+    },
+    "stills_only": {
+      "type": "boolean",
+      "title": "Stills only",
+      "description": "Leave animation and video out of the tools: fewer tokens per message.",
+      "default": false,
+      "required": false
+    }
+  }
+}

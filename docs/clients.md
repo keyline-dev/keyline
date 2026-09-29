@@ -41,7 +41,9 @@ Add `--scope user` to use it in every project. ([guide](https://code.claude.com/
 
 ### Claude Desktop
 
-Settings → Developer → Edit Config opens `claude_desktop_config.json`; add:
+On a Mac with Apple silicon, download `keyline-mcp-<version>.mcpb` from the [latest release](https://github.com/keyline-dev/keyline/releases/latest) and double-click it: Claude Desktop installs the extension, binary included. Its settings pick the folders keyline may read and whether to leave motion out.
+
+Or add the server yourself: Settings → Developer → Edit Config opens `claude_desktop_config.json`; add:
 
 ```json
 {

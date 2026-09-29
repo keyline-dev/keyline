@@ -22,9 +22,15 @@ jobs:
       - name: The tag matches Cargo.toml and the plugin
         run: |
           want="v$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
-          plugin="v$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' plugin/.claude-plugin/plugin.json | head -n 1)"
-          if [ "$GITHUB_REF_NAME" != "$want" ] || [ "$plugin" != "$want" ]; then
-            echo "::error::tag $GITHUB_REF_NAME, Cargo.toml $want, plugin.json $plugin: make them agree"
+          for f in plugin/.claude-plugin/plugin.json mcpb/manifest.json; do
+            got="v$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$f" | head -n 1)"
+            if [ "$got" != "$want" ]; then
+              echo "::error::$f says $got, Cargo.toml $want: make them agree"
+              exit 1
+            fi
+          done
+          if [ "$GITHUB_REF_NAME" != "$want" ]; then
+            echo "::error::tag $GITHUB_REF_NAME, but Cargo.toml says $want: bump the version first"
             exit 1
           fi
 
@@ -75,16 +81,30 @@ jobs:
       id-token: write
       attestations: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
           path: dist
-      - name: Checksums
+      - name: Flatten
         working-directory: dist
         run: |
           find . -mindepth 2 -type f -exec mv {} . \;
           find . -mindepth 1 -type d -empty -delete
-          sha256sum *.deb *.tar.gz > SHA256SUMS
+      # Claude Desktop's extension: the macOS binary with mcpb/manifest.json.
+      - name: Claude Desktop bundle (.mcpb)
+        run: |
+          name=keyline-mcp-$GITHUB_REF_NAME-macos-arm64
+          mkdir -p bundle/server
+          tar xzf "dist/$name.tar.gz" -C "$RUNNER_TEMP"
+          mv "$RUNNER_TEMP/$name/keyline-mcp" bundle/server/
+          cp mcpb/manifest.json LICENSE bundle/
+          npx -y @anthropic-ai/mcpb validate bundle/manifest.json
+          npx -y @anthropic-ai/mcpb pack bundle "dist/keyline-mcp-${GITHUB_REF_NAME#v}.mcpb"
+      - name: Checksums
+        working-directory: dist
+        run: |
+          sha256sum *.deb *.tar.gz *.mcpb > SHA256SUMS
           cat SHA256SUMS
       - uses: actions/attest-build-provenance@v2
         with:
@@ -114,5 +134,23 @@ jobs:
           reply=$(echo "$init" | env -i HOME="$HOME" PATH=/usr/bin:/bin \
             CLAUDE_PLUGIN_ROOT="$PWD/plugin" CLAUDE_PLUGIN_DATA="$RUNNER_TEMP/plugin-data" \
             sh plugin/scripts/launch.sh --data "$RUNNER_TEMP/data" | head -n 1)
+          echo "$reply"
+          echo "$reply" | grep -q '"serverInfo"'
+
+  # The Claude Desktop bundle as Claude Desktop unpacks and starts it, with
+  # no folders picked and motion on.
+  desktop:
+    needs: release
+    runs-on: macos-latest
+    steps:
+      - name: The bundle's server starts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern '*.mcpb' --pattern SHA256SUMS
+          shasum -a 256 --check --ignore-missing SHA256SUMS
+          unzip -q keyline-mcp-*.mcpb -d bundle
+          init='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}'
+          reply=$(echo "$init" | bundle/server/keyline-mcp --no-motion=false --allow-read "" --data "$RUNNER_TEMP/data" | head -n 1)
           echo "$reply"
           echo "$reply" | grep -q '"serverInfo"'
