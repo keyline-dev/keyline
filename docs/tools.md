@@ -121,7 +121,7 @@ video off: no ffmpeg (install it or set KEYLINE_MCP_FFMPEG); apng, gif work
 | Input | Type | Default | Meaning |
 |---|---|---|---|
 | `sceneId` | string, required | | The scene |
-| `url` | string | | Public http(s) URL of a PNG, JPEG, SVG or video clip |
+| `url` | string | | Public http(s) URL of a PNG, JPEG, SVG or video clip, or a `data:` URL (an inline SVG) |
 | `path` | string | | Or a local file in an allowed folder; offered only with [`--allow-read`](#command-line-flags), and its description names the folders |
 | `base64` | string | | Or a still image's bytes, base64. They pass through the model, so keep this for small files |
 | `id` | string | generated | The id layers use to refer to it; an existing id is replaced |

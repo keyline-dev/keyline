@@ -354,7 +354,7 @@ A size can rearrange the whole grid by changing only its templates in `media`.
 | `fontFamily` | string | Inter | Inter (bundled), any [Google Fonts](https://fonts.google.com) family (downloaded on first use), or a font the server loads |
 | `color` | Color | black | Text color; `fill` can paint it with a gradient, image or pattern instead |
 | `textAlign` | `left`, `center`, `right`, `justify` | `left` | |
-| `textAlignVertical` | `top`, `center`, `bottom` | `center` in a box with a height, else `top` | Within the box |
+| `textAlignVertical` | `top`, `center` (or `middle`), `bottom` | `center` in a box with a height, else `top` | Within the box |
 | `lineHeight` | number | the font's own line spacing | × `fontSize`; a value above 4 is an error (px was likely meant) |
 | `letterSpacing` | px | 0 | |
 | `textTransform` | `uppercase`, `lowercase`, `capitalize` | none | |
@@ -417,7 +417,7 @@ Frames, shapes, images, text and icons take the same paint fields.
 | Paint | Example |
 |---|---|
 | Color | `"#D0202E"`, `"rgba(208, 32, 46, 0.5)"`, a CSS name, or `{"color": "$red", "opacity": 0.5}` |
-| Gradient | `{"gradient": {"type": "radial", "stops": ["#0000", "#000C"]}}`, or written flat: `{"type": "linear", "angle": 180, "stops": […]}` |
+| Gradient | `{"gradient": {"type": "radial", "stops": ["#0000", "#000C"]}}`, or written flat: `{"type": "linear", "angle": 180, "stops": […]}`, or as a CSS string: `"linear-gradient(180deg, #fff 0%, #fff0 100%)"` (`radial-gradient` too, centered) |
 | Image | `{"image": "photo", "fit": "cover", "focus": [0.5, 0.3], "filter": {"grayscale": 1}}`, with the [image](#image) fields |
 | Pattern | `{"pattern": "dots", "color": "#0002", "size": 12}` |
 | Grain | `{"noise": 0.08, "seed": 1}` |

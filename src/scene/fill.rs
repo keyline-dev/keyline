@@ -279,9 +279,14 @@ impl<'de> Deserialize<'de> for Paint {
             r.map_err(|e| D::Error::custom(format!("{what} fill: {e}")))
         };
         match &v {
-            Value::String(s) => Color::parse(s)
-                .map(Paint::color)
-                .ok_or_else(|| D::Error::custom(format!("bad color {s}"))),
+            Value::String(s) => match super::gradient::from_css(s) {
+                Some(g) => serde_json::from_value(serde_json::json!({ "gradient": g }))
+                    .map(Paint::Gradient)
+                    .map_err(|e| D::Error::custom(format!("{s}: {e}"))),
+                None => Color::parse(s)
+                    .map(Paint::color)
+                    .ok_or_else(|| D::Error::custom(format!("bad color {s}"))),
+            },
             // A gradient written flat, `{type, angle, stops}`, as CSS and
             // Figma put it: every run of the benchmark guessed this first.
             Value::Object(o) if o.contains_key("stops") && !o.contains_key("gradient") => {
@@ -314,6 +319,40 @@ impl<'de> Deserialize<'de> for Paint {
 mod tests {
     use super::{Paint, PatternKind};
     use serde_json::json;
+
+    #[test]
+    fn css_gradient_strings_are_gradients() {
+        // What every recreate run wrote for a fade.
+        let css = |s: &str| serde_json::from_value::<Paint>(json!(s)).unwrap();
+        let obj = |v| serde_json::from_value::<Paint>(v).unwrap();
+        assert_eq!(
+            css("linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0) 100%)"),
+            obj(json!({"type": "linear", "angle": 180,
+                "stops": [{"color": "#fff", "offset": 0}, {"color": "#FFFFFF00", "offset": 1}]}))
+        );
+        assert_eq!(
+            css("linear-gradient(to right, red, blue)"),
+            obj(json!({"type": "linear", "angle": 90, "stops": ["red", "blue"]}))
+        );
+        assert_eq!(
+            css("linear-gradient(red, blue)"),
+            obj(json!({"type": "linear", "stops": ["red", "blue"]}))
+        );
+        assert_eq!(
+            css("radial-gradient(circle at center, #000 40%, transparent)"),
+            obj(
+                json!({"type": "radial", "stops": [{"color": "#000", "offset": 0.4}, "transparent"]})
+            )
+        );
+        let Paint::Gradient(g) = css("linear-gradient(to bottom right, #000, #fff)") else {
+            panic!("not a gradient")
+        };
+        assert_eq!(g.gradient.angle, Some(135.0));
+        let e = serde_json::from_value::<Paint>(json!("linear-gradient(90deg, nope, #fff)"))
+            .unwrap_err()
+            .to_string();
+        assert!(e.contains("linear-gradient(90deg, nope, #fff): "), "{e}");
+    }
 
     #[test]
     fn flat_gradients_as_agents_write_them_are_gradients() {

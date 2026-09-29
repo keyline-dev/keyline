@@ -503,3 +503,35 @@ async fn the_scene_itself_is_edited_like_a_layer() {
     assert!(e.contains("the scene takes background, sizes"), "{e}");
     mcp.stop().await;
 }
+
+#[tokio::test]
+async fn an_inline_svg_comes_as_a_data_url() {
+    let mcp = Mcp::start("data-url").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 100, "height": 100, "sizes": ["100x100"]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    // As agents write it: unencoded text, `#` as %23.
+    let svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' \
+height='24'><rect width='24' height='24' fill='%23D0202E'/></svg>";
+    let reply = mcp
+        .ok("asset_add", json!({"sceneId": id, "id": "dot", "url": svg}))
+        .await;
+    assert!(reply.starts_with("dot 24×24"), "{reply}");
+    mcp.ok(
+        "layer_add",
+        json!({"sceneId": id, "layers": [{"type": "image", "asset": "dot", "width": 100, "height": 100}]}),
+    )
+    .await;
+    let rendered = mcp.ok("render", json!({"sceneId": id})).await;
+    let path = rendered.lines().next().unwrap().split_once(' ').unwrap().1;
+    let (_, px) = common::golden::rgba(&std::fs::read(path).unwrap());
+    assert_eq!(px[..4], [0xD0, 0x20, 0x2E, 255]);
+    mcp.stop().await;
+}

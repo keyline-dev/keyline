@@ -1,5 +1,6 @@
 //! Downloads assets from public http(s) URLs. Blocks `file://`, localhost and
-//! private networks, and re-checks every redirect hop.
+//! private networks, and re-checks every redirect hop. A `data:` URL is
+//! decoded in place.
 
 use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
@@ -11,11 +12,15 @@ use reqwest::Url;
 pub const MAX_ASSET_BYTES: usize = 50 * 1024 * 1024;
 const MAX_REDIRECTS: usize = 5;
 
-/// Downloads a public http(s) URL, re-checking every redirect hop.
+/// Downloads a public http(s) URL, re-checking every redirect hop, or
+/// decodes a `data:` URL.
 ///
 /// # Errors
 /// Non-http(s) or non-public URLs, HTTP errors, oversized bodies, too many redirects.
 pub async fn fetch(url: &str) -> Result<Vec<u8>> {
+    if let Some(data) = url.strip_prefix("data:") {
+        return data_url(data);
+    }
     let mut url = Url::parse(url).context("bad URL")?;
     for _ in 0..=MAX_REDIRECTS {
         let addr = public_addr(&url).await?;
@@ -57,6 +62,44 @@ pub async fn fetch(url: &str) -> Result<Vec<u8>> {
         return Ok(body);
     }
     bail!("too many redirects")
+}
+
+/// The bytes of a `data:` URL (after `data:`): base64, or percent-encoded
+/// text such as an inline SVG.
+fn data_url(data: &str) -> Result<Vec<u8>> {
+    use base64::Engine as _;
+    let (meta, body) = data
+        .split_once(',')
+        .ok_or_else(|| anyhow!("data: URL needs a comma before its data"))?;
+    let bytes = if meta.ends_with(";base64") {
+        base64::engine::general_purpose::STANDARD
+            .decode(body.trim())
+            .context("bad base64 in data: URL")?
+    } else {
+        let mut out = Vec::with_capacity(body.len());
+        let mut rest = body.as_bytes();
+        while let Some((&b, tail)) = rest.split_first() {
+            let hex = tail
+                .get(..2)
+                .and_then(|h| std::str::from_utf8(h).ok())
+                .and_then(|h| u8::from_str_radix(h, 16).ok());
+            match (b, hex) {
+                (b'%', Some(v)) => {
+                    out.push(v);
+                    rest = &tail[2..];
+                }
+                _ => {
+                    out.push(b);
+                    rest = tail;
+                }
+            }
+        }
+        out
+    };
+    if bytes.len() > MAX_ASSET_BYTES {
+        bail!("asset larger than {} MB", MAX_ASSET_BYTES >> 20);
+    }
+    Ok(bytes)
 }
 
 /// Resolves the URL's host and returns an address only if it's public.
@@ -119,6 +162,22 @@ fn is_public(ip: IpAddr) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn data_urls_decode_in_place() {
+        assert_eq!(
+            data_url("image/svg+xml;utf8,<svg fill=\"%23fff\"/>").unwrap(),
+            b"<svg fill=\"#fff\"/>"
+        );
+        assert_eq!(data_url("text/plain;base64,aGk=").unwrap(), b"hi");
+        assert_eq!(data_url("text/plain,100%").unwrap(), b"100%");
+        assert!(
+            data_url("image/png")
+                .unwrap_err()
+                .to_string()
+                .contains("comma")
+        );
+    }
 
     #[test]
     fn private_and_local_addresses_are_blocked() {

@@ -23,3 +23,6 @@ vocab-css3-3	52e6d64+dirty	claude-opus-5[1m]	0.447	9	119	8	11594	1	10200	5132	14
 vocab-final-1	52e6d64+dirty	claude-opus-5[1m]	0.459	11	105	10	11998	2	8349	4544	18452	128239	portrait 24, wide 20, sky 8	0
 vocab-final-2	52e6d64+dirty	claude-opus-5[1m]	0.411	10	104	9	14036	1	8774	3088	13415	111276	portrait 22, wide 19, sky 11	0
 vocab-final-3	52e6d64+dirty	claude-opus-5[1m]	0.511	10	151	9	11528	2	10898	7314	17212	129462	portrait 20, wide 17, sky 8	0
+wrap-1	2df8775+dirty	claude-opus-5[1m]	0.396	7	98	6	8460	1	7969	4926	16153	66747	portrait 24, wide 22, sky 11	0
+wrap-2	2df8775+dirty	claude-opus-5[1m]	0.581	9	145	8	18168	2	13380	4547	18200	125560	portrait 22, wide 20, sky 10	0
+wrap-3	2df8775+dirty	claude-opus-5[1m]	0.452	13	106	12	14036	1	8668	4567	15318	160311	portrait 24, wide 20, sky 11	0

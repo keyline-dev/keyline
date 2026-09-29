@@ -1,0 +1,114 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×900
+portrait 1080×1350
+ root frame 0,0 1080×1350
+  headBlock frame 0,0 1080×273
+   eyebrowRow frame 64,56 952×29
+    eyebrowRule rect 64,68 56×6
+    eyebrow text 134,56 429×29 24px
+   headline text 64,105 952×134 62px 2L
+  photoBand image 0,295 1080×330 cover crop 46%h
+  candidates frame 0,648 1080×186
+   cand1 frame 56,688 304×106
+    cand1Name text 56,688 304×44 40px
+    cand1Rule rect 174,746 68×5
+    cand1Role text 56,765 304×29 24px
+   cand2 frame 388,688 304×106
+    cand2Name text 388,688 304×44 40px
+    cand2Rule rect 506,746 68×5
+    cand2Role text 388,765 304×29 24px
+   cand3 frame 720,688 304×106
+    cand3Name text 720,688 304×44 40px
+    cand3Rule rect 838,746 68×5
+    cand3Role text 720,765 304×29 24px
+  ctaBar frame 0,856 1080×119
+   mailIcon image 273,888 70×55 contain
+   ctaText text 371,886 436×59 54px
+  steps frame 0,998 1080×242
+   step1 frame 64,1038 952×44
+    check1 image 64,1038 44×44 contain
+    step1Text text 130,1039 886×42 34px
+   step2 frame 64,1104 952×44
+    check2 image 64,1104 44×44 contain
+    step2Text text 130,1105 886×42 34px
+   step3 frame 64,1170 952×44
+    check3 image 64,1170 44×44 contain
+    step3Text text 130,1171 886×42 34px
+  footBlock frame 0,1262 1080×88
+   footRule rect 56,1262 968×3
+   footText text 56,1281 968×29 22px
+wide 1200×1000
+ root frame 0,0 1200×1000
+  headBlock frame 0,0 1200×242
+   eyebrowRow frame 68,39 1064×25
+    eyebrowRule rect 68,49 48×5
+    eyebrow text 128,39 364×25 20px
+   headline text 68,78 1064×140 65px 2L
+  photoBand image 0,243 1200×213 cover crop 69%h
+  candidates frame 0,458 1200×163
+   cand1 frame 68,490 332×98
+    cand1Name text 68,490 332×43 39px
+    cand1Rule rect 205,545 58×4
+    cand1Role text 68,561 332×27 22px
+   cand2 frame 434,490 332×98
+    cand2Name text 434,490 332×43 39px
+    cand2Rule rect 571,545 58×4
+    cand2Role text 434,561 332×27 22px
+   cand3 frame 800,490 332×98
+    cand3Name text 800,490 332×43 39px
+    cand3Rule rect 937,545 58×4
+    cand3Role text 800,561 332×27 22px
+  ctaBar frame 0,622 1200×98
+   mailIcon image 373,648 60×47 contain
+   ctaText text 456,646 371×50 46px
+  steps frame 0,722 1200×199
+   step1 frame 68,753 1064×38
+    check1 image 68,753 37×37 contain
+    step1Text text 124,753 1008×38 31px
+   step2 frame 68,808 1064×38
+    check2 image 68,808 37×37 contain
+    step2Text text 124,808 1008×38 31px
+   step3 frame 68,863 1064×38
+    check3 image 68,863 37×37 contain
+    step3Text text 124,863 1008×38 31px
+  footBlock frame 0,923 1200×77
+   footRule rect 48,923 1105×3
+   footText text 48,939 1105×27 20px
+sky 300×600
+ root frame 0,0 300×600
+  headBlock frame 0,0 300×94
+   eyebrowRow frame 17,20 266×12
+    eyebrowRule rect 17,24 20×2
+    eyebrow text 40,20 155×12 10px
+   headline text 17,39 266×44 20px 2L
+  photoBand image 0,111 300×179 cover crop 6%w
+  candidates frame 0,307 300×66
+   cand1 frame 12,322 88×35
+    cand1Name text 12,322 88×14 12px
+    cand1Rule rect 44,340 24×2
+    cand1Role text 12,346 88×11 10px
+   cand2 frame 106,322 88×35
+    cand2Name text 106,322 88×14 12px
+    cand2Rule rect 138,340 24×2
+    cand2Role text 106,346 88×11 10px
+   cand3 frame 200,322 88×35
+    cand3Name text 200,322 88×14 12px
+    cand3Rule rect 232,340 24×2
+    cand3Role text 200,346 88×11 10px
+  ctaBar frame 0,390 300×41
+   mailIcon image 69,401 24×18 contain
+   ctaText text 99,401 132×19 17px
+  steps frame 0,448 300×90
+   step1 frame 16,463 269×16
+    check1 image 16,463 16×16 contain
+    step1Text text 38,464 247×15 12px
+   step2 frame 16,488 269×16
+    check2 image 16,488 16×16 contain
+    step2Text text 38,488 247×15 12px
+   step3 frame 16,512 269×16
+    check3 image 16,512 16×16 contain
+    step3Text text 38,512 247×15 12px
+  footBlock frame 0,554 300×46
+   footRule rect 14,554 272×1
+   footText text 14,559 272×26 10px 2L

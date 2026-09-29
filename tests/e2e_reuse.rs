@@ -174,10 +174,12 @@ async fn flat_gradients_and_tokens_in_spans_work_as_agents_write_them() {
                 "tokens": {"red": "#D0202E"},
                 "layers": [
                     {"type": "rect", "width": 400, "height": 80, "fill": [{"type": "linear", "angle": 180, "stops": [{"color": "#FFFFFF", "offset": 0}, {"color": "#FFFFFF00", "offset": 1}]}]},
-                    {"id": "t", "type": "text", "text": "Proven <span style=\"color:$red\">RESULTS</span>"}]}),
+                    {"id": "t", "type": "text", "text": "Proven <span style=\"color:$red\">RESULTS</span>"},
+                    {"id": "fade", "type": "rect", "y": 80, "width": 400, "height": 40,
+                     "fill": "linear-gradient(180deg, #fff 0%, rgba(255,255,255,0) 100%)"}]}),
         )
         .await;
-    assert!(reply.starts_with("added rect1,t v1 ok"), "{reply}");
+    assert!(reply.starts_with("added rect1,t,fade v1 ok"), "{reply}");
     let e = mcp
         .call(
             "layer_add",

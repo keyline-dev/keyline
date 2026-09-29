@@ -148,7 +148,8 @@ pub enum TextWrap {
 pub enum VAlign {
     /// At the top.
     Top,
-    /// Centered.
+    /// Centered; `middle` (CSS `vertical-align`) is read as this.
+    #[serde(alias = "middle")]
     Center,
     /// At the bottom.
     Bottom,
@@ -259,7 +260,9 @@ mod tests {
     fn vertical_alignment_is_top_center_or_bottom() {
         let v: VAlign = serde_json::from_value(json!("center")).unwrap();
         assert_eq!(v, VAlign::Center);
-        assert!(serde_json::from_value::<VAlign>(json!("middle")).is_err());
+        // CSS's word, which agents write: 2 of 3 recreate runs failed on it.
+        let m: VAlign = serde_json::from_value(json!("middle")).unwrap();
+        assert_eq!(m, VAlign::Center);
         assert_eq!(serde_json::to_value(v).unwrap(), "center");
     }
 

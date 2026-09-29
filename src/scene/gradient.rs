@@ -128,6 +128,81 @@ impl Gradient {
     }
 }
 
+/// A CSS `linear-gradient(…)` or `radial-gradient(…)` as the gradient's
+/// fields: every recreate run wrote its fade this way. `None` for other
+/// strings. A radial's shape and position are dropped (it's centered).
+pub(super) fn from_css(s: &str) -> Option<serde_json::Value> {
+    let s = s.trim();
+    let (kind, inner) = [
+        ("linear", "linear-gradient("),
+        ("radial", "radial-gradient("),
+    ]
+    .into_iter()
+    .find_map(|(k, p)| Some((k, s.strip_prefix(p)?.strip_suffix(')')?)))?;
+    // Split at the commas outside `rgba(…)`.
+    let (mut parts, mut depth, mut start) = (Vec::new(), 0_i32, 0);
+    for (i, ch) in inner.char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => depth -= 1,
+            ',' if depth == 0 => {
+                parts.push(inner[start..i].trim());
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(inner[start..].trim());
+    let mut angle = None;
+    let first = parts.first()?;
+    if kind == "linear" {
+        angle = first
+            .strip_suffix("deg")
+            .and_then(|a| a.trim().parse::<f32>().ok());
+        if angle.is_none() {
+            angle = first.strip_prefix("to ").map(|to| {
+                let has = |w: &str| to.split_whitespace().any(|t| t == w);
+                let (x, y) = (
+                    if has("right") {
+                        1.0
+                    } else if has("left") {
+                        -1.0
+                    } else {
+                        0.0
+                    },
+                    if has("bottom") {
+                        1.0
+                    } else if has("top") {
+                        -1.0
+                    } else {
+                        0.0
+                    },
+                );
+                // CSS angles: 0 up, clockwise.
+                f32::atan2(x, -y).to_degrees().rem_euclid(360.0)
+            });
+        }
+    }
+    let skip = usize::from(
+        angle.is_some()
+            || (kind == "radial" && Color::parse(first).is_none() && !first.contains('(')),
+    );
+    let stops: Vec<serde_json::Value> = parts[skip..]
+        .iter()
+        .map(|p| match p.rsplit_once(' ') {
+            Some((c, at)) if at.ends_with('%') => {
+                serde_json::json!({"color": c.trim(), "offset": at})
+            }
+            _ => serde_json::json!(p),
+        })
+        .collect();
+    let mut g = serde_json::json!({"type": kind, "stops": stops});
+    if let Some(a) = angle {
+        g["angle"] = a.into();
+    }
+    Some(g)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Gradient, GradientKind};
