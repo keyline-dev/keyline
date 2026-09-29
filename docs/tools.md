@@ -7,7 +7,7 @@ keyline-mcp exposes six tools. This page lists each tool's inputs and the exact 
 - The tools: [`scene_create`](#scene_create) · [`asset_add`](#asset_add) · [`layer_add`](#layer_add) · [`layer_update`](#layer_update) · [`scene_describe`](#scene_describe) · [`render`](#render)
 - [Templates and variants](#templates-and-variants)
 - [Output formats](#output-formats)
-- [Server configuration](#server-configuration): flags, environment, data, fonts, ffmpeg
+- [Server configuration](#server-configuration): flags, [rendering without an agent](#rendering-without-an-agent), data, fonts, ffmpeg
 - [Security](#security) · [Limits](#limits) · [Errors](#errors)
 
 | Tool | Does |
