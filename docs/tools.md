@@ -288,6 +288,15 @@ keyline-mcp render campaign.json --out renders/ --size wide --rows rows.json --f
 | `--rows <rows.json>` | none | A JSON list of token values, `[{"headline": "Sale"}, …]`: one render per row, as the tool's `rows` |
 | `--format <format>` | `png` | As the tool's `format` |
 
+In GitHub Actions, the repo is an action that installs a release and runs this on every scene a glob matches, failing the job on a `!` defect:
+
+```yaml
+- uses: keyline-dev/keyline@v0
+  with:
+    scenes: campaigns/*.json   # each scene's files go to renders/<name>/
+    args: --format webp        # any render flags
+```
+
 It may read files in the scene file's folder, and takes the server's flags too (`--allow-read`, `--data`, `--renderer`…). It prints the tool's reply, each problem line first, and exits 1 when any drawn size (of any row) has a `!` defect, so a broken design fails the job; `warn` advisories don't.
 
 ### Data directory

@@ -29,6 +29,11 @@ jobs:
               exit 1
             fi
           done
+          action="v$(sed -n '/^  version:/,/default:/s/.*default: *"\([^"]*\)".*/\1/p' action.yml)"
+          if [ "$action" != "$want" ]; then
+            echo "::error::action.yml's version input defaults to $action, Cargo.toml $want: make them agree"
+            exit 1
+          fi
           if [ "$GITHUB_REF_NAME" != "$want" ]; then
             echo "::error::tag $GITHUB_REF_NAME, but Cargo.toml says $want: bump the version first"
             exit 1
@@ -235,3 +240,32 @@ jobs:
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
           ./mcp-publisher login github-oidc
           ./mcp-publisher publish
+
+  # The GitHub Action as a user's workflow runs it, on the new release;
+  # then the major tag (v0 while keyline is 0.x) moves to this release.
+  action:
+    needs: release
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          scenes: tests/fixtures/action/*.json
+          out: ${{ runner.temp }}/renders
+      - run: ls "$RUNNER_TEMP/renders/flyer/400x200-v0.png" "$RUNNER_TEMP/renders/flyer/square-v0.png"
+        shell: bash
+
+  action-tag:
+    needs: action
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          major=$(echo "$GITHUB_REF_NAME" | cut -d. -f1)
+          git tag -f "$major" "$GITHUB_SHA"
+          git push -f origin "refs/tags/$major"
