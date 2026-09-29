@@ -1,6 +1,6 @@
 # Setting up an MCP client
 
-keyline is one program, `keyline-mcp`, that an MCP client starts and talks to over stdio. Install it first, then add it to your client with one of the blocks below. Each block names the server `keyline`; the client shows its tools as `keyline`'s.
+keyline is one program, `keyline-mcp`, that an MCP client starts and talks to over stdio. Install it first, then add it to your client with one of the blocks below; the [Claude Code plugin](#claude-code) installs it for you. Each block names the server `keyline`; the client shows its tools as `keyline`'s.
 
 ## Install
 
@@ -23,6 +23,15 @@ Check that it runs: `keyline-mcp --help`. If your client can't find it, use its 
 Client config files move between versions, so each section links the client's own guide.
 
 ### Claude Code
+
+Install the plugin, which needs no separate install: it uses `keyline-mcp` from the PATH if it's there, and otherwise downloads the matching release once and checks it against `SHA256SUMS`.
+
+```text
+/plugin marketplace add keyline-dev/keyline
+/plugin install keyline@keyline
+```
+
+Or, with `keyline-mcp` installed, add the server yourself:
 
 ```sh
 claude mcp add keyline -- keyline-mcp

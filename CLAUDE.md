@@ -19,7 +19,7 @@ Server-side image composition engine driven by an AI agent over MCP.
 
 ## Language
 
-Rust only. Stable toolchain, latest edition.
+Rust only. Stable toolchain, latest edition. Packaging and client setup files sit beside the Rust code and are the exception: JSON manifests, workflow YAML, and the plugin's POSIX shell launcher (`plugin/scripts/launch.sh`).
 
 ## License
 

@@ -19,11 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: The tag matches Cargo.toml
+      - name: The tag matches Cargo.toml and the plugin
         run: |
           want="v$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
-          if [ "$GITHUB_REF_NAME" != "$want" ]; then
-            echo "::error::tag $GITHUB_REF_NAME, but Cargo.toml says $want: bump the version first"
+          plugin="v$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' plugin/.claude-plugin/plugin.json | head -n 1)"
+          if [ "$GITHUB_REF_NAME" != "$want" ] || [ "$plugin" != "$want" ]; then
+            echo "::error::tag $GITHUB_REF_NAME, Cargo.toml $want, plugin.json $plugin: make them agree"
             exit 1
           fi
 
@@ -94,3 +95,24 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" --generate-notes dist/*
+
+  # The Claude Code plugin's launcher, run as a user would on each platform:
+  # no keyline-mcp on the PATH, so it downloads this release, checks it
+  # against SHA256SUMS and starts it.
+  plugin:
+    needs: release
+    name: plugin-${{ matrix.runner }}
+    strategy:
+      matrix:
+        runner: [ubuntu-22.04, ubuntu-22.04-arm, macos-latest]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: The launcher downloads, verifies and starts the server
+        run: |
+          init='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}'
+          reply=$(echo "$init" | env -i HOME="$HOME" PATH=/usr/bin:/bin \
+            CLAUDE_PLUGIN_ROOT="$PWD/plugin" CLAUDE_PLUGIN_DATA="$RUNNER_TEMP/plugin-data" \
+            sh plugin/scripts/launch.sh --data "$RUNNER_TEMP/data" | head -n 1)
+          echo "$reply"
+          echo "$reply" | grep -q '"serverInfo"'

@@ -1,0 +1,18 @@
+{
+  "name": "keyline",
+  "version": "0.5.0",
+  "description": "The keyline MCP server: design with your agent, rendered to PNG, JPEG, WebP, PDF, APNG, GIF and video at every size",
+  "author": {
+    "name": "keyline",
+    "url": "https://keyline.dev"
+  },
+  "homepage": "https://keyline.dev",
+  "repository": "https://github.com/keyline-dev/keyline",
+  "license": "LicenseRef-PolyForm-Shield-1.0.0",
+  "keywords": ["design", "images", "mcp", "rendering", "ads"],
+  "mcpServers": {
+    "keyline": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/launch.sh"
+    }
+  }
+}

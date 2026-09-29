@@ -100,11 +100,14 @@ xattr -d com.apple.quarantine /usr/local/bin/keyline-mcp 2>/dev/null || true
 cargo build --release
 ```
 
-**Claude Code:**
+**Claude Code:** the plugin installs everything, downloading the binary if it isn't on your PATH:
 
-```sh
-claude mcp add keyline -- keyline-mcp   # or the path to target/release/keyline-mcp
+```text
+/plugin marketplace add keyline-dev/keyline
+/plugin install keyline@keyline
 ```
+
+Or, with `keyline-mcp` installed: `claude mcp add keyline -- keyline-mcp`.
 
 **Claude Desktop, Cursor, VS Code, Windsurf, Cline and other clients:** [docs/clients.md](docs/clients.md) has a copy-paste setup for each, and how to check a download against the release's `SHA256SUMS`. The server speaks MCP over stdio, so it runs where your MCP client runs. To render on another machine, make the command `ssh that-machine keyline-mcp`.
 
