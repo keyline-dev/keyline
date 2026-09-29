@@ -43,32 +43,25 @@ flowchart LR
     R --> P["PNG, JPEG, WebP, PDF, animated PNG, GIF, MP4 or WebM per size"]
 ```
 
-1. **One master layout.** The scene is designed once, at a master size (say 1080×1350), and lists the target sizes.
-2. **Layouts that adapt.** Frames lay their children out as rows and columns (like CSS flexbox or Figma auto layout) or as a grid, and children size themselves with `hug`, `fill` or a percentage. A row can fall back to a column where it doesn't fit, and `firstFit` draws the first of several alternatives that fits. Free-placed layers follow design-tool constraints (`left`, `right`, `center`, `stretch`, `scale`) or pin to a spot such as `bottom-right`. Each size may have a scale factor, like a design tool's Scale tool, and any layer can change for one size, or for every portrait, landscape, wide or tall size (`at`). It uses no constraint solver: that's where layout systems get slow and agent-written layouts become undebuggable.
-3. **Text that fits its box.** Give text a width and height and the font shrinks to fit (down to `minFontScale`), then ends with an ellipsis. Give it a width only and it wraps and grows down. Give it no box and it's one line.
-4. **GPU by default, deterministic when it matters.** Renders run on the GPU (Metal on macOS, Vulkan on Linux and Windows) and fall back to the CPU when there's none. The CPU path is deterministic, so tests compare it against reference images (allowing for glyph anti-aliasing, which differs slightly between OS versions). Fonts are bundled or downloaded, never taken from the machine.
+1. **One master layout.** A design is written once at a master size and lists its target sizes.
+2. **Layouts that adapt.** Rows, columns, grids and design-tool constraints lay the design out again at every size, with no constraint solver; any layer can change for one size or aspect class.
+3. **Checks, not previews.** Every edit's reply says what's wrong at each size, with the measurement that fixes it.
+4. **GPU by default, deterministic when it matters.** Renders run on the GPU and fall back to the CPU, whose output is exactly repeatable.
+
+**Start here:** [docs/concepts.md](docs/concepts.md) explains the model; [docs/scene.md](docs/scene.md) is the scene format and [docs/tools.md](docs/tools.md) the tools and configuration.
 
 ## LLM-first, and LLM-only
 
-There's no GUI, and no plan for one. Every design decision is judged by one question: *how many tokens does the agent spend to get a correct image?* We measure that with a real model (Claude, through Claude Code) building a real multi-section ad. How the tools keep it low:
+There's no GUI, and no plan for one. Every design decision is judged by one question: *how many tokens does the agent spend to get a correct image?* We measure that with a real model (Claude, through Claude Code) building a real multi-section ad.
 
-- **Few, batched tools.** There are six tools, not one per property. A mutation takes a list of operations and applies them all or none; one call can build a whole ad.
-- **Short replies.** Edits never echo the scene back. They return the changed ids, a version, and `ok` or the problems found.
-- **Defaults left out.** Every field has a documented default and defaults are never sent or stored, so a typical layer is 4–6 fields.
-- **Semantic targets.** Layers are addressed by `role`, so the agent never reads the scene just to find an id, and one edit can hit every layer with that role.
-- **The server measures, and says how to fix it.** Warnings carry the answer, e.g. `!overflow needs 400×124 (one line: 440 wide)` or `!clipped by head: bottom 8px`, so the agent fixes it in one step instead of guessing.
-- **Verification without pixels.** Every edit reply includes three kinds of feedback, for every size:
-
-  | Kind | Example | The agent should |
-  |---|---|---|
-  | Defect | `!overflow`, `!truncated`, `!clipped`, `!hidden`, `!overlaps` | fix it |
-  | Advisory | `warn contrast 2.1:1 (WCAG 4.5)` | judge it |
-  | Fact | `smallest text: portrait 30px, sky 8.4px (footer)` | decide whether it suits the medium |
-
-  `render` also reports how each wrapped, shrunk or cut text was actually drawn. We learned that preview images cost more *and* catch less: Claude approved 7 px text from a 512 px preview, and the server's measurements catch it. So previews are opt-in, and come as one small image of all sizes side by side.
-- **Names, not inventions.** Icons and shapes (ribbons, bursts, blobs…) come by name, and repeated looks are named styles, tokens and components. Before icons, the model spent most of its tokens designing SVG paths in its head; with them, rebuilding a real flyer went from $0.22–0.62 to $0.15–0.19 per run.
-- **Measured, not guessed.** Every change is judged on several real-model runs, since identical runs vary up to 2× in cost. The runs are kept in [bench/](bench/reference-ad/), with prompts, logs and renders.
-- **Taste stays with the model.** The server flags only objective defects. Whether 8 px text is fine print or unreadable depends on where the ad runs, so the server reports the size and the model decides.
+- **Few, batched tools:** six tools, not one per property; one call can build a whole ad.
+- **Short replies:** edits return the changed ids, a version, and `ok` or the problems, never the scene.
+- **Defaults left out:** a typical layer is 4–6 fields.
+- **Semantic targets:** layers are addressed by `role`, so the agent never reads the scene to find an id.
+- **Verification without pixels:** defects to fix, advisories to judge and facts to weigh, each with the measurement that fixes it ([how](docs/concepts.md#checks-defects-advisories-facts)).
+- **Names, not inventions:** icons, shapes, styles, tokens and components by name. Icons alone took rebuilding a real flyer from $0.22–0.62 to $0.15–0.19 per run.
+- **Measured, not guessed:** every change is judged on several real-model runs, kept in [bench/](bench/reference-ad/).
+- **Taste stays with the model:** the server flags only objective defects and reports the rest as facts.
 
 ## Features
 
@@ -124,25 +117,13 @@ claude mcp add keyline-mcp -- keyline-mcp   # or the path to target/release/keyl
 
 The server speaks MCP over stdio, so it runs where your MCP client runs. To render on another machine, make the command `ssh that-machine keyline-mcp`.
 
-**Local files:** to let the agent add images by path (so their bytes never pass through the model, which is far cheaper than base64), start the server with `--allow-read <folder>`, once per folder: `claude mcp add keyline-mcp -- keyline-mcp --allow-read ~/projects/ads`. Without it, paths are refused and `path` isn't offered to the agent at all; with it, the tool names the folders, so the agent knows where it may read. A path is resolved through every symlink before the check, so a link inside the folder can't lead outside it.
+**Local files:** to let the agent add images and templates by path (so their bytes never pass through the model, which is far cheaper than base64), start the server with `--allow-read <folder>`, once per folder: `claude mcp add keyline-mcp -- keyline-mcp --allow-read ~/projects/ads`. Paths are resolved through every symlink before the check.
 
 Then ask your agent for a design: *"Make a vote-by-mail flyer with this photo, in 1080×1350, 1200×1000 and a 300×600 skyscraper."*
 
-| Command-line option | Purpose |
-|---|---|
-| `--allow-read <folder>` | Lets `asset_add` read local files by path inside this folder (repeatable); without it, paths are refused |
-| `--no-motion` | Leaves animation and video out of the tools, for stills-only use (fewer tokens per turn) |
-| `-h`, `--help` | Prints the options and environment variables |
+**Video** needs [ffmpeg](https://ffmpeg.org) (`brew install ffmpeg`, `apt install ffmpeg`), looked up when a call needs it. It's optional: without it, everything else works, animated PNG and GIF included.
 
-| Environment variable | Default | Purpose |
-|---|---|---|
-| `KEYLINE_MCP_DATA` | `~/.keyline-mcp` | Scenes, assets, renders and the web-font cache |
-| `KEYLINE_MCP_FONTS` | none | Extra folder of `.ttf` and `.otf` fonts; `<data>/fonts` is loaded too |
-| `KEYLINE_MCP_RENDERER` | `gpu` | `gpu` renders on the GPU and falls back to the CPU; `cpu` always uses the CPU |
-| `KEYLINE_MCP_FFMPEG` | `ffmpeg` on the PATH | The ffmpeg program, for video clips and MP4/WebM output |
-| `KEYLINE_MCP_ENCODER` | `auto` | H.264 encoder: `auto` (a GPU encoder that works, else `libx264`), `software`, or an ffmpeg encoder name |
-
-**Video** needs [ffmpeg](https://ffmpeg.org) (`brew install ffmpeg`, `apt install ffmpeg`), run as a separate program and looked up when a call needs it. It's optional: without it, everything else works, animated PNG and GIF included.
+Flags (`--allow-read`, `--no-motion`) and environment variables (data directory, fonts, renderer, ffmpeg, encoder) are listed in [docs/tools.md](docs/tools.md#server-configuration) and by `keyline-mcp --help`.
 
 **GPU on a Linux server:** it needs a GPU with Vulkan drivers (NVIDIA's, or Mesa for AMD and Intel); no display is needed. In Docker, pass the GPU through (for NVIDIA: the Container Toolkit, `--gpus all`, with graphics capability) and install `libvulkan1`. Software Vulkan drivers are skipped, since the CPU renderer is faster; without a GPU, renders use the CPU.
 
@@ -165,9 +146,9 @@ A typical call:
 {
   "sceneId": "s5b0a42a5e",
   "layers": [
-    { "id": "headline", "type": "text", "text": "Proven RESULTS for WILLOWMERE Families",
+    { "id": "headline", "type": "text",
       "x": 60, "y": 40, "width": 960, "fontSize": 64, "weight": 800, "align": "center",
-      "color": "#1B2A5C", "ranges": [{ "start": 7, "end": 14, "color": "#D0202E" }],
+      "color": "#1B2A5C", "text": "Proven <span color=\"#D0202E\">RESULTS</span> for WILLOWMERE Families",
       "constraints": { "h": "stretch", "v": "top" } },
     { "type": "image", "asset": "photo", "y": 220, "width": 1080, "height": 460,
       "constraints": { "h": "stretch", "v": "stretch" } },

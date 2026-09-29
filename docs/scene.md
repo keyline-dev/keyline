@@ -1,8 +1,22 @@
 # Scene format
 
-A scene is one JSON document: a master size, the target sizes, shared assets, styles, tokens and components, and a tree of layers. The agent writes it through the MCP tools ([tools.md](tools.md)); the server lays it out for each size and renders it. This page describes every part of it.
+A scene is one JSON document: a master size, the sizes it renders at, its assets, shared tokens, styles and components, and a tree of layers. This page is the reference for every field. The ideas behind it are in [concepts.md](concepts.md), and the tools that write and render it in [tools.md](tools.md).
 
-## Naming rules
+```json
+{
+  "sizes": ["instagram-square", "iab-skyscraper"],
+  "tokens": {"brand": "#D0202E"},
+  "layers": [
+    {"type": "rect", "width": "fill", "height": "fill", "color": "#FFF4E0"},
+    {"type": "text", "text": "Cold Brew <b>Season</b>", "fontSize": 96, "weight": 800,
+     "color": "$brand", "width": "80%", "place": "center", "at": {"tall": {"fontSize": 64}}}
+  ]
+}
+```
+
+**Contents:** [Conventions](#conventions) · [Document](#document) · [Layers](#layers) · [Layout](#layout) · [Text](#text) · [Paint](#paint) · [Reuse](#reuse) · [Motion](#motion) · [Template files](#template-files) · [Validation and limits](#validation-and-limits) · [Example](#example) · [Names](#appendix-names)
+
+## Conventions
 
 Field names follow what models already know:
 
@@ -10,96 +24,242 @@ Field names follow what models already know:
 2. **Short forms.** A compound field has a one-token short form: `fills: "#fff"`, `padding: 24`, `radius: 12`, `stroke: "#000"`.
 3. **Every field has a default, and defaults are omitted** in what the agent sends and in what the server stores.
 4. **Effects are arrays, never `…Enabled` flags.** Absent means off.
-5. **Deterministic.** The same scene renders the same PNG on a given OS version. Random-looking effects (grain, torn edges, rough strokes) take a `seed`.
+5. **Unknown fields are rejected**, with the nearest known name suggested.
+
+### Value types
+
+The tables below use these types.
+
+| Type | Values |
+|---|---|
+| px | A number of pixels at the master size; each size's `scale` scales it |
+| Length | px, `"hug"` (as big as the content), `"fill"` (the free space), or `"40%"` of the parent ([Sizing](#sizing)) |
+| Color | `#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA` or a CSS color name |
+| Paint | A Color, or a gradient, image, pattern or grain object ([Fills](#fills)) |
+| Sides | px for all four, `[vertical, horizontal]`, or `[top, right, bottom, left]` |
+| Point | `[x, y]`, each 0–1 of the box, from its top-left |
+| Seconds | A number of seconds |
+| Degrees | A number of degrees, clockwise |
+| Ease | An easing name ([Easing](#easing)) |
+| Token | `"$name"` in place of any value ([Tokens](#tokens)) |
+
+### Resolution order
+
+A layer's final values are built in this order; each step wins over the one before:
+
+1. **Tokens**, when the layer is written: every `"$name"` becomes the token's value. `text` is replaced only when it is wholly a token's name.
+2. **Components**, for a `use` layer: `{prop}` is filled from the instance's props, and the `use` layer's own fields replace the component root's, field by field.
+3. **Styles**, in the order listed; a later style wins. The layer's own fields win over all styles.
+4. **`at`**, per size: aspect classes broadest first, then the size id.
+
+`at` and `layer_update`'s `set` merge like a JSON merge patch: nested objects (`stack`, `grid`, an object `in`) merge field by field, while lists (`fills`, `ranges`, `children`) and plain values are replaced whole, and `null` resets a field. Styles and a `use` layer's fields replace whole top-level fields.
 
 ## Document
 
-```json
-{
-  "width": 1080, "height": 1350,
-  "sizes": ["instagram-portrait", {"id": "wide", "width": 1200, "height": 1000, "scale": 0.85}, "300x600"],
-  "background": "#FFFFFF",
-  "tokens": {"navy": "#1B2A5C", "red": "#D0202E"},
-  "styles": {"h1": {"fontSize": 64, "weight": 800, "color": "$navy"}},
-  "components": {"step": {"type": "frame", "stack": {"dir": "row", "gap": 16}, "children": ["…"]}},
-  "assets": {"photo": {"sha256": "…", "width": 1600, "height": 900}},
-  "layers": ["…"]
-}
-```
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `sizes` | list of Size | required | The sizes to render ([Sizes](#sizes)) |
+| `width`, `height` | px | the first size's | The master size: the layers are written at this size |
+| `background` | Color | `#FFFFFF` | Canvas color |
+| `tokens` | object | none | Named values, used as `"$name"` ([Tokens](#tokens)) |
+| `styles` | object | none | Named sets of layer fields ([Styles](#styles)) |
+| `components` | object | none | Named layer trees ([Components](#components)) |
+| `assets` | object | none | Images, SVGs and video clips added by `asset_add`, by id: `{sha256, width, height}` |
+| `layers` | list of Layer | none | The layer tree, bottom to top |
+| `duration`, `fps`, `loop` | | a still | [Scene timing](#scene-timing) |
 
-| Field | Meaning | Default |
+### Sizes
+
+A size is an object, a preset name, or `"WxH"` (its id is that string: `"300x600"`).
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `id` | string | required | Its name in replies, file names and `at`; letters, digits, `-` and `_` |
+| `width`, `height` | px | required | Output size |
+| `scale` | number | 1 | Shrinks everything, fonts included, before the layout adapts, like a design tool's Scale tool |
+| `safe` | Sides | none | The part a platform covers, such as a story's UI bars; text there is reported as `!unsafe` |
+
+### Presets
+
+| Preset | Size | Safe area |
 |---|---|---|
-| `width`, `height` | Master size, px: the layers are written at this size | the first size's |
-| `sizes` | Output sizes: `{id, width, height, scale, safe}`, a preset name, or `"WxH"` (its id is that string) | required |
-| `background` | Canvas color | `#FFFFFF` |
-| `tokens` | Named values used as `"$name"` in any field | none |
-| `styles` | Named sets of layer fields, applied by `style` | none |
-| `components` | Named layer trees, placed by `use` layers | none |
-| `assets` | Images, SVGs and video clips added by `asset_add`, stored by content hash | none |
-| `layers` | The layer tree, bottom to top | none |
-| `duration`, `fps`, `loop` | Motion: see [Motion](#motion) | a still |
+| `instagram-portrait` | 1080×1350 | |
+| `instagram-square` | 1080×1080 | |
+| `instagram-story` | 1080×1920 | 250 top, 340 bottom |
+| `facebook-feed` | 1200×628 | |
+| `linkedin-post` | 1200×627 | |
+| `x-post` | 1600×900 | |
+| `youtube-thumbnail` | 1280×720 | |
+| `iab-medium-rectangle` | 300×250 | |
+| `iab-leaderboard` | 728×90 | |
+| `iab-skyscraper` | 160×600 | |
+| `iab-half-page` | 300×600 | |
+| `a4-portrait` | 2480×3508 (300 dpi) | |
 
-A size's `scale` (1) shrinks everything, fonts included, before the layout adapts to the size, like a design tool's Scale tool. `safe` (`[top, right, bottom, left]` px) is the part a platform covers, such as a story's UI bars; text there is reported as `!unsafe`.
+A preset's id is its name.
 
-Presets: `instagram-portrait` 1080×1350, `instagram-square` 1080×1080, `instagram-story` 1080×1920 (safe 250 top, 340 bottom), `facebook-feed` 1200×628, `linkedin-post` 1200×627, `x-post` 1600×900, `youtube-thumbnail` 1280×720, `iab-medium-rectangle` 300×250, `iab-leaderboard` 728×90, `iab-skyscraper` 160×600, `iab-half-page` 300×600, `a4-portrait` 2480×3508 (300 dpi).
+### Aspect classes
+
+With r = width ÷ height of the size:
+
+| Class | When | Examples |
+|---|---|---|
+| `landscape` | r > 1.1 | 1200×628 |
+| `square` | 0.9 ≤ r ≤ 1.1 | 1080×1080 |
+| `portrait` | r < 0.9 | 1080×1350 |
+| `wide` | r ≥ 2 | 728×90 |
+| `tall` | r ≤ 0.5 | 300×600, 160×600 |
+
+A size is in one of the first three and may also be `wide` or `tall`.
 
 ## Layers
 
-| `type` | What it is | Its own fields (defaults) |
-|---|---|---|
-| `frame` | Container with free, stack or grid layout | `children`, `clip` (true), `stack`, `grid` |
-| `text` | Text in a box | see [Text](#text) |
-| `image` | An image in a box | `asset`, `fit` (`fill`), `focus` ([0.5, 0.5]), `crop`, `tileScale` (1), `adjust` |
-| `video` | A video clip in a box, playing in a moving scene | see [Video](#video) |
-| `rect` | Rectangle | |
-| `ellipse` | Ellipse in the box; arcs and rings | `arc {start, end, inner}` (0, 360, 0) |
-| `polygon` | Regular polygon in the box; a star with `innerRadius` | `sides` (3), `innerRadius` (the inner points' share of the outer radius: 0.38 for a classic star, 0.8 for a starburst) |
-| `path` | An SVG path, or a named shape | `d` or `shape`, `fillRule` (`nonzero`), `fitPath` (`contain`) |
-| `line` | From the box's top-left by `width, height` | `color`, `strokeWidth` |
-| `icon` | A named icon | `name`, `set` (`lucide`, or Font Awesome `solid`, `regular`, `brands`), `color`, `strokeWidth` |
-| `spacer` | Flexible empty space in a stack | `minLength` (0) |
-| `firstFit` | Draws the first child that fits (SwiftUI `ViewThatFits`) | `children` |
-| `use` | Instances of a component | `component`, `props`, `each` |
+Every layer has a `type`, the [common fields](#common-fields), and its type's own fields.
 
-Named shapes for `path` (and for shape masks): `ribbon`, `ribbon-banner`, `bubble`, `bubble-round`, `arrow`, `arrow-curved`, `chevron`, `tag`, `arch`, `shield`, `heart`, `cloud`, `wave`, `burst`, `blob-1` … `blob-6`, `brush-stroke`. A named shape is a real path, so every paint applies: a photo in a blob, a gradient ribbon, a dashed speech bubble.
+| `type` | What it is |
+|---|---|
+| [`frame`](#frame) | A container with free, stack or grid layout |
+| [`text`](#text) | Text in a box |
+| [`image`](#image) | An image in a box |
+| [`video`](#video) | A video clip in a box, playing in a moving scene |
+| [`rect`, `ellipse`, `polygon`, `path`, `line`](#shapes) | Shapes |
+| [`icon`](#icon) | A named icon |
+| [`spacer`](#spacer) | Flexible empty space in a stack |
+| [`firstFit`](#firstfit) | Draws the first child that fits |
+| [`use`](#use) | Instances of a component |
 
-Icons: about 5,000 by name, [Lucide](https://lucide.dev) outline icons and [Font Awesome Free](https://fontawesome.com) solid, regular and brand icons. An icon is 24 px tall unless sized.
+### Common fields
 
-### Fields every layer takes
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `id` | string | generated (`text1`, `rect2`, …) | Stable id |
+| `role` | string | none | Semantic name; an edit can target every layer with a role |
+| `parent` | string | top level | (`layer_add` only) The frame to add the layer into |
+| `x`, `y` | px or `"N%"` | 0 | Position in the parent; ignored in a stack or grid |
+| `width`, `height` | Length | by type: text and images size themselves, stack and grid frames hug, others are 100 | Size ([Sizing](#sizing)) |
+| `minWidth`, `maxWidth`, `minHeight`, `maxHeight` | px | none | Clamps, applied last |
+| `aspectRatio` | number | none | Width ÷ height, kept when only one side is set |
+| `constraints` | `{h, v}` | `left`, `top` | How the layer follows its parent in free layout ([Free layout](#free-layout)) |
+| `place`, `inset` | spot, px or `[x, y]` | none | Pins the layer to a spot of its parent ([Free layout](#free-layout)) |
+| `hidden` | boolean | false | Not drawn and takes no space |
+| `opacity` | 0–1 | 1 | The layer and its children as one |
+| `blendMode` | name | `normal` | One of the [blend modes](#blend-modes) |
+| `fills`, `color`, `gradient` | Paint, or a list | by type | [Fills](#fills); `color` and `gradient` are short forms of one fill |
+| `strokes`, `stroke` | Stroke, or a list | none | [Strokes](#strokes) |
+| `shadows` | Shadow, or a list | none | [Shadows](#shadows) |
+| `blur`, `backdropBlur` | px | 0 | [Blur](#blur) |
+| `radius` | px, `[tl, tr, br, bl]` or `"full"` | 0 | Corners; `"full"` is a capsule at every size |
+| `mask` | Mask | none | [Masks](#masks) |
+| `edges` | Edges | none | [Edges](#edges) |
+| `rotation` | Degrees | 0 | About the box center |
+| `scale`, `offset`, `skew`, `flipX`, `flipY` | number, `[x, y]` px, `[x, y]` Degrees, boolean, boolean | 1, [0, 0], [0, 0], false, false | Visual transforms after layout, about the box center; they never move other layers |
+| `style` | string or list | none | [Styles](#styles) applied in order |
+| `at` | object | none | Changes for one size or aspect class ([Per size](#per-size)) |
+| `in`, `out`, `animate`, `stagger`, `split` | | none | [Motion](#motion) |
+| `shot` | Shot | none | Makes a top-level frame a [shot](#shots-and-transitions) |
 
-| Field | Meaning | Default |
-|---|---|---|
-| `id` | Stable id | generated (`text1`, `rect2`, …) |
-| `role` | Semantic name; an edit can target every layer with a role | none |
-| `parent` | (`layer_add` only) The frame to add the layer into | top level |
-| `x`, `y` | Position in the parent, px or `"25%"`; ignored in a stack or grid | 0 |
-| `width`, `height` | px, `"hug"` (fit the content), `"fill"` (take the free space), or `"40%"` of the parent | by type: text and images size themselves, stack and grid frames hug, others are 100 |
-| `minWidth`, `maxWidth`, `minHeight`, `maxHeight` | Clamps, px | none |
-| `aspectRatio` | Width ÷ height, kept when only one side is set | none |
-| `constraints` | How the layer follows its parent in free layout: `{h: left\|right\|center\|stretch\|scale, v: top\|bottom\|center\|stretch\|scale}` | left, top |
-| `place`, `inset` | Pins to one of nine spots of the parent (`"top-left"` … `"center"` … `"bottom-right"`) at `inset` px (or `[x, y]`) from the edges, at every size | none |
-| `hidden` | Not drawn and takes no space | false |
-| `opacity` | 0–1, the layer and its children as one | 1 |
-| `blendMode` | One of the 16 CSS blend modes | `normal` |
-| `fills`, `strokes`, `shadows` | See [Paint](#paint) | by type |
-| `blur`, `backdropBlur` | Blur of the layer, and of what's behind it within its shape, px | 0 |
-| `radius` | Corners: px, `[tl, tr, br, bl]`, or `"full"` (a capsule at every size) | 0 |
-| `mask` | See [Masks](#masks) | none |
-| `edges` | Torn sides: `{sides, depth, seed}` | none |
-| `rotation` | Degrees, clockwise, about the box center | 0 |
-| `scale`, `offset`, `skew`, `flipX`, `flipY` | Visual transforms after layout, about the box center; they never move other layers | 1, [0, 0], [0, 0], false, false |
-| `style` | A style name, or a list applied in order; the layer's own fields win | none |
-| `at` | Changes for one size or aspect class, see [Per size](#per-size) | none |
-| `in`, `out`, `animate`, `stagger`, `split` | Motion, see [Motion](#motion) | none |
-| `shot` | Makes a top-level frame a shot, see [Shots and transitions](#shots-and-transitions) | none |
+In a stack, children also take the [stack child fields](#stack-children); in a grid, the [grid child fields](#grid-children).
 
-In a stack, children also take `alignSelf`, `grow`, `priority` and `position`; in a grid, `area`, `cell` and `span` (below).
+A layer with no `fills` draws no fill, except text, lines and icons, which are black.
+
+### frame
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `children` | list of Layer | none | Its layers, bottom to top |
+| `clip` | boolean | true | Clips children to the frame, animated ones included |
+| `stack` | Stack | none | Lays the children out as a row or column ([Stacks](#stacks)) |
+| `grid` | Grid | none | Lays them out as a grid ([Grids](#grids)) |
+
+With neither `stack` nor `grid`, children are placed freely.
+
+### text
+
+See [Text](#text).
+
+### image
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `asset` | string | required | An asset id from `asset_add` |
+| `fit` | `fill`, `fit`, `tile` | `fill` | Cover the box (cropping), contain it (letterboxed), or repeat |
+| `focus` | Point | [0.5, 0.5] | The point that stays in view when `fill` crops |
+| `crop` | `{x, y, width, height}`, 0–1 of the image | none | Show only that part |
+| `tileScale` | number | 1 | Tile size for `tile`, × the image's size |
+| `adjust` | Adjust | none | [Image adjustments](#image-adjustments) |
+
+SVGs are drawn at their drawn size, so they stay sharp.
+
+### video
+
+A clip added with `asset_add`, drawn like an image and under any layers above it: titles, captions, logos. Decoding it needs ffmpeg ([tools.md](tools.md#ffmpeg)).
+
+```json
+{"type": "video", "asset": "beach", "width": "fill", "height": "fill", "start": 2, "speed": 0.5, "audio": false}
+```
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `asset` | string | required | A clip from `asset_add` (MP4, MOV, WebM…) |
+| `fit`, `focus`, `crop`, `adjust` | | `fill`, center | As for [images](#image), applied to every frame |
+| `start` | Seconds | 0 | Where in the clip to begin |
+| `delay` | Seconds | 0 | When the clip starts playing in the scene (in a shot, from the shot's start); before, its first frame holds |
+| `speed` | number | 1 | Playback speed, 0.01–100: 0.5 is slow motion |
+| `loop` | boolean | false | Repeat the clip until the scene ends; otherwise its last frame holds |
+| `audio` | boolean | true | Play the clip's own sound in MP4 and WebM output |
+
+A clip's sound plays with its pictures: from `start`, at `speed`, looping with it, and only while its shot is on; several clips' sounds are mixed. Stills (`time`, or a scene at rest) show the clip's frame at that moment.
+
+### Shapes
+
+| `type` | Field | Type | Default | Meaning |
+|---|---|---|---|---|
+| `rect` | | | | A rectangle; `radius` rounds it |
+| `ellipse` | `arc` | `{start, end, inner}` | 0, 360, 0 | Part of the ellipse, Degrees from the top; `inner` is a hole, 0–1 of the radius: a ring |
+| `polygon` | `sides` | number ≥ 3 | 3 | A regular polygon in the box |
+| | `innerRadius` | 0–1 | none | Makes a star: the inner points' share of the outer radius (0.38 classic, 0.8 starburst) |
+| `path` | `d` | string | | SVG path data |
+| | `shape` | name | | Or a [named shape](#appendix-names) |
+| | `fillRule` | `nonzero`, `evenodd` | `nonzero` | Which regions are inside |
+| | `fitPath` | `contain`, `stretch` | `contain` | Scaled evenly and centered, or stretched to the box |
+| `line` | `color`, `strokeWidth` | Color, px | black, 1 | From the box's top-left by `width, height` |
+
+A named shape is a real path, so every paint applies: a photo in a blob, a gradient ribbon, a dashed speech bubble.
+
+### icon
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | string | required | The icon's name in its set |
+| `set` | `lucide`, `solid`, `regular`, `brands` | `lucide` | [Lucide](https://lucide.dev) outline icons, or [Font Awesome Free](https://fontawesome.com) |
+| `color` | Color | black | |
+| `strokeWidth` | number | 2 | Lucide icons' line width, in the icon's 24-unit grid |
+
+An icon is 24 px tall unless sized.
+
+### spacer
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `minLength` | px | 0 | Takes the leftover space in a stack, at least this much |
+
+### firstFit
+
+Draws the first of its `children` that fits its box at this size with nothing wrong inside it: no overflow or truncated text, no text shrunk below its `minFontScale`. When none fits, it draws the last. Typical uses: a long and a short headline, a row CTA and a stacked CTA. `scene_describe` shows what was chosen at each size (`→ short`).
+
+### use
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `component` | string | required | The component to place |
+| `props` | object | none | Values for the component's `{prop}` placeholders, for every instance |
+| `each` | list of objects | none | One instance per entry, in the parent's flow; each entry's values win over `props` |
+
+See [Components](#components).
 
 ## Layout
 
-A frame lays out its children in one of three ways: **free** (each child's `x`, `y`, `constraints` or `place`), **stack** (a row or column, like CSS flexbox and Figma auto layout) or **grid** (like CSS grid). Children of a stack or grid ignore `x`, `y` and `constraints` unless they set `position: "absolute"`, which takes them out of the flow and places them like a free child (a badge over a card's corner).
-
-Rendering a size scales the master by the size's `scale`, then fits it to the target size: free layers follow their constraints, stacks and grids lay out again, recursively. There's no constraint solver.
+A frame lays out its children in one of three ways: **free** (each child's position and constraints), **stack** (a row or column) or **grid**. Children of a stack or grid ignore `x`, `y` and `constraints` unless they set `position: "absolute"`, which places them like a free child (a badge over a card's corner).
 
 ### Sizing
 
@@ -107,10 +267,20 @@ Rendering a size scales the master by the size's `scale`, then fits it to the ta
 |---|---|---|---|---|
 | `320` | Fixed px (scaled by the size's `scale`) | Fixed | `.frame(width:)` | `320px` |
 | `"hug"` | As big as the content | Hug | ideal size | `fit-content` |
-| `"fill"` | The free space in a stack or grid; the rest of the parent in free layout | Fill | `maxWidth: .infinity` | `flex: 1` |
-| `"40%"` | Share of the parent's size | | `containerRelativeFrame` | `40%` |
+| `"fill"` | The free space in a stack; in free layout, the rest of the parent from the layer's position | Fill | `maxWidth: .infinity` | `flex: 1` |
+| `"40%"` | Share of the parent: of a stack's content box (inside its padding), or of a free parent's whole box | | `containerRelativeFrame` | `40%` |
 
-Min and max clamps apply last.
+In a grid, a child with a px size keeps it and sits at its cell's start; otherwise it fills its cell. Min and max clamps apply last.
+
+### Free layout
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `constraints` | `{h: left\|right\|center\|stretch\|scale, v: top\|bottom\|center\|stretch\|scale}` | `left`, `top` | How the layer follows its parent as it resizes, as in Figma |
+| `place` | `top-left`, `top`, `top-right`, `left`, `center`, `right`, `bottom-left`, `bottom`, `bottom-right` | none | Pins the layer to that spot of its parent at every size |
+| `inset` | px or `[x, y]` | 0 | Distance from the parent's edges for `place` |
+
+Free children use the parent's whole box; its padding doesn't apply.
 
 ### Stacks
 
@@ -118,16 +288,23 @@ Min and max clamps apply last.
 "stack": {"dir": "row", "gap": 16, "padding": [24, 32], "align": "center", "justify": "between", "wrap": true}
 ```
 
-| Field | Values | Default |
-|---|---|---|
-| `dir` | `row`, `column`, `row-reverse`, `column-reverse`, or a list tried in order: `["row", "column"]` is a row where it fits, else a column | required |
-| `gap` | px, or `[rowGap, columnGap]` | 0 |
-| `padding` | px, `[vertical, horizontal]`, or `[top, right, bottom, left]` | 0 |
-| `align` | Across: `start`, `center`, `end`, `stretch`, `baseline` | `start` |
-| `justify` | Along: `start`, `center`, `end`, `between`, `around`, `evenly` | `start` |
-| `wrap` | Wrap onto more lines when they don't fit | false |
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `dir` | `row`, `column`, `row-reverse`, `column-reverse`, or a list | required | Direction; a list is tried in order: `["row", "column"]` is a row where it fits, else a column |
+| `gap` | px or `[rowGap, columnGap]` | 0 | Space between children |
+| `padding` | Sides | 0 | Space inside the frame's edges |
+| `align` | `start`, `center`, `end`, `stretch`, `baseline` | `start` | Across the direction |
+| `justify` | `start`, `center`, `end`, `between`, `around`, `evenly` | `start` | Along the direction |
+| `wrap` | boolean | false | Wrap onto more lines when they don't fit |
 
-Children may set `alignSelf` (their own `align`), `grow` (their share of the free space when they `fill`, 1) and `priority` (0; when a row is too narrow, lower priorities give way first, like SwiftUI's `layoutPriority`). A `spacer` takes the leftover space.
+### Stack children
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `alignSelf` | as `align` | the stack's `align` | This child's own alignment (`baseline` in a column is `start`) |
+| `grow` | number ≥ 0 | 1 | Its share of the free space when it `fill`s |
+| `priority` | number | 0 | When a row is too narrow, lower priorities give way first, like SwiftUI's `layoutPriority` |
+| `position` | `auto`, `absolute` | `auto` | `absolute` takes it out of the flow and places it like a free child |
 
 ### Grids
 
@@ -135,119 +312,59 @@ Children may set `alignSelf` (their own `align`), `grow` (their share of the fre
 "grid": {"columns": "2fr 1fr", "rows": "2fr 1fr", "gap": 24, "areas": ["photo side", "cta side"]}
 ```
 
-| Field | Values | Default |
-|---|---|---|
-| `columns` | CSS tracks (`200px`, `1fr`, `auto`, `25%`, `repeat(3, 1fr)`), a count (`3` = three `1fr`), or `{"min": 160}` for as many equal columns as fit at that width or more | one `1fr` per `areas` column, else one |
-| `rows` | Tracks, as `columns`; rows beyond them are `auto` | `auto` |
-| `gap` | px, or `[rowGap, columnGap]` | 0 |
-| `padding` | As a stack's | 0 |
-| `areas` | Named areas, one string per row and a name per column; `.` is empty. Each name must form a rectangle | none |
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `columns` | tracks, a count, or `{"min": px}` | one `1fr` per `areas` column, else one | CSS tracks (`200px`, `1fr`, `auto`, `25%`, `repeat(3, 1fr)`); `3` is three `1fr`; `{"min": 160}` is as many equal columns as fit at that width or more |
+| `rows` | tracks | `auto` | As `columns`; rows beyond them are `auto` |
+| `gap` | px or `[rowGap, columnGap]` | 0 | |
+| `padding` | Sides | 0 | |
+| `areas` | list of strings | none | Named areas, one string per row and a name per column; `.` is empty. Each name must form a rectangle |
 
-A child takes `area: "photo"`, or `cell: [row, column]` (counted from 1) with `span: [rows, columns]`; otherwise it fills the next free cell, row by row. Children stretch to their cell, except on a side with a px size, where they sit at the cell's start. A size can rearrange the whole grid by changing only `columns`, `rows` and `areas` in `at`. Tracks, cells and spans go up to 100.
+A size can rearrange the whole grid by changing only `columns`, `rows` and `areas` in `at`.
 
-### Layouts that pick what fits
+### Grid children
 
-`firstFit` draws the first child that fits its box at this size with nothing wrong inside it (no overflow or truncated text, no text shrunk below its `minFontScale`). Typical uses: a long and a short headline, a row CTA and a stacked CTA. A stack's `dir` list is the common case in one field. `scene_describe` shows what was chosen at each size (`→ column`, `→ short`).
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `area` | string | none | The named area to fill |
+| `cell` | `[row, column]`, from 1 | the next free cell, row by row | Where it starts |
+| `span` | `[rows, columns]` | [1, 1] | How many cells it covers |
 
 ### Per size
 
-`at` changes a layer's fields for some sizes: `"at": {"sky": {"fontSize": 20}}`. Its keys are a size id or an aspect class, applied broadest first: `landscape` (wider than 1.1:1), `square` (0.9–1.1) or `portrait`, then `wide` (2:1 or wider) or `tall` (1:2 or taller), then the size id. A 4:5 post is portrait; a 300×600 half-page is tall. One `"tall"` entry covers every skyscraper the design is ever rendered at. `at` can't change a layer's `id`, `type` or `children`.
-
-## Paint
-
-Frames, shapes, images, text and icons take the same paint fields. `color` and `gradient` are short forms of a single fill; `stroke` of a single stroke.
-
-### Fills
-
-`fills` is one paint or a list, bottom to top; `[]` fills nothing (outlined text, for example).
-
-| Paint | Example |
-|---|---|
-| Color | `"#D0202E"`, `"#D0202E80"`, a CSS name, or `{"color": "$red", "opacity": 0.5}` |
-| Gradient | `{"gradient": {"type": "radial", "stops": ["#0000", "#000C"]}}`; also written flat, `{"type": "linear", "angle": 180, "stops": […]}` |
-| Image | `{"image": "photo", "fit": "fill", "focus": [0.5, 0.3], "adjust": {"grayscale": 1}}` |
-| Pattern | `{"pattern": "dots", "color": "#0002", "size": 12}`: `dots`, `stripes`, `grid`, `checker`, `zigzag`, `rays` |
-| Grain | `{"noise": 0.08, "seed": 1}` |
-
-Every paint takes `opacity` (1) and `blendMode` (`normal`). An image fill works on any shape: a photo in a circle is `{"type": "ellipse", "fills": {"image": "photo"}}`.
-
-**Gradients:** `type` `linear` (default), `radial` or `conic`. Linear takes a CSS `angle` in degrees (0 = up, 90 = right) or `from`/`to` points ([x, y], 0–1 of the box). Radial takes `center` ([0.5, 0.5]) and `radius`. `stops` is a list of colors, evenly spaced, or of `{at, color}` (`at` 0–1 or `"55%"`; `offset`, `position` and `pos` also read).
-
-**Colors:** `#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA` or a CSS color name.
-
-### Images
-
-| Field | Meaning | Default |
-|---|---|---|
-| `fit` | `fill` (cover the box, cropping), `fit` (contain, letterboxed) or `tile` (repeat) | `fill` |
-| `focus` | [x, y], 0–1: the point that stays in view when `fill` crops | [0.5, 0.5] |
-| `crop` | `{x, y, width, height}`, 0–1 of the image: show only that part | none |
-| `tileScale` | Tile size for `tile`, × the image's size | 1 |
-| `adjust` | `brightness`, `contrast`, `saturate` (−1…1), `grayscale`, `sepia` (0…1), `hue` (degrees), `duotone` ([dark, light] colors), `tint` (recolor every visible pixel, e.g. a logo in white), `halftone` (dot spacing px: the image redrawn as black dots, larger where it's darker) | none |
-
-### Strokes
-
-`strokes` is one stroke or a list; `"#000"` is a 1 px stroke.
-
-| Field | Meaning | Default |
-|---|---|---|
-| `width` | px; `[top, right, bottom, left]` on rects for per-side borders | required |
-| `color`, `gradient` | Its paint | black |
-| `align` | `inside`, `center` or `outside` the edge | `inside` (`center` for lines) |
-| `dash` | `[on, off]` px | solid |
-| `cap`, `join` | `butt`\|`round`\|`square`; `miter`\|`round`\|`bevel` | `butt`, `miter` |
-| `start`, `end` | Markers on lines and paths: `arrow`, `triangle`, `circle`, `diamond` | none |
-| `rough`, `seed` | Hand-drawn wobble, px | 0 |
-
-### Shadows and blur
-
-`shadows` is one shadow or a list, like CSS `box-shadow`: `{x, y, blur, spread, color, inset}`. `inset: true` is an inner shadow. A shadow follows the layer's shape: it hugs a cutout photo or the letters of a text. A glow is a shadow at `x: 0, y: 0`; a hard offset shadow has `blur: 0`.
-
-`blur` blurs the layer; `backdropBlur` blurs what's behind it within its shape (frosted glass).
-
-### Masks
-
-| `mask` | Shows |
-|---|---|
-| a gradient | The layer faded by the gradient's alpha (a photo fading out) |
-| `"ellipse"` or a named shape (`"blob-3"`) | The layer inside that shape |
-| `{"path": "M…"}` | The layer inside that path |
-| `{"layer": "logo"}` | The layer where another layer is; the mask layer isn't drawn itself |
-| `{"image": "torn-edge"}` | The layer where an image is opaque |
-
-`"mode": "luminance"` uses brightness instead of alpha; `"invert": true` reverses it. Frames clip their children unless `clip: false`.
-
-### Edges
-
-`edges: {"sides": ["top", "bottom"], "depth": 12, "seed": 1}` tears the chosen sides of any layer's box, like ripped paper. `sides` defaults to all four; `depth` (12) is how far the tears cut in, px.
+`at` changes a layer's fields for some sizes: `"at": {"sky": {"fontSize": 20}, "tall": {"hidden": true}}`. Its keys are size ids or [aspect classes](#aspect-classes), applied broadest first: `landscape`/`square`/`portrait`, then `wide`/`tall`, then the size id. Its values merge into the layer ([Resolution order](#resolution-order)). `at` can't change a layer's `id`, `type`, `children` or `at`; a key that isn't a size or class is an error.
 
 ## Text
 
-| Field | Meaning | Default |
-|---|---|---|
-| `text` | The text, with optional [markup](#inline-markup) | required |
-| `fontSize` | px; the largest size when the text shrinks to fit | 16 |
-| `weight` | 100–900 | 400 |
-| `fontFamily` | Inter (bundled), any [Google Fonts](https://fonts.google.com) family (downloaded on first use), or an installed font | Inter |
-| `color` | Text color; `fills` can paint it with a gradient, image or pattern instead | black |
-| `align` | `left`, `center`, `right`, `justify` | `left` |
-| `verticalAlign` | `top`, `center`, `bottom` within the box | `center` for a fixed box, else `top` |
-| `lineHeight` | × the font size | the font's |
-| `letterSpacing` | px | 0 |
-| `textCase` | `upper`, `lower`, `capitalize` | none |
-| `italic` | Italic face | false |
-| `decoration` | `underline`, `strike` | none |
-| `textWrap` | `balance` (even line lengths), `pretty` (no lone last word) | `wrap` |
-| `maxLines` | Lines before the ellipsis | none |
-| `trim` | `"cap"`: trims the space above cap height and below the baseline, so text centers optically in pills and buttons | none |
-| `padding` | Space around the text inside its box, as a stack's `padding` | 0 |
-| `highlight` | A box behind each line: a color, or `{color, padding, radius, style: box\|brush}` | none |
-| `curve` | Sets one line of text on a circular arc of this radius, px; negative bends down | none |
-| `leader` | A character that fills each tab's gap: `"Espresso\t$3"` with `leader: "."` draws dot leaders, the price flush right | none |
-| `knockout` | The letters cut through their parent frame's fill, showing what's behind | false |
-| `direction` | `auto`, `ltr`, `rtl` | `auto` |
-| `features` | OpenType features, e.g. `{"tnum": 1}` | none |
-| `ranges` | `[{start, end, …}]`: character offsets of the displayed text with their own `color`, `weight`, `italic`, `fontSize`, `fontFamily`, `decoration`, `highlight` | none |
+### Fields
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `text` | string | required | The text, with optional [markup](#inline-markup); `\n` breaks lines |
+| `fontSize` | px | 16 | The largest size when the text shrinks to fit |
+| `minFontScale` | 0–1 | 0.5 | The smallest it shrinks to, × `fontSize` |
+| `resize` | `fixed`, `truncate` | inferred from the box | Overrides [fitting](#fitting): `fixed` keeps the size and lets it overflow; `truncate` keeps it and cuts with an ellipsis |
+| `weight` | 100–900, in 100s | 400 | |
+| `fontFamily` | string | Inter | Inter (bundled), any [Google Fonts](https://fonts.google.com) family (downloaded on first use), or a font the server loads |
+| `color` | Color | black | Text color; `fills` can paint it with a gradient, image or pattern instead |
+| `align` | `left`, `center`, `right`, `justify` | `left` | |
+| `verticalAlign` | `top`, `center`, `bottom` | `center` for a fixed box, else `top` | Within the box |
+| `lineHeight` | number | the font's own line spacing | × the font size |
+| `letterSpacing` | px | 0 | |
+| `textCase` | `upper`, `lower`, `capitalize` | none | |
+| `italic` | boolean | false | |
+| `decoration` | `underline`, `strike` | none | |
+| `textWrap` | `wrap`, `balance`, `pretty` | `wrap` | `balance` evens line lengths; `pretty` avoids a lone last word |
+| `maxLines` | number | none | Lines before the ellipsis |
+| `trim` | `cap` | none | Trims the space above cap height and below the baseline, so text centers optically in pills and buttons |
+| `padding` | Sides | 0 | Space around the text inside its box |
+| `highlight` | Color or `{color, padding, radius, style: box\|brush}` | none | A box behind each line |
+| `curve` | px | none | Sets one line on a circular arc of this radius; negative bends down |
+| `leader` | string | none | A character that fills each tab's gap: `"Espresso\t$3"` with `leader: "."` draws dot leaders, the price flush right |
+| `knockout` | boolean | false | The letters cut through their parent frame's fill, showing what's behind |
+| `direction` | `auto`, `ltr`, `rtl` | `auto` | |
+| `features` | object | none | OpenType features, e.g. `{"tnum": 1}` |
+| `ranges` | list of Range | none | [Ranges](#ranges) |
 
 `strokes` outline the letters (`fills: []` with a stroke makes outlined text) and `shadows` follow their shapes.
 
@@ -255,11 +372,11 @@ Every paint takes `opacity` (1) and `blendMode` (`normal`). An image fill works 
 
 The box decides how text fits:
 
-- **Width and height:** the font shrinks until the text fits (down to `minFontScale`, 0.5 of `fontSize`), then ends with an ellipsis. `resize: "fixed"` keeps the size and lets it overflow; `"truncate"` keeps the size and cuts with an ellipsis.
+- **Width and height:** the font shrinks until the text fits, down to `minFontScale`, then ends with an ellipsis.
 - **Width only:** the text wraps and the box grows down.
 - **Neither:** one line, as wide as the text.
 
-When text still doesn't fit, `scene_describe` reports `!overflow` or `!truncated`, never a silent change.
+When text still doesn't fit, the checks report `!overflow` or `!truncated`; nothing changes silently.
 
 ### Inline markup
 
@@ -270,37 +387,141 @@ Models miscount character offsets, so text takes a small HTML subset instead:
 {"type": "text", "text": "<s>$49</s> <b>$29</b><sup>99</sup> today"}
 ```
 
-- Tags: `<b>`, `<i>`, `<u>`, `<s>`, `<sup>`, `<sub>`, `<br>`, a style's name as a tag (`<accent>`), and `<span …>` with any range field as an attribute (`<span color="#D0202E" weight="800" highlight="#FFE600">`). Attribute values can be tokens (`color="$red"`).
+- Tags: `<b>`, `<i>`, `<u>`, `<s>`, `<sup>`, `<sub>`, `<br>`, a style's name as a tag (`<accent>`), and `<span …>` with any [range](#ranges) field as an attribute (`<span color="#D0202E" weight="800" highlight="#FFE600">`). Attribute values can be tokens (`color="$red"`).
 - A `<` that doesn't open a known tag is text; `&lt;`, `&gt;`, `&amp;` and `&quot;` are entities.
 - A `<span>` whose attributes don't parse is an error, not text.
+
+### Ranges
+
+`ranges` styles parts of the displayed text by character offset; markup is usually easier.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `start`, `end` | number | Character offsets of the displayed text |
+| `color`, `weight`, `italic`, `fontSize`, `fontFamily`, `decoration`, `highlight` | as for text | That part's own values |
+
+## Paint
+
+Frames, shapes, images, text and icons take the same paint fields.
+
+### Fills
+
+`fills` is one paint or a list, bottom to top; `[]` fills nothing (outlined text, for example). Every paint takes `opacity` (0–1, default 1) and `blendMode` (default `normal`).
+
+| Paint | Example |
+|---|---|
+| Color | `"#D0202E"`, `"#D0202E80"`, a CSS name, or `{"color": "$red", "opacity": 0.5}` |
+| Gradient | `{"gradient": {"type": "radial", "stops": ["#0000", "#000C"]}}`, or written flat: `{"type": "linear", "angle": 180, "stops": […]}` |
+| Image | `{"image": "photo", "fit": "fill", "focus": [0.5, 0.3], "adjust": {"grayscale": 1}}`, with the [image](#image) fields |
+| Pattern | `{"pattern": "dots", "color": "#0002", "size": 12}` |
+| Grain | `{"noise": 0.08, "seed": 1}` |
+
+An image fill works on any shape: a photo in a circle is `{"type": "ellipse", "fills": {"image": "photo"}}`.
+
+### Gradients
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `type` | `linear`, `radial`, `conic` | `linear` | |
+| `stops` | list of Colors, or of `{at, color}` | required | Colors evenly spaced, or at `at` (0–1 or `"55%"`; `offset`, `position` and `pos` also read) |
+| `angle` | Degrees | left to right | Linear: CSS angle, 0 = up, 90 = right. Conic: where it starts, from 12 o'clock |
+| `from`, `to` | Point | [0, 0.5], [1, 0.5] | Linear, instead of `angle` |
+| `center` | Point | [0.5, 0.5] | Radial and conic |
+| `radius` | Point | [0.5, 0.5] | Radial: horizontal and vertical radius, 0–1 of the box |
+
+### Patterns and grain
+
+| Paint | Field | Type | Default | Meaning |
+|---|---|---|---|---|
+| Pattern | `pattern` | `dots`, `stripes`, `grid`, `checker`, `zigzag`, `rays` | required | |
+| | `color` | Color | `#00000033` | |
+| | `size` | px | 12 | Repeat length |
+| | `angle` | Degrees | 0 | Rotation |
+| Grain | `noise` | 0–1 | required | Film grain strength |
+| | `size` | px | 1 | Grain size |
+| | `seed` | number | 0 | Its random pattern |
+
+### Image adjustments
+
+`adjust` on an image, video or image fill:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `brightness`, `contrast`, `saturate` | −1…1 | |
+| `grayscale`, `sepia` | 0…1 | |
+| `hue` | Degrees | Hue rotation |
+| `duotone` | `[dark, light]` Colors | Maps dark to light |
+| `tint` | Color | Recolors every visible pixel, e.g. a logo in white |
+| `halftone` | px | Redraws the image as black dots this far apart, larger where it's darker |
+
+### Strokes
+
+`strokes` is one stroke or a list; `"#000"` is a 1 px black stroke.
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `width` | px, or `[top, right, bottom, left]` on rects | required | Line width; per side for borders |
+| `color`, `gradient` | Color, gradient | black | Its paint |
+| `align` | `inside`, `center`, `outside` | `inside` (`center` for lines) | Where it sits on the edge |
+| `dash` | `[on, off]` px | solid | |
+| `cap` | `butt`, `round`, `square` | `butt` | |
+| `join` | `miter`, `round`, `bevel` | `miter` | |
+| `start`, `end` | `arrow`, `triangle`, `circle`, `diamond` | none | Markers on lines and paths |
+| `rough` | px | 0 | Hand-drawn wobble |
+| `seed` | number | 0 | The wobble's random pattern |
+
+### Shadows
+
+`shadows` is one shadow or a list, like CSS `box-shadow`. A shadow follows the layer's shape: it hugs a cutout photo or the letters of a text. A glow is a shadow at `x: 0, y: 0`; a hard offset shadow has `blur: 0`.
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `color` | Color | required | |
+| `x`, `y` | px | 0 | Offset |
+| `blur` | px | 0 | |
+| `spread` | px | 0 | Grows the shadow's shape |
+| `inset` | boolean | false | An inner shadow |
+
+### Blur
+
+`blur` (px) blurs the layer; `backdropBlur` (px) blurs what's behind it within its shape (frosted glass).
+
+### Masks
+
+| `mask` | Shows |
+|---|---|
+| a gradient | The layer faded by the gradient's alpha (a photo fading out) |
+| `"ellipse"` or a [named shape](#appendix-names) (`"blob-3"`) | The layer inside that shape |
+| `{"path": "M…"}` | The layer inside that path |
+| `{"layer": "logo"}` | The layer where another layer is; the mask layer isn't drawn itself |
+| `{"image": "torn-edge"}` | The layer where an image is opaque |
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `mode` | `alpha`, `luminance` | `alpha` | What of the mask counts: its opacity or its brightness |
+| `invert` | boolean | false | Reverses the mask |
+
+### Edges
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `sides` | list of `top`, `right`, `bottom`, `left` | all four | Which sides of the box tear, like ripped paper |
+| `depth` | px | 12 | How far the tears cut in |
+| `seed` | number | 0 | The tears' random pattern |
+
+### Blend modes
+
+`normal`, `multiply`, `screen`, `overlay`, `darken`, `lighten`, `color-dodge`, `color-burn`, `hard-light`, `soft-light`, `difference`, `exclusion`, `hue`, `saturation`, `color`, `luminosity`.
 
 ## Reuse
 
 ### Tokens
 
-`tokens` holds named values, and any field takes `"$name"` (letters, digits, `_`, `.` and `-`). The server remembers which fields came from which token, so changing a token in `layer_update` changes every field bound to it. Setting such a field to a value of its own unbinds it. `text` is a token only when it is wholly the name of one (`"text": "$headline"`, the way a template names its variables); otherwise it is never scanned, so `"$29"` stays text.
+`tokens` holds named values; any field takes `"$name"` (a letter or `_`, then letters, digits, `_`, `.` and `-`). The server remembers which fields came from which token, so changing a token in `layer_update` changes every field bound to it; setting such a field to a value of its own unbinds it. `text` is a token only when it is wholly the name of one (`"text": "$headline"`, the way a template names its variables); other text is never scanned, so `"$29"` stays text. In markup, attribute values can be tokens. An unknown token elsewhere is an error that lists the tokens there are.
 
 ### Styles
 
 `styles` hold any layer fields: a `card` style can carry fills, radius and shadows. A layer's `style` takes one name or a list; a later style wins where they overlap, and the layer's own fields win over all of them. Changing a style through `layer_update` changes every layer that uses it.
-
-### Templates
-
-A template is a scene file that `scene_create` loads by `url` or `path` ([tools.md](tools.md#scene_create)). It has a scene's fields (`sizes`, `background`, `tokens`, `styles`, `components`, `layers`, `duration` …), and its `assets` name files instead of hashes: a URL, or a path relative to the template.
-
-```json
-{
-  "sizes": ["instagram-square", "iab-medium-rectangle"],
-  "tokens": {"headline": "Spring sale", "price": "$29", "accent": "#D0202E"},
-  "assets": {"photo": "photo.jpg", "logo": "https://example.com/logo.svg"},
-  "layers": [
-    {"type": "image", "asset": "photo", "width": "fill", "height": "fill"},
-    {"type": "text", "text": "$headline", "fontSize": 64, "weight": 800, "color": "$accent", "place": "center"}
-  ]
-}
-```
-
-Its tokens are its variables: `scene_create` sets them with `tokens`, and `render` makes one file per row of them with `rows`. A layer whose `text` is exactly `"$name"` of a token takes the token's value; other text is never scanned. A template from a URL reads its images from the web only, never from local files; one from a path reads only inside the allowed folders. A scene keyline saved (its `assets` by `sha256`) loads as a template too.
 
 ### Components
 
@@ -315,24 +536,25 @@ Its tokens are its variables: `scene_create` sets them with `tokens`, and `rende
 ```json
 {"type": "use", "id": "c", "component": "candidate", "each": [
   {"name": "Dana Levi", "office": "Mayor"},
-  {"name": "Omar Haddad", "office": "Council"},
-  {"name": "Ruth Cohen", "office": "Council"}]}
+  {"name": "Omar Haddad", "office": "Council"}]}
 ```
 
-- `{prop}` in any string of a component is filled from the instance's props: a string that is only `{prop}` takes the value as is (a number stays a number). `props` apply to every instance, and `each` places one instance per entry, in the parent's flow.
+- `{prop}` in any string of a component is filled from the instance's props; a string that is only `{prop}` takes the value as is (a number stays a number).
 - The `use` layer's own fields (width, constraints, `at`…) apply to each instance's root.
-- Instances stay linked: changing the component changes every instance. Their layers are named by the `use` id, the instance number and the inner layer's id or role, e.g. `c.1.name`. `layer_update` with `detach: true` turns a `use` into plain layers that no longer follow the component.
+- Instances stay linked: changing the component changes every instance. Their layers are named by the `use` id, the instance number and the inner layer's id or role, e.g. `c.1.name`, in replies. To change one, target the component (`{"component": "candidate", "role": "name"}`), or `detach` the `use` layer into plain layers.
 - Components may place other components, up to 8 levels deep.
 
 ## Motion
 
-A scene with a `duration`, or made of [shots](#shots-and-transitions), moves. Only fields that don't change layout animate, so the layout is the same at every moment and every check about it holds throughout; a scene without motion fields is drawn at rest. `render` makes an animated PNG (`format: "apng"`), a GIF (`format: "gif"`), an MP4 or WebM video (`format: "mp4"`, `"webm"`, with ffmpeg), or a still at any moment (`time`).
+A scene with a `duration`, or made of [shots](#shots-and-transitions), moves. Only fields that don't change layout animate, so the layout is the same at every moment and every check holds throughout. A scene without motion fields is drawn at rest. Output formats are in [tools.md](tools.md#output-formats).
 
-| Scene field | Meaning | Default |
-|---|---|---|
-| `duration` | Length, seconds; its presence makes the scene move | none (a still), or where the last shot ends |
-| `fps` | Frames per second | 30 |
-| `loop` | The animation repeats forever | false (plays once) |
+### Scene timing
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `duration` | Seconds, 0.001–86,400 | none (a still), or where the last shot ends | Length; its presence makes the scene move |
+| `fps` | 1–120 | 30 | Frames per second |
+| `loop` | boolean | false | The animation repeats forever |
 
 ### Enter and exit
 
@@ -341,15 +563,15 @@ A scene with a `duration`, or made of [shots](#shots-and-transitions), moves. On
 {"type": "frame", "in": {"effect": "pop", "at": 1.2, "ease": "back.out"}, "out": {"effect": "fade", "at": 7}}
 ```
 
-`in` and `out` take an effect name, or `{effect, at, duration, ease, distance}`. A layer is hidden before its `in` and gone after its `out`.
+`in` and `out` take an effect name, or an object. A layer is hidden before its `in` and gone after its `out`.
 
-| Field | Meaning | Default |
-|---|---|---|
-| `effect` | `fade`, `fade-up`, `fade-down`, `fade-left`, `fade-right` (fade while moving `distance` into place), `pop` (grow from 0.6 with an overshoot), `zoom-in` (grow from 0.85), `zoom-out` (shrink from 1.15), `blur-in` (sharpen from a 12 px blur) | required |
-| `at` | Start, seconds | `in`: 0; `out`: so it ends with the scene |
-| `duration` | Seconds | 0.6 |
-| `ease` | See [Easing](#easing) | `power2.out` entering (`back.out` for `pop`), `power2.in` leaving |
-| `distance` | How far a directional fade travels, px | 40 |
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `effect` | name | required | `fade`, `fade-up`, `fade-down`, `fade-left`, `fade-right` (fade while moving `distance` into place), `pop` (grow from 0.6 with an overshoot), `zoom-in` (grow from 0.85), `zoom-out` (shrink from 1.15), `blur-in` (sharpen from a 12 px blur) |
+| `at` | Seconds | `in`: 0; `out`: so it ends with the scene | Start |
+| `duration` | Seconds | 0.6 | |
+| `ease` | Ease | `power2.out` entering (`back.out` for `pop`), `power2.in` leaving | |
+| `distance` | px | 40 | How far a directional fade travels |
 
 ### Keyframes
 
@@ -360,29 +582,30 @@ A scene with a `duration`, or made of [shots](#shots-and-transitions), moves. On
 "animate": {"rotation": {"from": "random(-90, 90)"}, "offset": {"from": [0, -80]}, "duration": 0.8, "ease": "back.out"}
 ```
 
-| Field | Meaning | Default |
-|---|---|---|
-| `opacity`, `scale`, `rotation`, `blur` | A list of numbers spread over `duration`, or `{from, to}` (a missing end is the layer's own value) | |
-| `offset`, `skew` | The same, with `[x, y]` pairs | |
-| `color` | The same, with colors: the layer's own color | |
-| `times` | Where each listed value falls, 0–1 of `duration` | evenly spaced |
-| `at` | Start, seconds | 0 |
-| `duration` | One play, seconds | 1 |
-| `ease` | Between each pair of values | `power1.inOut` |
-| `repeat` | Extra plays; −1 repeats to the end | 0 |
-| `yoyo` | Every other play runs backwards | false |
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `opacity`, `scale`, `rotation`, `blur` | list of numbers, or `{from, to}` | | Values spread over `duration`; a missing end is the layer's own value |
+| `offset`, `skew` | the same, with `[x, y]` pairs | | |
+| `color` | the same, with Colors | | The layer's own color |
+| `times` | list of 0–1 | evenly spaced | Where each listed value falls, of `duration` |
+| `at` | Seconds | 0 | Start |
+| `duration` | Seconds | 1 | One play |
+| `ease` | Ease | `power1.inOut` | Between each pair of values |
+| `repeat` | number | 0 | Extra plays; −1 repeats to the end |
+| `yoyo` | boolean | false | Every other play runs backwards |
 
-A number may be `"random(lo, hi)"`, as in GSAP: each target gets its own value (each layer, or each piece of split text), the same on every render. Values hold before a track starts and after it ends. Layout fields (`width`, `fontSize`, `text`, `padding`…) can't animate; to make something grow, animate `scale`.
+A number may be `"random(lo, hi)"`, as in GSAP: each target (each layer, or each piece of split text) gets its own value, seeded from its id, the same on every render. Values hold before a track starts and after it ends. Layout fields (`width`, `fontSize`, `text`, `padding`…) can't animate; to make something grow, animate `scale`.
 
 ### Easing
 
 GSAP's names: `none`, `power1` … `power4`, `sine`, `expo`, `circ`, `back`, `elastic`, `bounce`, each with `.in`, `.out` or `.inOut` (a family alone is `.out`), and `steps(n)`. CSS's `ease`, `ease-in`, `ease-out` and `ease-in-out`, and `smooth`, `snappy` and `bouncy`, read as the nearest of those.
 
-### Stagger and split text
+### Stagger and split
 
-`stagger` (seconds) on a frame or a `use` layer gives its `in` to its children or instances one after another instead of entering whole.
-
-`split: "chars"` or `"words"` on a text layer makes its `in`, `out`, `animate` and `stagger` apply to each letter or word, GSAP's SplitText. The text is laid out once; each piece moves as a rigid part of it.
+| Field | Type | On | Meaning |
+|---|---|---|---|
+| `stagger` | Seconds | a frame or `use` layer | Gives its `in` to its children or instances one after another, this far apart, instead of entering whole |
+| `split` | `chars`, `words` | a text layer | Its `in`, `out`, `animate` and `stagger` apply to each letter or word, like GSAP's SplitText. The text is laid out once; each piece moves as a rigid part of it |
 
 ```json
 {"type": "text", "text": "Animate Anything", "fontSize": 96, "split": "chars", "stagger": 0.05,
@@ -392,41 +615,63 @@ GSAP's names: `none`, `power1` … `power4`, `sine`, `expo`, `circ`, `back`, `el
 
 Frames clip their children, animated ones included: give a frame `clip: false` when its children move beyond its edges.
 
-### Video
-
-A `video` layer plays a clip added with `asset_add`, drawn like an image and under any layers above it: titles, captions, logos.
-
-```json
-{"type": "video", "asset": "beach", "width": "fill", "height": "fill", "start": 2, "speed": 0.5, "audio": false}
-```
-
-| Field | Meaning | Default |
-|---|---|---|
-| `asset` | A clip from `asset_add` (MP4, MOV, WebM…) | required |
-| `fit`, `focus`, `crop`, `adjust` | As for [images](#images), applied to every frame | `fill`, center |
-| `start` | Where in the clip to begin, seconds | 0 |
-| `delay` | When the clip starts playing in the scene, seconds; before, its first frame holds | 0 |
-| `speed` | Playback speed: 0.5 is slow motion | 1 |
-| `loop` | Repeat the clip until the scene ends; otherwise its last frame holds | false |
-| `audio` | Play the clip's own sound in MP4 and WebM output | true |
-
-Each clip's sound plays with its pictures: from `start`, at `speed`, looping with it, and only while its shot is on; several clips' sounds are mixed. Stills (`time`, or a scene at rest) show the clip's frame at that moment. Decoding clips and writing MP4 or WebM needs [ffmpeg](https://ffmpeg.org), found on the PATH (or `KEYLINE_MCP_FFMPEG`) when a call needs it; everything else, APNG and GIF included, works without it.
-
 ### Shots and transitions
 
-A top-level frame with `shot` is a shot: shots play one after another instead of stacking, each joined to the one before by a transition. Times inside a shot (`in`, `animate`, a clip's `delay`) count from the shot's own start. Layers that aren't shots, such as a logo or a caption bar, stay on across all of them. At rest, the first shot shows.
+A top-level frame with `shot` is a shot: shots play one after another instead of stacking. Times inside a shot (`in`, `animate`, a clip's `delay`) count from the shot's own start. Layers that aren't shots, such as a logo or a caption bar, stay on across all of them. At rest, the first shot shows.
 
 ```json
 {"id": "s1", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 3}, "children": ["…"]}
 {"id": "s2", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 3, "transition": "push-left"}, "children": ["…"]}
 ```
 
-| Field | Meaning | Default |
-|---|---|---|
-| `duration` | Seconds on screen, including its transitions | required |
-| `transition` | How it enters from the shot before: a name, or `{type, duration, ease}` | `cut` |
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `duration` | Seconds | required | On screen, including its transitions |
+| `transition` | name, or `{type, duration, ease}` | `cut` | How it enters from the shot before |
 
-Transitions: `cut`, `fade`, `slide-left`, `slide-right`, `slide-up`, `slide-down` (slides in over the last shot), `push-left` … `push-down` (pushes the last shot out), `wipe-left` … `wipe-down` (a moving edge reveals it) and `zoom` (the last shot grows and fades). A transition lasts 0.5 s with `power2.inOut` unless given, and overlaps the two shots, so each shot starts where the one before ends minus its transition. The scene's length is where the last shot ends unless `duration` says otherwise.
+| Transition field | Type | Default | Meaning |
+|---|---|---|---|
+| `type` | name | required | `cut`, `fade`, `slide-left`, `slide-right`, `slide-up`, `slide-down` (slides in over the last shot), `push-left` … `push-down` (pushes the last shot out), `wipe-left` … `wipe-down` (a moving edge reveals it), `zoom` (the last shot grows as the new one fades in) |
+| `duration` | Seconds | 0.5 | Overlaps the two shots; a cut has none |
+| `ease` | Ease | `power2.inOut` | |
+
+Each shot starts where the one before ends minus its transition. The scene's length is where the last shot ends unless `duration` says otherwise. A transition can't be longer than either shot it joins.
+
+## Template files
+
+A template is a scene file that `scene_create` loads by URL or path ([tools.md](tools.md#templates-and-variants)). It has a scene's fields, and its `assets` name files instead of hashes: a URL, or a path relative to the template. Its `tokens` are its variables.
+
+```json
+{
+  "sizes": ["instagram-square", "iab-medium-rectangle"],
+  "tokens": {"headline": "Spring sale", "price": "$29", "accent": "#D0202E"},
+  "assets": {"photo": "photo.jpg", "logo": "https://example.com/logo.svg"},
+  "layers": [
+    {"type": "image", "asset": "photo", "width": "fill", "height": "fill"},
+    {"type": "text", "text": "$headline", "fontSize": 64, "weight": 800, "color": "$accent", "place": "center"}
+  ]
+}
+```
+
+A scene keyline saved (its `assets` by `sha256`) loads as a template too.
+
+## Validation and limits
+
+A change that breaks any of these rules is refused whole, with a one-line error ([tools.md](tools.md#errors)); what the layout does at each size (overflow, clipping, contrast) is never refused, but reported as [problems](tools.md#problem-lines).
+
+- Unknown fields, in layers and in every object inside them.
+- Values of the wrong type or out of range: opacity 0–1, weight 100–900 in 100s, `minFontScale` above 0 and at most 1, `grow` ≥ 0, polygon `sides` ≥ 3, video `speed` 0.01–100, sizes at least 1 px with `scale` above 0.
+- An unknown token, style, component, asset, parent frame or `at` key; a duplicate layer id.
+- Shots that aren't top-level frames, have no positive `duration`, or whose transition is longer than a shot it joins; `split` on anything but text.
+
+| Limit | Value |
+|---|---|
+| Grid tracks per axis, `repeat` count, `cell` and `span` values | 100 |
+| Component nesting | 8 levels |
+| `fps` | 1–120 |
+| `duration` | 0.001–86,400 s |
+
+Asset and file limits are in [tools.md](tools.md#limits).
 
 ## Example
 
@@ -472,3 +717,15 @@ The reference ad from the end-to-end tests, in one `layer_add`: tokens, styles, 
 ```
 
 The photo takes whatever height is left at each size, the candidates switch to a column where a row doesn't fit, and the footer is dropped on tall sizes.
+
+## Appendix: names
+
+| Kind | Names |
+|---|---|
+| Named shapes (`path` `shape`, masks) | `ribbon`, `ribbon-banner`, `bubble`, `bubble-round`, `arrow`, `arrow-curved`, `chevron`, `tag`, `arch`, `shield`, `heart`, `cloud`, `wave`, `burst`, `blob-1` … `blob-6`, `brush-stroke` |
+| Icons | About 5,000: [Lucide](https://lucide.dev) (`lucide`, about 2,100) and [Font Awesome Free](https://fontawesome.com) (`solid` about 2,000, `regular` about 270, `brands` about 610) |
+| Patterns | `dots`, `stripes`, `grid`, `checker`, `zigzag`, `rays` |
+| Enter and exit effects | `fade`, `fade-up`, `fade-down`, `fade-left`, `fade-right`, `pop`, `zoom-in`, `zoom-out`, `blur-in` |
+| Transitions | `cut`, `fade`, `slide-*`, `push-*`, `wipe-*` (each `left`, `right`, `up`, `down`), `zoom` |
+| Eases | `none`, `power1`–`power4`, `sine`, `expo`, `circ`, `back`, `elastic`, `bounce` (`.in`, `.out`, `.inOut`), `steps(n)` |
+| Blend modes | See [Blend modes](#blend-modes) |
