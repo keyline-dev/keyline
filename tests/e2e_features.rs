@@ -541,3 +541,70 @@ height='24'><rect width='24' height='24' fill='%23D0202E'/></svg>";
     assert_eq!(px[..4], [0xD0, 0x20, 0x2E, 255]);
     mcp.stop().await;
 }
+
+#[test]
+fn render_draws_a_scene_file_and_fails_on_a_defect() {
+    let dir = std::env::temp_dir().join(format!("keyline-mcp-e2e-cli-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let scene = dir.join("ad.json");
+    std::fs::write(
+        &scene,
+        json!({"width": 400, "height": 200, "sizes": ["400x200", {"id": "small", "width": 200, "height": 100}],
+            "tokens": {"headline": "Sale"},
+            "layers": [{"id": "h", "type": "text", "text": "$headline", "place": "center", "fontSize": 40}]})
+        .to_string(),
+    )
+    .unwrap();
+    let rows = dir.join("rows.json");
+    std::fs::write(
+        &rows,
+        r#"[{"headline": "Hi"}, {"headline": "A headline far too long for any of these sizes"}]"#,
+    )
+    .unwrap();
+    let run = |extra: &[&str]| {
+        let out = dir.join("out");
+        let _ = std::fs::remove_dir_all(&out);
+        let o = std::process::Command::new(env!("CARGO_BIN_EXE_keyline-mcp"))
+            .arg("render")
+            .arg(&scene)
+            .args(["--renderer", "cpu", "--data"])
+            .arg(dir.join("data"))
+            .arg("--out")
+            .arg(&out)
+            .args(extra)
+            .output()
+            .unwrap();
+        let mut files: Vec<String> = std::fs::read_dir(&out)
+            .map(|d| {
+                d.map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+                    .collect()
+            })
+            .unwrap_or_default();
+        files.sort();
+        (
+            o.status.code(),
+            String::from_utf8_lossy(&o.stdout).into_owned(),
+            files,
+        )
+    };
+    // Fits: every size, exit 0.
+    let (code, text, files) = run(&[]);
+    assert_eq!(code, Some(0), "{text}");
+    assert_eq!(files, ["400x200-v0.png", "small-v0.png"]);
+    // One row per variant; the long one is a defect, so a script fails.
+    let (code, text, files) = run(&["--rows", rows.to_str().unwrap(), "--size", "400x200"]);
+    assert_eq!(code, Some(1), "{text}");
+    assert_eq!(files, ["400x200-v0.r1.png", "400x200-v0.r2.png"]);
+    assert!(
+        text.contains("r2 400x200 h text") && text.contains("!clipped"),
+        "{text}"
+    );
+    assert!(!text.contains("small"), "only the sizes drawn: {text}");
+    // Render flags without render are a mistake.
+    let o = std::process::Command::new(env!("CARGO_BIN_EXE_keyline-mcp"))
+        .args(["--out", "x"])
+        .output()
+        .unwrap();
+    assert!(String::from_utf8_lossy(&o.stderr).contains("go with render"));
+}

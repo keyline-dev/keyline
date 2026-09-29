@@ -353,7 +353,7 @@ impl Server {
 /// The scene to render once per row of token values, each tagged for its
 /// file names (`r2.`), or the scene alone when there are no rows. Each
 /// row's tokens apply as `layer_update` would, to a copy.
-fn variants(
+pub(super) fn variants(
     scene: &Scene,
     rows: &[serde_json::Map<String, Value>],
 ) -> Result<Vec<(String, Scene)>, String> {

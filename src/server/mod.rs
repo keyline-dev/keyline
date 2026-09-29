@@ -2,6 +2,7 @@
 //! and plain-text results, to keep the agent's token spend low.
 
 mod args;
+mod cli;
 mod handlers;
 mod schema;
 mod template;
@@ -26,6 +27,7 @@ use crate::store::Store;
 pub use args::{
     AssetAddArgs, LayerAddArgs, LayerUpdateArgs, RenderArgs, SceneCreateArgs, SceneDescribeArgs,
 };
+pub use cli::{RenderFile, Report};
 
 const INSTRUCTIONS: &str = "Compose images from a JSON scene and export several sizes. \
 Author once at the master size; constraints and per-size scale adapt it to every size. \

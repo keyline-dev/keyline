@@ -10,13 +10,18 @@ use crate::gpu::Backend;
 /// What `--help` prints: every flag.
 pub const HELP: &str = "keyline-mcp: an AI-native design engine, an MCP server over stdio.
 
-Usage: keyline-mcp [options]
+Usage: keyline-mcp [options]                  the MCP server, over stdio
+       keyline-mcp render <scene.json> [options]
+                                               render a scene file without an agent
 
 Options:
-  --allow-read <folder>   Let asset_add read local files by path inside this folder
-                          (repeatable). Without it, paths are refused. Paths are
-                          resolved through symlinks before the check.
-  --no-motion             Leave animation and video out of the tools: stills
+  --allow-read <folder>...
+                          Let asset_add read local files by path inside these
+                          folders (every folder up to the next flag; repeatable).
+                          Without it, paths are refused. Paths are resolved
+                          through symlinks before the check.
+  --no-motion[=true|false]
+                          Leave animation and video out of the tools: stills
                           only, and fewer tokens of tool definitions per turn
   --data <folder>         Scenes, assets, renders and the web-font cache
                           (default: ~/.keyline-mcp)
@@ -27,6 +32,14 @@ Options:
                           libx264), software, or an ffmpeg encoder name
   -h, --help              Print this help
 
+render:
+  --out <folder>          Where the files go (default: the current folder)
+  --size <id>             A size to draw (repeatable; default: all)
+  --rows <rows.json>      A JSON list of token values: one render per row
+  --format <format>       png (default), jpeg, webp, pdf, apng, gif, mp4 or webm
+  render reads images beside the scene file, prints what the render tool
+  replies, and exits 1 if the design has a ! defect.
+
 Each flag also takes its value as --flag=value.
 
 Docs: https://github.com/keyline-dev/keyline";
@@ -36,7 +49,8 @@ Docs: https://github.com/keyline-dev/keyline";
 pub struct Options {
     /// `--allow-read`: folders local files may be read from, as given.
     pub allow_read: Vec<PathBuf>,
-    /// `--no-motion`: leave animation and video out of the tools.
+    /// `--no-motion` (or `--no-motion=true`): leave animation and video
+    /// out of the tools.
     pub no_motion: bool,
     /// `--data`: the data directory (default `~/.keyline-mcp`).
     pub data: Option<PathBuf>,
@@ -50,21 +64,45 @@ pub struct Options {
     pub encoder: Option<String>,
     /// `-h`/`--help`: print [`HELP`] and exit.
     pub help: bool,
+    /// Arguments that aren't flags: a subcommand and its operands.
+    pub operands: Vec<String>,
+    /// `--out`: where `render` writes its files.
+    pub out: Option<PathBuf>,
+    /// `--size`: the sizes `render` draws (default: all).
+    pub sizes: Vec<String>,
+    /// `--rows`: a JSON file of token rows, one render per row.
+    pub rows: Option<PathBuf>,
+    /// `--format`: `render`'s file format (default `png`).
+    pub format: Option<String>,
 }
 
 impl Options {
     /// Reads the command line, without the program name.
     ///
     /// # Errors
-    /// An unknown flag, a flag without its value, or a bad `--renderer`.
+    /// An unknown flag, a flag without its value, or a bad `--renderer`
+    /// or `--no-motion` value.
     pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Self> {
         let mut o = Options::default();
-        let mut args = args.into_iter();
+        let mut args = args.into_iter().peekable();
         while let Some(arg) = args.next() {
+            if !arg.starts_with('-') {
+                o.operands.push(arg);
+                continue;
+            }
             let (flag, inline) = match arg.split_once('=') {
                 Some((f, v)) if f.starts_with("--") => (f, Some(v.to_owned())),
                 _ => (arg.as_str(), None),
             };
+            if flag == "--allow-read" {
+                // Every folder up to the next flag, so a client can pass a
+                // list (Claude Desktop's folder picker); none is fine.
+                o.allow_read.extend(inline.map(PathBuf::from));
+                while let Some(dir) = args.next_if(|a| !a.starts_with('-')) {
+                    o.allow_read.push(dir.into());
+                }
+                continue;
+            }
             let mut value = || {
                 inline
                     .clone()
@@ -73,13 +111,23 @@ impl Options {
             };
             match flag {
                 "-h" | "--help" => o.help = true,
-                "--no-motion" => o.no_motion = true,
-                "--allow-read" => o.allow_read.push(value()?.into()),
+                // A value too, for clients that can only fill one in.
+                "--no-motion" => {
+                    o.no_motion = match inline.as_deref() {
+                        None | Some("true") => true,
+                        Some("false") => false,
+                        Some(v) => bail!("--no-motion takes true or false, not {v}"),
+                    }
+                }
                 "--data" => o.data = Some(value()?.into()),
                 "--fonts" => o.fonts.push(value()?.into()),
                 "--renderer" => o.renderer = value()?.parse()?,
                 "--ffmpeg" => o.ffmpeg = Some(value()?.into()),
                 "--encoder" => o.encoder = Some(value()?),
+                "--out" => o.out = Some(value()?.into()),
+                "--size" => o.sizes.push(value()?),
+                "--rows" => o.rows = Some(value()?.into()),
+                "--format" => o.format = Some(value()?),
                 _ => bail!("unknown argument {arg}; see keyline-mcp --help"),
             }
         }
@@ -129,10 +177,30 @@ mod tests {
     }
 
     #[test]
+    fn allow_read_takes_every_folder_up_to_the_next_flag() {
+        let o = parse(&[
+            "--allow-read",
+            "/a",
+            "/b",
+            "--no-motion=false",
+            "--allow-read",
+        ])
+        .unwrap();
+        assert_eq!(o.allow_read, [PathBuf::from("/a"), PathBuf::from("/b")]);
+        assert!(!o.no_motion);
+        assert!(parse(&["--no-motion=true"]).unwrap().no_motion);
+        let o = parse(&["render", "ad.json", "--size", "wide", "--out=dist"]).unwrap();
+        assert_eq!(o.operands, ["render", "ad.json"]);
+        assert_eq!(o.sizes, ["wide"]);
+        assert_eq!(o.out, Some("dist".into()));
+    }
+
+    #[test]
     fn bad_command_lines_say_what_to_fix() {
         let e = |args: &[&str]| parse(args).unwrap_err().to_string();
         assert!(e(&["--bogus"]).contains("unknown argument --bogus"));
         assert!(e(&["--data"]).contains("--data needs a value"));
         assert!(e(&["--renderer", "metal"]).contains("gpu or cpu"));
+        assert!(e(&["--no-motion=maybe"]).contains("true or false"));
     }
 }

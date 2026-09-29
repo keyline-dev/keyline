@@ -1,15 +1,38 @@
-//! keyline-mcp server: speaks MCP over stdio.
+//! keyline-mcp: speaks MCP over stdio, or renders a scene file
+//! (`keyline-mcp render scene.json`).
 
 use keyline_mcp::options::{HELP, Options};
-use keyline_mcp::{fonts, local::AllowedDirs, server::Server, store::Store, text, video};
+use keyline_mcp::server::{RenderFile, Server};
+use keyline_mcp::{fonts, local::AllowedDirs, store::Store, text, video};
 use rmcp::ServiceExt;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let o = Options::parse(std::env::args().skip(1))?;
+    let mut o = Options::parse(std::env::args().skip(1))?;
     if o.help {
         println!("{HELP}");
         return Ok(());
+    }
+    let render = match o.operands.as_slice() {
+        [] => None,
+        [cmd, scene] if cmd == "render" => Some(scene.clone()),
+        _ => anyhow::bail!(
+            "unexpected {}; see keyline-mcp --help",
+            o.operands.join(" ")
+        ),
+    };
+    let render_only =
+        o.out.is_some() || !o.sizes.is_empty() || o.rows.is_some() || o.format.is_some();
+    if render.is_none() && render_only {
+        anyhow::bail!("--out, --size, --rows and --format go with render; see keyline-mcp --help");
+    }
+    // A scene's images are beside it: rendering one may read its folder.
+    if let Some(scene) = &render {
+        let dir = std::path::Path::new(scene)
+            .parent()
+            .filter(|d| !d.as_os_str().is_empty())
+            .unwrap_or(std::path::Path::new("."));
+        o.allow_read.push(dir.to_path_buf());
     }
     // Local paths are read only inside folders named with --allow-read.
     let reads = AllowedDirs::new(&o.allow_read)?;
@@ -26,7 +49,26 @@ async fn main() -> anyhow::Result<()> {
         ffmpeg: o.ffmpeg,
         encoder: o.encoder,
     });
-    Server::new(store, o.renderer, reads, !o.no_motion)
+    let server = Server::new(store, o.renderer, reads, !o.no_motion);
+    if let Some(scene) = render {
+        let report = server
+            .render_file(&RenderFile {
+                scene: scene.into(),
+                out: o.out,
+                sizes: o.sizes,
+                rows: o.rows,
+                format: o.format,
+            })
+            .await
+            .map_err(anyhow::Error::msg)?;
+        print!("{}", report.text);
+        // A script or CI job fails on a broken design.
+        if report.defects {
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+    server
         .serve(rmcp::transport::stdio())
         .await?
         .waiting()

@@ -258,8 +258,8 @@ Every setting is a flag; each takes its value after a space or as `--flag=value`
 
 | Flag | Default | Does |
 |---|---|---|
-| `--allow-read <folder>` | none | Lets `asset_add` and `scene_create` read local files inside this folder (repeatable). Without it, `path` isn't offered to the agent at all |
-| `--no-motion` | motion on | Leaves motion out of the tools: `duration`, `fps`, `loop`, `time`, `muted`, video, shots and the motion fields. Fewer tokens per turn, for stills-only use |
+| `--allow-read <folder>...` | none | Lets `asset_add` and `scene_create` read local files inside these folders: every folder up to the next flag, and repeatable. Without it, `path` isn't offered to the agent at all |
+| `--no-motion[=true\|false]` | motion on | Leaves motion out of the tools: `duration`, `fps`, `loop`, `time`, `muted`, video, shots and the motion fields. Fewer tokens per turn, for stills-only use |
 | `--data <folder>` | `~/.keyline-mcp` | The [data directory](#data-directory) |
 | `--fonts <folder>` | none | An extra folder of `.ttf` and `.otf` fonts (repeatable) |
 | `--renderer gpu\|cpu` | `gpu` | `gpu` renders on the GPU and falls back to the CPU; `cpu` always uses the CPU |
@@ -272,6 +272,23 @@ An MCP client passes them in `args`:
 ```json
 {"mcpServers": {"keyline": {"command": "keyline-mcp", "args": ["--data", "/srv/keyline", "--allow-read", "/srv/brand"]}}}
 ```
+
+### Rendering without an agent
+
+`keyline-mcp render <scene.json>` loads a scene file the way `scene_create` loads a [template](#templates-and-variants), renders it like the `render` tool, and copies the files into a folder, for scripts and CI:
+
+```sh
+keyline-mcp render campaign.json --out renders/ --size wide --rows rows.json --format webp
+```
+
+| Flag | Default | Does |
+|---|---|---|
+| `--out <folder>` | the current folder | Where the files go |
+| `--size <id>` | every size | A size to draw (repeatable) |
+| `--rows <rows.json>` | none | A JSON list of token values, `[{"headline": "Sale"}, …]`: one render per row, as the tool's `rows` |
+| `--format <format>` | `png` | As the tool's `format` |
+
+It may read files in the scene file's folder, and takes the server's flags too (`--allow-read`, `--data`, `--renderer`…). It prints the tool's reply, each problem line first, and exits 1 when any drawn size (of any row) has a `!` defect, so a broken design fails the job; `warn` advisories don't.
 
 ### Data directory
 
