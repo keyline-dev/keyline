@@ -217,7 +217,8 @@ mod tests {
         let s = sources(&scene, "/a".as_ref());
         assert_eq!(s.len(), 1, "{s:?}");
         let (input, filter) = ffmpeg_args(&s);
-        assert_eq!(input, ["-i", "/a/m"]);
+        let path = std::path::Path::new("/a").join("m").display().to_string();
+        assert_eq!(input, ["-i", path.as_str()]);
         assert_eq!(
             filter,
             "[1:a]atrim=start=3,asetpts=PTS-STARTPTS,atrim=0:4,asetpts=PTS-STARTPTS,volume=0.5,\
