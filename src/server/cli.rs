@@ -66,6 +66,7 @@ impl Server {
         let blocks = self.render_impl(from(args.clone())?).await?;
         let out = r.out.clone().unwrap_or_else(|| PathBuf::from("."));
         std::fs::create_dir_all(&out).map_err(|e| format!("{}: {e}", out.display()))?;
+        let renders = self.store.root().join("renders");
         let mut text = String::new();
         // Problem lines start with their size: only the sizes drawn count.
         let drawn = |line: &str| {
@@ -96,7 +97,7 @@ impl Server {
         }
         for t in blocks.iter().filter_map(|b| b.as_text()) {
             for line in t.text.lines() {
-                let _ = writeln!(text, "{}", copy_out(line, &out)?);
+                let _ = writeln!(text, "{}", copy_out(line, &renders, &out)?);
             }
         }
         Ok(Report {
@@ -116,20 +117,20 @@ fn from<T: serde::de::DeserializeOwned>(v: Value) -> Result<T, String> {
     serde_json::from_value(v).map_err(|e| e.to_string())
 }
 
-/// A reply line naming a rendered file (`<size> <path>`): the file copied
-/// into `out`, and the line with its new path. Other lines as they are.
-fn copy_out(line: &str, out: &Path) -> Result<String, String> {
-    let Some((size, file)) = line.rsplit_once(' ') else {
+/// A reply line naming a rendered file (`<size> <path> (<facts>)`, the
+/// path under `renders`): the file copied into `out`, and the line with
+/// its new path. Other lines as they are.
+fn copy_out(line: &str, renders: &Path, out: &Path) -> Result<String, String> {
+    let root = renders.display().to_string();
+    let Some(at) = line.find(&root) else {
         return Ok(line.to_owned());
     };
-    let src = Path::new(file);
-    let (false, Some(name)) = (line.starts_with(' '), src.file_name()) else {
+    let end = line.rfind(" (").filter(|&e| e > at).unwrap_or(line.len());
+    let src = Path::new(&line[at..end]);
+    let (Some(name), true) = (src.file_name(), src.is_file()) else {
         return Ok(line.to_owned());
     };
-    if !src.is_file() {
-        return Ok(line.to_owned());
-    }
     let dst = out.join(name);
     std::fs::copy(src, &dst).map_err(|e| format!("{}: {e}", dst.display()))?;
-    Ok(format!("{size} {}", dst.display()))
+    Ok(format!("{}{}{}", &line[..at], dst.display(), &line[end..]))
 }

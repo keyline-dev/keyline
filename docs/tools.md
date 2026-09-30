@@ -225,7 +225,14 @@ instagram-portrait 1080×1350
 | `muted` | boolean | false | `true` leaves every clip's sound out of `mp4` and `webm` (a clip's own `muted` leaves out one) |
 | `rows` | array of objects | | [Variants](#templates-and-variants): one render per row of token values |
 
-Reply: per size, the size id and the file's path ([Output files](#output-files)), then its [drawn-text lines](#drawn-text-lines). With `maxKB`, the path is followed by `quality N` or `fps N` when it was lowered, or `!too-big N KB` when even the lowest setting doesn't fit. With `rows`, each line starts with `r<row>`. With `preview`, the reply also carries the preview as an image.
+Reply: per size, the size id, the file's path ([Output files](#output-files)) and, in parentheses, what the file holds, then its [drawn-text lines](#drawn-text-lines):
+
+```text
+wide /…/renders/s1a2b3c4d5/wide-v3.png (1200×628, 212 KB)
+wide /…/renders/s1a2b3c4d5/wide-v3.gif (1200×628, 2s, 60 frames at 30 fps, plays once, 1840 KB)
+```
+
+A moving format gives its length, frame count and frame rate; GIF and APNG also say whether they loop (`loops`) or stop on their last frame (`plays once`), from the scene's `loop`. An agent opening an animated file sees only its first frame, so these facts are how it checks one. With `maxKB`, `quality N` follows when the quality was lowered (a lowered frame rate shows in the facts), or `!too-big` when even the lowest setting doesn't fit. With `rows`, each line starts with `r<row>`. With `preview`, the reply also carries the preview as an image.
 
 ## Templates and variants
 

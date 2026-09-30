@@ -63,7 +63,7 @@ async fn reference_ad_renders_all_sizes_without_warnings() {
     let paths: Vec<(&str, &str)> = rendered
         .lines()
         .filter(|l| !l.starts_with(' '))
-        .map(|l| l.split_once(' ').expect("size path"))
+        .map(|l| common::file_of(l).expect("size path"))
         .collect();
     assert_eq!(paths.len(), 3, "{rendered}");
     for (size, path) in &paths {

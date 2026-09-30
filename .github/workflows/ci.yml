@@ -43,8 +43,9 @@ jobs:
       - run: cargo test --test layout
       # End-to-end tests compare against reference PNGs, which are per OS
       # (glyph rasterization differs by platform) and allow for anti-aliasing
-      # that differs between versions of it. They exist for macOS;
-      # create them on another OS with UPDATE_GOLDEN=1 before enabling it here.
+      # that differs between versions of it. They exist for macOS and
+      # Windows; create them on another OS with UPDATE_GOLDEN=1 before
+      # enabling it here.
       # Video tests need ffmpeg; the rest of the server works without it.
       - name: ffmpeg for the video tests
         if: runner.os == 'macOS'
@@ -52,8 +53,14 @@ jobs:
       - name: End-to-end tests
         if: runner.os == 'macOS'
         run: cargo test --tests
+      - name: ffmpeg for the video tests (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y --no-progress
+      - name: End-to-end tests (Windows)
+        if: runner.os == 'Windows'
+        run: cargo test --tests -- --test-threads=2
       - name: Upload renders that missed their golden
-        if: failure() && runner.os == 'macOS'
+        if: failure() && runner.os != 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: golden-actual-${{ matrix.os }}

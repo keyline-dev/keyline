@@ -154,7 +154,7 @@ Fix any defects, then render.\n\n{extra}",
 
     // The final render, scored against the reference.
     let rendered = mcp.ok("render", json!({"sceneId": scene})).await;
-    let path = rendered.lines().next().unwrap().split_once(' ').unwrap().1;
+    let path = common::file_of(rendered.lines().next().unwrap()).unwrap().1;
     let png = std::fs::read(path).unwrap();
     std::fs::write(run.join("final.png"), &png).unwrap();
     let score = likeness(&ref_img, &decode(&png));

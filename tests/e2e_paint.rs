@@ -59,7 +59,7 @@ async fn the_paint_kit_renders_at_every_size() {
 
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
     for line in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = line.split_once(' ').unwrap();
+        let (size, path) = common::file_of(line).unwrap();
         check_golden(&format!("paint-{size}.png"), &std::fs::read(path).unwrap());
     }
     mcp.stop().await;
@@ -133,7 +133,7 @@ async fn torn_edges_rough_strokes_and_halftone_look_hand_made() {
             {"id": "dots", "type": "image", "asset": "photo", "x": 400, "y": 200, "width": 60, "height": 40, "filter": {"halftone": 5, "tint": "#D0202E"}}]}))
         .await;
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
-    let path = rendered.lines().next().unwrap().split_once(' ').unwrap().1;
+    let path = common::file_of(rendered.lines().next().unwrap()).unwrap().1;
     check_golden("hand-card.png", &std::fs::read(path).unwrap());
     let e = mcp
         .call(

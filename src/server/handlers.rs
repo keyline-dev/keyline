@@ -173,6 +173,7 @@ impl Server {
                             None => scene,
                         };
                         let mut note = String::new();
+                        let mut used_fps = scene.fps;
                         let still = matches!(format, Format::Png | Format::Jpeg | Format::Webp);
                         let video = crate::video::frame::has_video(&scene);
                         if video && format == Format::Pdf {
@@ -210,27 +211,23 @@ impl Server {
                             }
                             Format::Apng | Format::Gif => {
                                 // maxKB: halve the frame rate until it fits.
-                                let mut fps = scene.fps;
+                                let fps = &mut used_fps;
                                 loop {
                                     let bytes = if format == Format::Gif {
-                                        render_gif(&scene, &size, fps, &assets)?
+                                        render_gif(&scene, &size, *fps, &assets)?
                                     } else {
-                                        render_apng(&scene, &size, fps, &assets)?
+                                        render_apng(&scene, &size, *fps, &assets)?
                                     };
                                     let over =
                                         max_kb.is_some_and(|kb| bytes.len() > kb as usize * 1024);
                                     if !over {
-                                        if fps < scene.fps {
-                                            note = format!(" fps {fps}");
-                                        }
                                         break bytes;
                                     }
-                                    if fps / 2.0 < 5.0 {
-                                        let kb = bytes.len().div_ceil(1024);
-                                        note = format!(" !too-big {kb} KB at {fps} fps");
+                                    if *fps / 2.0 < 5.0 {
+                                        note = " !too-big".to_owned();
                                         break bytes;
                                     }
-                                    fps /= 2.0;
+                                    *fps /= 2.0;
                                 }
                             }
                             // ponytail: lossy formats render on the CPU; add a GPU readback if they get hot.
@@ -241,13 +238,20 @@ impl Server {
                                     note = format!(" quality {q}");
                                 }
                                 if e.too_big {
-                                    let kb = e.bytes.len().div_ceil(1024);
-                                    let _ = write!(note, " !too-big {kb} KB");
+                                    note.push_str(" !too-big");
                                 }
                                 e.bytes
                             }
                         };
-                        anyhow::Ok((text_report(&scene, &size), size.id, bytes, note))
+                        // What the file holds, so the agent needn't open it (a
+                        // model sees only an animation's first frame).
+                        let facts = facts(&scene, &size, format, used_fps, bytes.len());
+                        anyhow::Ok((
+                            text_report(&scene, &size),
+                            size.id,
+                            bytes,
+                            format!(" ({facts}){note}"),
+                        ))
                     })
                 })
                 .collect();
@@ -415,4 +419,29 @@ fn blank(a: SceneCreateArgs) -> Result<Scene, String> {
     };
     scene.validate()?;
     Ok(scene)
+}
+
+/// A rendered file's facts for the reply, in parentheses after its path
+/// (a path may hold spaces): `1080×1350, 212 KB`, and for a
+/// moving format its length, frames and rate, and for GIF and APNG whether
+/// it loops (video players decide that themselves).
+fn facts(scene: &Scene, size: &Size, format: Format, fps: f32, bytes: usize) -> String {
+    let mut out = format!("{}×{}", size.width.round(), size.height.round());
+    let moving = matches!(
+        format,
+        Format::Apng | Format::Gif | Format::Mp4 | Format::Webm
+    );
+    if let (true, Some(secs)) = (moving, crate::anim::shots::length(scene)) {
+        let frames = ((secs * fps).round() as usize).max(1);
+        let _ = write!(out, ", {secs}s, {frames} frames at {fps} fps");
+        if matches!(format, Format::Apng | Format::Gif) {
+            out.push_str(if scene.looping {
+                ", loops"
+            } else {
+                ", plays once"
+            });
+        }
+    }
+    let _ = write!(out, ", {} KB", bytes.div_ceil(1024));
+    out
 }

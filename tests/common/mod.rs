@@ -352,3 +352,10 @@ pub const LEOPARD_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBo
 <g fill="#3B2412"><circle cx="18" cy="20" r="3.5"/><circle cx="55" cy="18" r="3"/>
 <circle cx="35" cy="52" r="3.5"/><circle cx="66" cy="62" r="3"/><circle cx="14" cy="72" r="2.5"/></g>
 </svg>"##;
+
+/// A `render` reply line's size id and file path: `<size> <path> (<facts>)`;
+/// the path may hold spaces.
+pub fn file_of(line: &str) -> Option<(&str, &str)> {
+    let (size, rest) = line.split_once(' ')?;
+    Some((size, rest.rsplit_once(" (").map_or(rest, |(path, _)| path)))
+}

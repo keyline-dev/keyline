@@ -41,7 +41,7 @@ async fn one_scene_becomes_a_post_a_banner_and_a_story() {
     let rendered = mcp.ok("render", serde_json::json!({"sceneId": id})).await;
     let mut sizes = Vec::new();
     for l in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = l.split_once(' ').unwrap();
+        let (size, path) = common::file_of(l).unwrap();
         check_golden(
             &format!("showcase-{size}.png"),
             &std::fs::read(path).unwrap(),

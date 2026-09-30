@@ -17,7 +17,7 @@ inputs:
     default: ""
   version:
     description: The keyline release to use
-    default: "0.5.0"
+    default: "0.6.0"
 
 runs:
   using: composite
@@ -31,6 +31,7 @@ runs:
           Linux-X64) target=linux-amd64 ;;
           Linux-ARM64) target=linux-arm64 ;;
           macOS-ARM64) target=macos-arm64 ;;
+          Windows-X64 | Windows-ARM64) target=windows-amd64 ;;
           *) echo "::error::keyline has no release for $RUNNER_OS $RUNNER_ARCH"; exit 1 ;;
         esac
         name=keyline-mcp-v$V-$target
@@ -38,12 +39,17 @@ runs:
         mkdir -p "$dir"
         cd "$dir"
         url=https://github.com/keyline-dev/keyline/releases/download/v$V
-        curl -fsSL "$url/$name.tar.gz" -o "$name.tar.gz"
+        # Windows gets a .zip, the others a tarball.
+        file=$name.tar.gz
+        if [ "$RUNNER_OS" = Windows ]; then file=$name.zip; fi
+        curl -fsSL "$url/$file" -o "$file"
         curl -fsSL "$url/SHA256SUMS" -o SHA256SUMS
-        grep " $name.tar.gz\$" SHA256SUMS > want
+        grep " $file\$" SHA256SUMS > want
         if command -v sha256sum > /dev/null; then sha256sum -c want; else shasum -a 256 -c want; fi
-        tar xzf "$name.tar.gz"
-        echo "$dir/$name" >> "$GITHUB_PATH"
+        if [ "$RUNNER_OS" = Windows ]; then unzip -q "$file"; else tar xzf "$file"; fi
+        bin="$dir/$name"
+        if command -v cygpath > /dev/null; then bin=$(cygpath -w "$bin"); fi
+        echo "$bin" >> "$GITHUB_PATH"
     - name: Render
       shell: bash
       env:

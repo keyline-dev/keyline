@@ -246,7 +246,7 @@ impl Run<'_> {
         )
         .unwrap();
         for line in self.rendered.lines().filter(|l| !l.starts_with(' ')) {
-            if let Some((size, path)) = line.split_once(' ') {
+            if let Some((size, path)) = common::file_of(line) {
                 std::fs::copy(path, dir.join(format!("{size}.png"))).unwrap();
             }
         }

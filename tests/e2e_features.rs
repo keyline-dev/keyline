@@ -136,7 +136,7 @@ async fn text_can_be_filled_with_images_and_outlined() {
 
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
     for line in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = line.split_once(' ').unwrap();
+        let (size, path) = common::file_of(line).unwrap();
         check_golden(
             &format!("textfill-{size}.png"),
             &std::fs::read(path).unwrap(),
@@ -195,7 +195,7 @@ async fn stacks_lay_out_rows_and_columns_at_every_size() {
 
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
     for line in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = line.split_once(' ').unwrap();
+        let (size, path) = common::file_of(line).unwrap();
         check_golden(&format!("stacks-{size}.png"), &std::fs::read(path).unwrap());
     }
     mcp.stop().await;
@@ -262,7 +262,7 @@ async fn styles_icons_shapes_masks_and_focus_work_end_to_end() {
 
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
     for line in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = line.split_once(' ').unwrap();
+        let (size, path) = common::file_of(line).unwrap();
         check_golden(&format!("kit-{size}.png"), &std::fs::read(path).unwrap());
     }
     mcp.stop().await;
@@ -494,7 +494,7 @@ async fn the_scene_itself_is_edited_like_a_layer() {
     assert_eq!(reply, "changed scene v1 ok");
     // The new size renders, on the new background.
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
-    let (size, path) = rendered.lines().next().unwrap().split_once(' ').unwrap();
+    let (size, path) = common::file_of(rendered.lines().next().unwrap()).unwrap();
     assert_eq!(size, "200x100", "{rendered}");
     let (dims, px) = common::golden::rgba(&std::fs::read(path).unwrap());
     assert_eq!(dims, (200, 100));
@@ -536,7 +536,7 @@ height='24'><rect width='24' height='24' fill='%23D0202E'/></svg>";
     )
     .await;
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
-    let path = rendered.lines().next().unwrap().split_once(' ').unwrap().1;
+    let path = common::file_of(rendered.lines().next().unwrap()).unwrap().1;
     let (_, px) = common::golden::rgba(&std::fs::read(path).unwrap());
     assert_eq!(px[..4], [0xD0, 0x20, 0x2E, 255]);
     mcp.stop().await;
@@ -607,4 +607,57 @@ fn render_draws_a_scene_file_and_fails_on_a_defect() {
         .output()
         .unwrap();
     assert!(String::from_utf8_lossy(&o.stderr).contains("go with render"));
+}
+
+#[test]
+fn without_data_the_home_folder_holds_it_on_every_os() {
+    // Windows has no HOME; its home folder is USERPROFILE.
+    let home = std::env::temp_dir().join(format!("keyline-mcp-e2e-home-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&home);
+    std::fs::create_dir_all(&home).unwrap();
+    let scene = home.join("ad.json");
+    std::fs::write(
+        &scene,
+        json!({"width": 100, "height": 100, "sizes": ["100x100"], "layers": [{"type": "rect", "fill": "#000"}]})
+            .to_string(),
+    )
+    .unwrap();
+    let o = std::process::Command::new(env!("CARGO_BIN_EXE_keyline-mcp"))
+        .arg("render")
+        .arg(&scene)
+        .args(["--renderer", "cpu", "--out"])
+        .arg(home.join("out"))
+        .env("HOME", &home)
+        .env("USERPROFILE", &home)
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(home.join(".keyline-mcp").join("scenes").is_dir());
+}
+
+#[test]
+#[ignore = "needs the network (Google Fonts)"]
+fn web_fonts_a_scene_file_names_are_fetched_before_it_is_checked() {
+    let dir = std::env::temp_dir().join(format!("keyline-mcp-e2e-tplfont-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let scene = dir.join("ad.json");
+    std::fs::write(
+        &scene,
+        json!({"width": 200, "height": 100, "sizes": ["200x100"],
+            "layers": [{"type": "text", "text": "Hi", "fontFamily": "Poppins", "fontSize": 30}]})
+        .to_string(),
+    )
+    .unwrap();
+    let o = std::process::Command::new(env!("CARGO_BIN_EXE_keyline-mcp"))
+        .arg("render")
+        .arg(&scene)
+        .args(["--renderer", "cpu", "--data"])
+        .arg(dir.join("data"))
+        .arg("--out")
+        .arg(dir.join("out"))
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(dir.join("out").join("200x100-v0.png").is_file());
 }

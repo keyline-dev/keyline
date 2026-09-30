@@ -241,7 +241,7 @@ async fn a_grid_collage_rearranges_per_aspect_with_one_at() {
     assert_eq!(cx, 600, "{d}");
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
     for l in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = l.split_once(' ').unwrap();
+        let (size, path) = common::file_of(l).unwrap();
         check_golden(&format!("grid-{size}.png"), &std::fs::read(path).unwrap());
     }
     mcp.stop().await;

@@ -15,14 +15,16 @@ pub struct Store {
 }
 
 impl Store {
-    /// `data` (`--data`), else `~/.keyline-mcp`.
+    /// `data` (`--data`), else `.keyline-mcp` in the user's home folder
+    /// (`%USERPROFILE%` on Windows).
     ///
     /// # Errors
-    /// No `data` and no `HOME`, or the directories can't be created.
+    /// No `data` and no home folder, or the directories can't be created.
     pub fn open_default(data: Option<PathBuf>) -> Result<Self> {
         let root = match data {
             Some(dir) => dir,
-            None => PathBuf::from(std::env::var_os("HOME").context("HOME is not set")?)
+            None => std::env::home_dir()
+                .context("no home folder; pass --data <folder>")?
                 .join(".keyline-mcp"),
         };
         Self::open(root)

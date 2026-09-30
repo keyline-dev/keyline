@@ -151,6 +151,11 @@ async fn three_clips_play_as_shots_with_titles_and_sound() {
         .await;
     let mp4 = reply.split_whitespace().nth(1).unwrap();
     assert!(mp4.ends_with(".mp4"), "{reply}");
+    // A video's facts: length and frames; players decide the looping.
+    assert!(
+        reply.contains(" frames at ") && !reply.contains("loops"),
+        "{reply}"
+    );
     assert_eq!(
         streams(mp4),
         ["video", "audio"],

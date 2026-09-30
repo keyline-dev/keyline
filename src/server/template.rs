@@ -64,6 +64,9 @@ impl Server {
         if let Some(k) = t.keys().find(|k| !FIELDS.contains(&k.as_str())) {
             return Err(format!("template: unknown field {k}"));
         }
+        // Its web fonts first, as layer_add does: the scene is checked
+        // against the fonts it names.
+        self.fetch_fonts(&[Value::Object(t.clone())]).await?;
         let mut take = |k: &str| t.remove(k).unwrap_or(Value::Null);
         let map = |v: Value, what: &str| match v {
             Value::Null => Ok(Map::new()),

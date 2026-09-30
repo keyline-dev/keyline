@@ -1,7 +1,7 @@
 {
   "name": "keyline",
-  "version": "0.5.0",
-  "description": "The keyline MCP server: design with your agent, rendered to PNG, JPEG, WebP, PDF, APNG, GIF and video at every size",
+  "version": "0.6.0",
+  "description": "Design engine for AI agents: images and video at every size, no Chrome needed",
   "author": {
     "name": "keyline",
     "url": "https://keyline.dev"

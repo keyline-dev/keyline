@@ -50,6 +50,9 @@ jobs:
           - { os: linux, arch: arm64, runner: ubuntu-22.04-arm }
           # ponytail: Apple silicon only; add macos-15-intel if anyone needs x86_64.
           - { os: macos, arch: arm64, runner: macos-latest }
+          # ponytail: x64 only; Windows on Arm runs it emulated. Add
+          # windows-11-arm if anyone needs it native.
+          - { os: windows, arch: amd64, runner: windows-latest }
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -63,20 +66,28 @@ jobs:
           cargo install cargo-deb --locked
           cargo deb
       - name: Build the release binary
-        if: matrix.os == 'macos'
+        if: matrix.os != 'linux'
         run: cargo build --release --locked
-      - name: Tarball
+      # A tarball, or on Windows a .zip holding keyline-mcp.exe.
+      - name: Archive
+        shell: bash
         run: |
           name=keyline-mcp-${GITHUB_REF_NAME}-${{ matrix.os }}-${{ matrix.arch }}
           mkdir "$name"
-          cp target/release/keyline-mcp LICENSE README.md "$name"/
-          tar czf "$name.tar.gz" "$name"
+          if [ "${{ matrix.os }}" = windows ]; then
+            cp target/release/keyline-mcp.exe LICENSE README.md "$name"/
+            7z a -tzip "$name.zip" "$name" > /dev/null
+          else
+            cp target/release/keyline-mcp LICENSE README.md "$name"/
+            tar czf "$name.tar.gz" "$name"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}
           path: |
             target/debian/*.deb
             *.tar.gz
+            *.zip
 
   release:
     needs: build
@@ -96,20 +107,23 @@ jobs:
         run: |
           find . -mindepth 2 -type f -exec mv {} . \;
           find . -mindepth 1 -type d -empty -delete
-      # Claude Desktop's extension: the macOS binary with mcpb/manifest.json.
+      # Claude Desktop's extension: the macOS and Windows binaries with
+      # mcpb/manifest.json, which picks one per OS.
       - name: Claude Desktop bundle (.mcpb)
         run: |
-          name=keyline-mcp-$GITHUB_REF_NAME-macos-arm64
+          mac=keyline-mcp-$GITHUB_REF_NAME-macos-arm64
+          win=keyline-mcp-$GITHUB_REF_NAME-windows-amd64
           mkdir -p bundle/server
-          tar xzf "dist/$name.tar.gz" -C "$RUNNER_TEMP"
-          mv "$RUNNER_TEMP/$name/keyline-mcp" bundle/server/
+          tar xzf "dist/$mac.tar.gz" -C "$RUNNER_TEMP"
+          unzip -q "dist/$win.zip" -d "$RUNNER_TEMP"
+          mv "$RUNNER_TEMP/$mac/keyline-mcp" "$RUNNER_TEMP/$win/keyline-mcp.exe" bundle/server/
           cp mcpb/manifest.json LICENSE bundle/
           npx -y @anthropic-ai/mcpb validate bundle/manifest.json
           npx -y @anthropic-ai/mcpb pack bundle "dist/keyline-mcp-${GITHUB_REF_NAME#v}.mcpb"
       - name: Checksums
         working-directory: dist
         run: |
-          sha256sum *.deb *.tar.gz *.mcpb > SHA256SUMS
+          sha256sum *.deb *.tar.gz *.zip *.mcpb > SHA256SUMS
           cat SHA256SUMS
       - uses: actions/attest-build-provenance@v2
         with:
@@ -143,20 +157,26 @@ jobs:
           echo "$reply" | grep -q '"serverInfo"'
 
   # The Claude Desktop bundle as Claude Desktop unpacks and starts it, with
-  # no folders picked and motion on.
+  # no folders picked: it passes the placeholders unfilled.
   desktop:
     needs: release
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - { runner: macos-latest, exe: keyline-mcp }
+          - { runner: windows-latest, exe: keyline-mcp.exe }
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: The bundle's server starts
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern '*.mcpb' --pattern SHA256SUMS
-          shasum -a 256 --check --ignore-missing SHA256SUMS
+          sha256sum --check --ignore-missing SHA256SUMS 2>/dev/null || shasum -a 256 --check --ignore-missing SHA256SUMS
           unzip -q keyline-mcp-*.mcpb -d bundle
           init='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}'
-          reply=$(echo "$init" | bundle/server/keyline-mcp --no-motion=false --allow-read "" --data "$RUNNER_TEMP/data" | head -n 1)
+          reply=$(echo "$init" | bundle/server/${{ matrix.exe }} '--no-motion=${user_config.stills_only}' --allow-read '${user_config.folders}' --data "$RUNNER_TEMP/data" | head -n 1)
           echo "$reply"
           echo "$reply" | grep -q '"serverInfo"'
 
@@ -247,7 +267,7 @@ jobs:
     needs: release
     strategy:
       matrix:
-        runner: [ubuntu-latest, macos-latest]
+        runner: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4

@@ -91,7 +91,7 @@ Nothing else to install.
 /plugin install keyline@keyline
 ```
 
-**Claude Desktop** (Mac, Apple silicon): download `keyline-mcp-<version>.mcpb` from the [latest release](https://github.com/keyline-dev/keyline/releases/latest) and double-click it. Its settings pick the folders keyline may read and whether to leave motion out.
+**Claude Desktop** (Mac with Apple silicon, or Windows): download `keyline-mcp-<version>.mcpb` from the [latest release](https://github.com/keyline-dev/keyline/releases/latest) and double-click it. Its settings pick the folders keyline may read and whether to leave motion out.
 
 ### Other clients: install, then add
 
@@ -114,6 +114,8 @@ xattr -d com.apple.quarantine /usr/local/bin/keyline-mcp 2>/dev/null || true
 ```sh
 sudo apt install ./keyline-mcp_<version>-1_amd64.deb
 ```
+
+**Windows** (x64; Arm runs it emulated): download `keyline-mcp-<version>-windows-amd64.zip` from the [latest release](https://github.com/keyline-dev/keyline/releases/latest), unpack it, and put the folder holding `keyline-mcp.exe` on your PATH, or give clients its full path. The Claude Code plugin doesn't run on Windows yet; add the server with `claude mcp add keyline -- keyline-mcp` instead.
 
 **Docker** (Linux, nothing else to install): use this as the command in your client. `:latest` includes ffmpeg for video; `:stills` leaves it out and is about a third the size.
 

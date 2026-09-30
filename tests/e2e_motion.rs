@@ -51,6 +51,11 @@ async fn a_scene_moves_as_an_animated_png_and_as_stills() {
         .await;
     let path = reply.split_whitespace().nth(1).unwrap();
     assert!(path.ends_with(".anim.png"), "{reply}");
+    // The reply says what the file holds: a model sees only its first frame.
+    assert!(
+        reply.contains(" (500×250, 1.5s, 15 frames at 10 fps, loops, "),
+        "{reply}"
+    );
     let png = std::fs::read(path).unwrap();
     let actl = png.windows(4).position(|w| w == b"acTL").unwrap();
     assert_eq!(
@@ -77,6 +82,10 @@ async fn a_scene_moves_as_an_animated_png_and_as_stills() {
         let reply = mcp.ok("render", json!({"sceneId": id, "time": t})).await;
         let path = reply.split_whitespace().nth(1).unwrap();
         assert!(path.ends_with(&format!(".at{t}s.png")), "{reply}");
+        assert!(
+            reply.contains(" (500×250, ") && reply.contains(" KB)"),
+            "{reply}"
+        );
         check_golden(&format!("motion-{t}.png"), &std::fs::read(path).unwrap());
     }
 
@@ -86,6 +95,7 @@ async fn a_scene_moves_as_an_animated_png_and_as_stills() {
         .await;
     let gif = std::fs::read(reply.split_whitespace().nth(1).unwrap()).unwrap();
     assert!(gif.starts_with(b"GIF89a"), "{reply}");
+    assert!(reply.contains("15 frames at 10 fps, loops, "), "{reply}");
     assert!(
         gif.windows(11).any(|w| w == b"NETSCAPE2.0"),
         "loops forever"

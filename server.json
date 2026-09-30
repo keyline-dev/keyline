@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.keyline-dev/keyline",
   "title": "keyline",
-  "description": "Design engine for agents: layouts, ads and posts rendered to images and video at every size",
+  "description": "Design engine for AI agents: images and video at every size, no Chrome needed",
   "websiteUrl": "https://keyline.dev",
   "repository": {
     "url": "https://github.com/keyline-dev/keyline",

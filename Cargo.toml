@@ -1,9 +1,9 @@
 [package]
 name = "keyline-mcp"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
 license = "PolyForm-Shield-1.0.0"
-description = "Image composition engine driven by an AI agent over MCP: one JSON scene, PNGs at every size"
+description = "Design engine for AI agents: images and video at every size, no Chrome needed"
 
 # `cargo deb` (a build tool, run in the release workflow) packages the binary.
 [package.metadata.deb]

@@ -1,0 +1,54 @@
+name: Preview
+
+# Test builds of any branch, kept as run artifacts (not released): the
+# Windows .zip and a Claude Desktop .mcpb with the macOS and Windows
+# binaries, for trying on a machine before a release. Run it from the
+# Actions tab or `gh workflow run preview.yml --ref <branch>`, then
+# `gh run download <run id>`.
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - { os: windows, runner: windows-latest, exe: keyline-mcp.exe }
+          - { os: macos, runner: macos-latest, exe: keyline-mcp }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --release --locked
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.os }}
+          path: target/release/${{ matrix.exe }}
+
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: bins
+      - name: Windows .zip and Claude Desktop .mcpb
+        run: |
+          mkdir -p out keyline-mcp-windows-amd64 bundle/server
+          cp bins/bin-windows/keyline-mcp.exe LICENSE README.md keyline-mcp-windows-amd64/
+          zip -qr out/keyline-mcp-windows-amd64.zip keyline-mcp-windows-amd64
+          cp bins/bin-windows/keyline-mcp.exe bins/bin-macos/keyline-mcp bundle/server/
+          chmod +x bundle/server/keyline-mcp
+          cp mcpb/manifest.json LICENSE bundle/
+          npx -y @anthropic-ai/mcpb validate bundle/manifest.json
+          npx -y @anthropic-ai/mcpb pack bundle out/keyline-mcp-preview.mcpb
+          (cd out && sha256sum * > SHA256SUMS && cat SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview
+          path: out/

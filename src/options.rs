@@ -8,7 +8,8 @@ use anyhow::{Context, Result, bail};
 use crate::gpu::Backend;
 
 /// What `--help` prints: every flag.
-pub const HELP: &str = "keyline-mcp: an AI-native design engine, an MCP server over stdio.
+pub const HELP: &str = "keyline-mcp: a design engine for AI agents: images and video at every size,
+no Chrome needed. An MCP server over stdio.
 
 Usage: keyline-mcp [options]                  the MCP server, over stdio
        keyline-mcp render <scene.json> [options]
@@ -86,8 +87,9 @@ impl Options {
         let mut o = Options::default();
         let mut args = args.into_iter().peekable();
         while let Some(arg) = args.next() {
-            // A client's setting left empty can arrive as "".
-            if arg.is_empty() {
+            // A client's setting left empty can arrive as "", or as its
+            // placeholder unfilled (Claude Desktop: `${user_config.folders}`).
+            if unset(&arg) {
                 continue;
             }
             if !arg.starts_with('-') {
@@ -101,9 +103,10 @@ impl Options {
             if flag == "--allow-read" {
                 // Every folder up to the next flag, so a client can pass a
                 // list (Claude Desktop's folder picker); none is fine.
-                o.allow_read.extend(inline.map(PathBuf::from));
+                o.allow_read
+                    .extend(inline.filter(|d| !unset(d)).map(PathBuf::from));
                 while let Some(dir) = args.next_if(|a| !a.starts_with('-')) {
-                    if !dir.is_empty() {
+                    if !unset(&dir) {
                         o.allow_read.push(dir.into());
                     }
                 }
@@ -121,7 +124,7 @@ impl Options {
                 "--no-motion" => {
                     o.no_motion = match inline.as_deref() {
                         None | Some("true") => true,
-                        Some("false") => false,
+                        Some(v) if v == "false" || unset(v) => false,
                         Some(v) => bail!("--no-motion takes true or false, not {v}"),
                     }
                 }
@@ -139,6 +142,11 @@ impl Options {
         }
         Ok(o)
     }
+}
+
+/// A value a client left unset: empty, or its `${…}` placeholder unfilled.
+fn unset(v: &str) -> bool {
+    v.is_empty() || (v.starts_with("${") && v.ends_with('}'))
 }
 
 #[cfg(test)]
@@ -201,6 +209,18 @@ mod tests {
         assert_eq!(o.operands, ["render", "ad.json"]);
         assert_eq!(o.sizes, ["wide"]);
         assert_eq!(o.out, Some("dist".into()));
+    }
+
+    #[test]
+    fn placeholders_a_client_left_unfilled_mean_unset() {
+        // What Claude Desktop passed with no folder picked.
+        let o = parse(&[
+            "--no-motion=${user_config.stills_only}",
+            "--allow-read",
+            "${user_config.folders}",
+        ])
+        .unwrap();
+        assert!(o.allow_read.is_empty() && !o.no_motion && o.operands.is_empty());
     }
 
     #[test]

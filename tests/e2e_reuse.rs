@@ -95,7 +95,7 @@ async fn the_reference_ad_with_components_tokens_and_adaptive_layout() {
     );
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
     for l in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = l.split_once(' ').unwrap();
+        let (size, path) = common::file_of(l).unwrap();
         check_golden(&format!("reuse-{size}.png"), &std::fs::read(path).unwrap());
     }
     mcp.stop().await;

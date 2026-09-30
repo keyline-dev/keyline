@@ -1,6 +1,6 @@
 {
   "name": "keyline",
-  "description": "keyline: an AI-native design engine. Agents design over MCP; keyline renders every size.",
+  "description": "Design engine for AI agents: images and video at every size, no Chrome needed",
   "owner": {
     "name": "keyline",
     "url": "https://keyline.dev"
@@ -9,7 +9,7 @@
     {
       "name": "keyline",
       "source": "./plugin",
-      "description": "The keyline MCP server: design with your agent, rendered to PNG, JPEG, WebP, PDF, APNG, GIF and video at every size"
+      "description": "Design engine for AI agents: images and video at every size, no Chrome needed"
     }
   ]
 }
