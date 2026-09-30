@@ -242,7 +242,7 @@ async fn a_number_counts_up_frame_by_frame_in_a_box_that_holds_still() {
         .unwrap()
         .to_owned();
     mcp.ok("layer_add", json!({"sceneId": id, "layers": [
-        {"id": "stat", "type": "text", "text": "{n}+", "fontSize": 40, "color": "#000000", "x": 20, "y": 20,
+        {"id": "stat", "type": "text", "text": "{{n}}+", "fontSize": 40, "color": "#000000", "x": 20, "y": 20,
          "animate": {"count": [0, 1250], "separator": ",", "duration": 0.9, "ease": "none"}}]}))
         .await;
     // Measured with its final value: the box is the width of "1,250+".

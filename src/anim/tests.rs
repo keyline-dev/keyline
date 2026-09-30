@@ -130,7 +130,7 @@ fn bad_timing_is_refused_in_one_line() {
 #[test]
 fn draw_and_count_tracks_set_the_moment_and_the_count_box_holds_still() {
     let s = scene(
-        json!([{"id": "n", "type": "text", "text": "{n} users", "fontSize": 20,
+        json!([{"id": "n", "type": "text", "text": "{{n}} users", "fontSize": 20,
             "animate": {"count": [0, 12500], "separator": ",", "ease": "none", "draw": [0, 1]}}]),
         json!({}),
     );
@@ -155,7 +155,7 @@ fn draw_and_count_tracks_set_the_moment_and_the_count_box_holds_still() {
 fn draw_and_count_are_refused_where_they_would_do_nothing() {
     let s: Scene = serde_json::from_value(json!({"width": 100, "height": 100, "duration": 1,
         "sizes": [{"id": "a", "width": 100, "height": 100}],
-        "layers": [{"id": "t", "type": "text", "text": "{n}", "split": "chars",
+        "layers": [{"id": "t", "type": "text", "text": "{{n}}", "split": "chars",
             "animate": {"count": [0, 9]}}]}))
     .unwrap();
     let e = s.validate().unwrap_err();
@@ -169,6 +169,6 @@ fn draw_and_count_are_refused_where_they_would_do_nothing() {
     .unwrap();
     assert_eq!(
         s.validate().unwrap_err(),
-        "t: count needs text with {n} where the number goes"
+        "t: count needs text with {{n}} where the number goes"
     );
 }

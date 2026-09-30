@@ -93,6 +93,23 @@ fn instances(scene: &Scene, u: &Layer, depth: usize) -> Result<Vec<Layer>, Strin
         .map(|(n, p)| {
             let mut v = template.clone();
             fill(&mut v, p);
+            if let Some(name) = unfilled(&v, &scene.tokens) {
+                let names = |keys: Vec<&String>| {
+                    let k: Vec<&str> = keys.into_iter().map(String::as_str).collect();
+                    if k.is_empty() {
+                        "none".to_owned()
+                    } else {
+                        k.join(", ")
+                    }
+                };
+                return Err(format!(
+                    "{}: {} is neither a prop nor a token; props: {}; tokens: {}",
+                    u.id,
+                    super::tokens::braced(&name),
+                    names(p.keys().collect()),
+                    names(scene.tokens.keys().collect())
+                ));
+            }
             super::tokens::substitute(&mut v, &scene.tokens)
                 .map_err(|e| format!("{}: {e}", u.id))?;
             let root = if each.is_empty() {
@@ -145,6 +162,20 @@ fn fill(v: &mut Value, props: &Map<String, Value>) {
         Value::Array(a) => a.iter_mut().for_each(|x| fill(x, props)),
         Value::Object(o) => o.values_mut().for_each(|x| fill(x, props)),
         _ => {}
+    }
+}
+
+/// The first `{{name}}` left in `v` once props are filled that isn't a
+/// token either.
+fn unfilled(v: &Value, tokens: &std::collections::BTreeMap<String, Value>) -> Option<String> {
+    match v {
+        Value::String(s) => super::tokens::placeholders(s)
+            .into_iter()
+            .find(|(_, n)| !tokens.contains_key(*n))
+            .map(|(_, n)| n.to_owned()),
+        Value::Array(a) => a.iter().find_map(|x| unfilled(x, tokens)),
+        Value::Object(o) => o.values().find_map(|x| unfilled(x, tokens)),
+        _ => None,
     }
 }
 
@@ -216,7 +247,7 @@ mod tests {
             "height": 400,
             "sizes": [{"id": "a", "width": 400, "height": 400}],
             "tokens": {"red": "#D0202E"},
-            "components": {"card": {"type": "frame", "flexDirection": "column", "alignItems": "flex-start", "children": [{"type": "text", "role": "name", "text": "{{name}}", "color": "$red"}, {"type": "text", "role": "office", "text": "Runs for {{office}}", "fontSize": "{{size}}"}]}}});
+            "components": {"card": {"type": "frame", "flexDirection": "column", "alignItems": "flex-start", "children": [{"type": "text", "role": "name", "text": "{{name}}", "color": "{{red}}"}, {"type": "text", "role": "office", "text": "Runs for {{office}}", "fontSize": "{{size}}"}]}}});
         v["layers"] = layers;
         serde_json::from_value(v).unwrap()
     }

@@ -3,6 +3,7 @@
 //! costs the agent a resend of its whole batch, so these are cheaper to
 //! accept than to refuse.
 
+pub(crate) mod dollar;
 mod names;
 
 use serde_json::{Map, Value};

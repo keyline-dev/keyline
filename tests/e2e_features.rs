@@ -552,7 +552,7 @@ fn render_draws_a_scene_file_and_fails_on_a_defect() {
         &scene,
         json!({"width": 400, "height": 200, "sizes": ["400x200", {"id": "small", "width": 200, "height": 100}],
             "tokens": {"headline": "Sale"},
-            "layers": [{"id": "h", "type": "text", "text": "$headline", "place": "center", "fontSize": 40}]})
+            "layers": [{"id": "h", "type": "text", "text": "{{headline}}", "place": "center", "fontSize": 40}]})
         .to_string(),
     )
     .unwrap();

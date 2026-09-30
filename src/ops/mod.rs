@@ -15,6 +15,7 @@ use serde_json::{Map, Value};
 
 use crate::scene::{Layer, Scene, check_keys};
 
+pub(crate) use guesses::dollar::hints as dollar_hints;
 pub(crate) use guesses::normalize;
 
 /// `{ id }` or `{ role }`. A role may match several layers.
@@ -117,6 +118,19 @@ pub struct Shared {
 /// Adds or replaces shared styles, tokens and components; tokens that
 /// changed are re-applied to every layer bound to them.
 fn share(next: &mut Scene, shared: Shared) -> Result<(), String> {
+    // Tokens first, so styles and components written alongside can use them.
+    let mut changed = Vec::new();
+    for (name, v) in shared.tokens {
+        if !crate::reuse::tokens::is_name(&name) {
+            return Err(format!("bad token name {name}: letters, digits, _ . -"));
+        }
+        if name == crate::reuse::tokens::COUNT {
+            return Err("{{n}} is the counting number; give the token another name".into());
+        }
+        if next.tokens.insert(name.clone(), v).is_some() {
+            changed.push(name);
+        }
+    }
     for (name, style) in shared.styles {
         let Value::Object(mut style) = style else {
             return Err(format!("style {name} must be an object of layer fields"));
@@ -124,22 +138,18 @@ fn share(next: &mut Scene, shared: Shared) -> Result<(), String> {
         // `type` says what the style is for: it steers the guesses, then goes.
         let kind = style.remove("type");
         guesses::fields(&mut style, kind.as_ref().and_then(Value::as_str));
-        next.styles.insert(name, style);
+        let mut style = Value::Object(style);
+        guesses::dollar::whole(&mut style, &next.tokens);
+        if let Value::Object(style) = style {
+            next.styles.insert(name, style);
+        }
     }
-    for (name, c) in shared.components {
+    for (name, mut c) in shared.components {
         if !c.is_object() {
             return Err(format!("component {name} must be a layer object"));
         }
+        guesses::dollar::whole(&mut c, &next.tokens);
         next.components.insert(name, c);
-    }
-    let mut changed = Vec::new();
-    for (name, v) in shared.tokens {
-        if crate::reuse::tokens::reference(&format!("${name}")).is_none() {
-            return Err(format!("bad token name {name}: letters, digits, _ . -"));
-        }
-        if next.tokens.insert(name.clone(), v).is_some() {
-            changed.push(name);
-        }
     }
     crate::reuse::tokens::rebind(next, &changed)
 }
@@ -167,6 +177,7 @@ pub fn add_layers(
             Some(Value::String(p)) => Some(p),
             Some(_) => return Err(at("parent must be a frame id".into())),
         };
+        guesses::dollar::whole(&mut v, &next.tokens);
         crate::reuse::tokens::bind(&mut v, &next.tokens).map_err(at)?;
         let mut layer = parse_layer(&v).map_err(|e| at(blame_token(&v, e)))?;
         resolve_assets(&mut layer, &next.assets);
@@ -309,7 +320,9 @@ fn restyle(scene: &mut Scene, name: &str, op: &Op) -> Result<(), String> {
             .ok_or_else(|| format!("no style {name}")),
         Some(set) => {
             let mut v = Value::Object(scene.styles.remove(name).unwrap_or_default());
-            merge_patch(&mut v, &Value::Object(set.clone()));
+            let mut set = Value::Object(set.clone());
+            guesses::dollar::whole(&mut set, &scene.tokens);
+            merge_patch(&mut v, &set);
             if let Value::Object(mut style) = v {
                 guesses::fields(&mut style, None);
                 scene.styles.insert(name.to_owned(), style);
@@ -335,14 +348,16 @@ fn apply(
             }
             if let Some(set) = &op.set {
                 let mut v = serde_json::to_value(&layers[i]).map_err(|e| e.to_string())?;
-                // An explicit value replaces a token binding; a new "$name" binds again.
+                // An explicit value replaces a token binding; a new "{{name}}" binds again.
                 crate::reuse::tokens::unbind_set(&mut v, set);
                 // A field the set mentions is no longer a kept default:
                 // its new value (or its reset) decides.
                 if let Some(Value::Object(kept)) = v.get_mut("$defaults") {
                     kept.retain(|k, _| !set.contains_key(k));
                 }
-                merge_patch(&mut v, &Value::Object(set.clone()));
+                let mut set = Value::Object(set.clone());
+                guesses::dollar::whole(&mut set, tokens);
+                merge_patch(&mut v, &set);
                 crate::reuse::tokens::bind(&mut v, tokens)
                     .map_err(|e| format!("{}: {e}", layers[i].id))?;
                 layers[i] = parse_layer(&v)
@@ -397,8 +412,14 @@ fn blame_token(v: &Value, e: String) -> String {
             .is_some_and(|o| o.remove(&key).is_some());
         if dropped && parse_layer(&without).is_ok() {
             let field = ptr.trim_start_matches('/');
-            let name = name.as_str().unwrap_or_default();
-            return format!("token ${name} doesn't suit {field}: {e}");
+            let written = name.as_str().unwrap_or_default();
+            // A whole value's name, or the template that spliced tokens in.
+            let shown = if written.contains("{{") {
+                written.to_owned()
+            } else {
+                crate::reuse::tokens::braced(written)
+            };
+            return format!("token {shown} doesn't suit {field}: {e}");
         }
     }
     e

@@ -271,13 +271,13 @@
           "text": "Order now",
           "fontSize": 36,
           "fontWeight": 800,
-          "color": "$violet",
+          "color": "{{violet}}",
           "trim": "cap"
          },
          {
           "type": "icon",
           "name": "arrow-right",
-          "color": "$violet",
+          "color": "{{violet}}",
           "width": 36,
           "height": 36
          }
@@ -319,7 +319,7 @@
           "text": "-20%",
           "fontSize": 40,
           "fontWeight": 900,
-          "color": "$ink",
+          "color": "{{ink}}",
           "place": "center"
          }
         ],

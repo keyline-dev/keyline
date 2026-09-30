@@ -26,7 +26,7 @@ fn template_dir(name: &str) -> PathBuf {
         "assets": {"photo": "photo.png"},
         "layers": [
             {"type": "image", "asset": "photo", "width": "fill", "height": "fill"},
-            {"id": "headline", "type": "text", "text": "$headline", "fontSize": 40, "fontWeight": 800, "color": "$accent", "place": "center"}]});
+            {"id": "headline", "type": "text", "text": "{{headline}}", "fontSize": 40, "fontWeight": 800, "color": "{{accent}}", "place": "center"}]});
     std::fs::write(dir.join("template.json"), template.to_string()).unwrap();
     dir
 }
@@ -130,5 +130,73 @@ async fn a_template_cannot_read_outside_the_allowed_folders() {
             assert!(t["inputSchema"]["properties"].get("path").is_none(), "{t}");
         }
     }
+    mcp.stop().await;
+}
+
+/// The RGB pixel at `(x, y)` of a PNG file.
+fn pixel(file: &str, x: usize, y: usize) -> [u8; 3] {
+    let mut reader = png::Decoder::new(std::io::BufReader::new(std::fs::File::open(file).unwrap()))
+        .read_info()
+        .unwrap();
+    let mut buf = vec![0u8; reader.output_buffer_size().unwrap()];
+    let info = reader.next_frame(&mut buf).unwrap();
+    let px = info.color_type.samples();
+    let at = y * info.line_size + x * px;
+    [buf[at], buf[at + 1], buf[at + 2]]
+}
+
+#[tokio::test]
+async fn rows_fill_a_sentence_and_swap_the_photo() {
+    let mcp = Mcp::start("rows-photo").await;
+    let id = mcp
+        .ok("scene_create", json!({"sizes": ["400x200"]}))
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    for (asset, bytes) in [
+        ("sky", common::photo_png()),
+        ("mark", common::CHECK_SVG.as_bytes().to_vec()),
+    ] {
+        mcp.ok(
+            "asset_add",
+            json!({"sceneId": id, "id": asset, "base64": common::b64(&bytes)}),
+        )
+        .await;
+    }
+    let reply = mcp
+        .ok("layer_add", json!({"sceneId": id, "tokens": {"name": "Mia", "photo": "sky", "price": 29},
+            "layers": [
+                {"id": "photo", "type": "image", "asset": "{{photo}}", "width": 200, "height": 200, "fit": "cover"},
+                {"id": "t", "type": "text", "text": "Meet {{name}}", "x": 220, "y": 80, "fontSize": 28},
+                {"id": "p", "type": "text", "text": "Only $price", "x": 220, "y": 140, "fontSize": 16}]}))
+        .await;
+    // A `$name` in text is pointed out, not rewritten.
+    assert!(
+        reply.contains("hint: did you mean {{price}}? (p says $price)"),
+        "{reply}"
+    );
+
+    let reply = mcp
+        .ok(
+            "render",
+            json!({"sceneId": id, "rows": [{"name": "Mia"}, {"name": "Rex", "photo": "mark"}]}),
+        )
+        .await;
+    let files: Vec<&str> = reply
+        .lines()
+        .filter(|l| l.starts_with('r'))
+        .map(|l| l.split(' ').nth(2).unwrap())
+        .collect();
+    assert_eq!(files.len(), 2, "{reply}");
+    // Row 1 shows the sky photo (blue at the top left); row 2 the red mark.
+    let [r, _, b] = pixel(files[0], 20, 10);
+    assert!(b > r, "sky: {:?}", pixel(files[0], 20, 10));
+    let [r, g, _] = pixel(files[1], 100, 100);
+    assert!(r > 150 && g < 100, "mark: {:?}", pixel(files[1], 100, 100));
+    // "Meet Mia" and "Meet Rex" differ where the names are drawn.
+    let names = |f: &str| (300..380).map(|x| pixel(f, x, 95)).collect::<Vec<_>>();
+    assert_ne!(names(files[0]), names(files[1]), "each row's own name");
     mcp.stop().await;
 }

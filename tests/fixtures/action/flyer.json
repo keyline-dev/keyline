@@ -1,4 +1,4 @@
 {"width": 400, "height": 200, "sizes": ["400x200", {"id": "square", "width": 200, "height": 200}],
  "tokens": {"headline": "Vote by mail"},
  "layers": [{"type": "rect", "width": "fill", "height": "fill", "fill": "#1B2A5C"},
-            {"id": "h", "type": "text", "text": "$headline", "place": "center", "width": "80%", "fontSize": 36, "color": "#FFFFFF", "textAlign": "center"}]}
+            {"id": "h", "type": "text", "text": "{{headline}}", "place": "center", "width": "80%", "fontSize": 36, "color": "#FFFFFF", "textAlign": "center"}]}

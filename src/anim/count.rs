@@ -1,7 +1,7 @@
-//! The `count` track: a number in a text's `{n}` that counts as it plays.
+//! The `count` track: a number in a text's `{{n}}` that counts as it plays.
 //!
 //! ```json
-//! {"type": "text", "text": "{n}+ adopted", "animate": {"count": [0, 1250], "separator": ","}}
+//! {"type": "text", "text": "{{n}}+ adopted", "animate": {"count": [0, 1250], "separator": ","}}
 //! ```
 //!
 //! Layout measures the text with its widest value, so the box holds still
@@ -11,7 +11,7 @@ use super::track::{Keys, N, Spec, Track};
 use crate::scene::{Kind, Layer, OneOrMany};
 
 /// Where the number goes in the text.
-pub const SLOT: &str = "{n}";
+pub const SLOT: &str = "{{n}}";
 
 /// `v` with `decimals` places and `sep` between thousands. With `"."`
 /// between thousands the decimal mark is a comma, as in German.
@@ -45,7 +45,7 @@ fn tracks(l: &Layer) -> impl Iterator<Item = &Track> {
         .filter(|t| t.props.contains_key("count"))
 }
 
-/// The text of `l` with `{n}` filled in: the number of the moment when
+/// The text of `l` with `{{n}}` filled in: the number of the moment when
 /// `now` and one is set, else the widest of its values (what layout
 /// measures). `None` when `l` isn't counting text.
 pub fn text(l: &Layer, now: bool) -> Option<String> {
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn layout_measures_the_widest_value_and_drawing_the_moment() {
-        let mut l = layer(json!({"type": "text", "text": "{n}+ adopted",
+        let mut l = layer(json!({"type": "text", "text": "{{n}}+ adopted",
             "animate": {"count": [0, 1250], "separator": ","}}));
         assert_eq!(text(&l, false).as_deref(), Some("1,250+ adopted"));
         assert_eq!(
@@ -126,13 +126,13 @@ mod tests {
         assert_eq!(text(&l, true).as_deref(), Some("42+ adopted"));
         assert_eq!(text(&l, false).as_deref(), Some("1,250+ adopted"));
         let down =
-            layer(json!({"type": "text", "text": "T-{n}", "animate": {"count": {"from": 10}}}));
+            layer(json!({"type": "text", "text": "T-{{n}}", "animate": {"count": {"from": 10}}}));
         assert_eq!(
             text(&down, false).as_deref(),
             Some("T-10"),
             "a countdown measures its start"
         );
-        let plain = layer(json!({"type": "text", "text": "{n}", "animate": {"scale": [1, 2]}}));
+        let plain = layer(json!({"type": "text", "text": "{{n}}", "animate": {"scale": [1, 2]}}));
         assert_eq!(text(&plain, false), None);
     }
 }

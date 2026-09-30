@@ -54,7 +54,7 @@ Previews are opt-in. They cost more tokens and catch less: in testing, a model a
 
 ### Tokens and binding
 
-A **token** is a named value (`navy: "#1B2A5C"`) that any field uses as `"$navy"`. The server remembers which fields came from which token, so changing the token changes every field **bound** to it. Setting such a field to a value of its own unbinds it.
+A **token** is a named value (`navy: "#1B2A5C"`) that any field uses as `"{{navy}}"`, or inside text: `"Meet {{name}}"`. The server remembers which fields came from which token, so changing the token changes every field **bound** to it, sentences included. Setting such a field to a value of its own unbinds it.
 
 ### Styles and components
 
@@ -104,7 +104,7 @@ No model generates pixels: the same scene renders the same design. On the CPU re
 | Safe area | The part of a size a platform covers, where text is flagged |
 | Layer | One element of the tree: a frame, text, image, video, shape, icon, spacer, `firstFit` or `use` |
 | Role | A semantic name on layers, so an edit can target every layer with it |
-| Token | A named value used as `"$name"` in any field |
+| Token | A named value used as `{{name}}` in any field or text |
 | Binding | The link from a field to the token it came from |
 | Style | A named set of layer fields layers pull in |
 | Component | A named layer tree placed by `use` layers |

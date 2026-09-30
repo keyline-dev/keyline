@@ -266,7 +266,7 @@ impl Scene {
         if animates("count")
             && !matches!(&l.kind, Kind::Text { text, .. } if text.contains(crate::anim::count::SLOT))
         {
-            return Err("count needs text with {n} where the number goes".into());
+            return Err("count needs text with {{n}} where the number goes".into());
         }
         // Split text moves piece by piece, which strokes and numbers don't.
         if l.time.split.is_some() && (animates("draw") || animates("count")) {

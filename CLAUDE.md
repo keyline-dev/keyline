@@ -32,6 +32,7 @@ The agent-facing text lives in `src/server/mod.rs` (instructions and tool descri
 | Change | Also update |
 |---|---|
 | A scene field or feature | `docs/scene.md`; the tool text if the agent should know it; a guess in `src/ops/guesses/` if models will write a common alternative; unit and end-to-end tests |
+| The scene syntax (a field's name, a placeholder like `{{name}}`) | Every scene written in it: `tests/fixtures/`, `docs/scene.md`'s examples, the benchmark prompts (`tests/llm_e2e.rs`, `tests/recreate_e2e.rs`), and the site's `scenes/` once a release reads the new syntax |
 | A server flag | `src/options.rs` (its `HELP` and tests); the flags table in `docs/tools.md`; the README's Options line; `mcpb/manifest.json` if Claude Desktop users should set it |
 | A tool's reply | `docs/tools.md`; the reply readers in `tests/common/mod.rs` (`file_of`) and `src/server/cli.rs`; the reply snippets on the site |
 | A client or install channel | The README's Quick start; the site's Install tabs |

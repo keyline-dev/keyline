@@ -64,12 +64,12 @@ pub struct Fit {
 
 impl<'a> Text<'a> {
     /// `k` is the size's Scale-tool factor; it multiplies the font size. A
-    /// counting text's `{n}` is its widest value, so layout holds still.
+    /// counting text's `{{n}}` is its widest value, so layout holds still.
     pub fn of(layer: &'a Layer, k: f32) -> Option<Self> {
         Self::of_at(layer, k, false)
     }
 
-    /// Like [`Text::of`], with a counting text's `{n}` the number of the
+    /// Like [`Text::of`], with a counting text's `{{n}}` the number of the
     /// moment being drawn.
     pub fn drawn(layer: &'a Layer, k: f32) -> Option<Self> {
         Self::of_at(layer, k, true)

@@ -1,0 +1,105 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×900
+portrait 1080×1350
+ root frame 0,0 1080×1350
+  headBlock frame 0,0 1080×270
+   headline text 56,54 968×178 86px 2L
+  photoBand image 0,270 1080×380 cover crop 37%h
+  candidates frame 0,650 1080×213
+   candRow frame 48,699 984×114
+    use1 frame 48,699 309×114
+     use1.frame0 frame 167,699 72×7
+     use1.candName text 48,720 309×48 44px
+     use1.candRole text 48,782 309×31 26px
+    use2 frame 385,699 309×114
+     use2.frame0 frame 504,699 72×7
+     use2.candName text 385,720 309×48 44px
+     use2.candRole text 385,782 309×31 26px
+    use3 frame 723,699 309×114
+     use3.frame0 frame 841,699 72×7
+     use3.candName text 723,720 309×48 44px
+     use3.candRole text 723,782 309×31 26px
+  ctaBar frame 0,863 1080×127
+   mailIcon image 250,899 70×55 contain
+   ctaText text 346,889 485×75 62px
+  steps frame 0,990 1080×281
+   use4 frame 56,1039 968×46
+    use4.stepIcon image 56,1040 44×44 contain
+    use4.stepText text 122,1039 902×46 38px
+   use5 frame 56,1109 968×46
+    use5.stepIcon image 56,1110 44×44 contain
+    use5.stepText text 122,1109 902×46 38px
+   use6 frame 56,1179 968×46
+    use6.stepIcon image 56,1180 44×44 contain
+    use6.stepText text 122,1179 902×46 38px
+  footerBar frame 0,1270 1080×80
+   footer text 40,1292 1000×36 30px
+wide 1200×1000
+ root frame 0,0 1200×1000
+  headBlock frame 0,0 1200×193
+   headline text 48,29 1105×144 70px 2L
+  photoBand image 0,193 1200×255 cover crop 62%h
+  candidates frame 0,448 1200×166
+   candRow frame 41,481 1118×102
+    use1 frame 41,481 357×102
+     use1.frame0 frame 189,481 61×6
+     use1.candName text 41,498 357×43 39px
+     use1.candRole text 41,553 357×29 24px
+    use2 frame 422,481 357×102
+     use2.frame0 frame 569,481 61×6
+     use2.candName text 422,498 357×43 39px
+     use2.candRole text 422,553 357×29 24px
+    use3 frame 802,481 357×102
+     use3.frame0 frame 950,481 61×6
+     use3.candName text 802,498 357×43 39px
+     use3.candRole text 802,553 357×29 24px
+  ctaBar frame 0,615 1200×108
+   mailIcon image 353,645 60×47 contain
+   ctaText text 434,637 413×64 53px
+  steps frame 0,723 1200×209
+   use4 frame 48,753 1105×39
+    use4.stepIcon image 48,754 37×37 contain
+    use4.stepText text 104,753 1049×39 32px
+   use5 frame 48,808 1105×39
+    use5.stepIcon image 48,809 37×37 contain
+    use5.stepText text 104,808 1049×39 32px
+   use6 frame 48,862 1105×39
+    use6.stepIcon image 48,863 37×37 contain
+    use6.stepText text 104,862 1049×39 32px
+  footerBar frame 0,932 1200×68
+   footer text 34,950 1132×31 26px
+sky 300×600
+ root frame 0,0 300×600
+  headBlock frame 0,0 300×133
+   headline text 16,20 269×99 31px 3L
+  photoBand image 0,133 300×106 cover crop 37%h
+  candidates frame 0,239 300×113
+   candRow frame 11,268 278×54
+    use1 frame 11,268 89×38
+     use1.frame0 frame 46,268 20×2
+     use1.candName text 11,274 89×16 15px
+     use1.candRole text 11,294 89×12 10px
+    use2 frame 105,268 89×54
+     use2.frame0 frame 140,268 20×2
+     use2.candName text 105,274 89×32 15px 2L
+     use2.candRole text 105,310 89×12 10px
+    use3 frame 200,268 89×38
+     use3.frame0 frame 234,268 20×2
+     use3.candName text 200,274 89×16 15px
+     use3.candRole text 200,294 89×12 10px
+  ctaBar frame 0,352 300×45
+   mailIcon image 38,363 27×22 contain
+   ctaText text 73,359 189×30 25px
+  steps frame 0,396 300×157
+   use4 frame 16,428 269×36
+    use4.stepIcon image 16,437 17×17 contain
+    use4.stepText text 39,428 245×36 15px 2L
+   use5 frame 16,475 269×18
+    use5.stepIcon image 16,476 17×17 contain
+    use5.stepText text 39,475 245×18 15px
+   use6 frame 16,504 269×18
+    use6.stepIcon image 16,505 17×17 contain
+    use6.stepText text 39,504 245×18 15px
+  footerBar frame 0,553 300×47
+   footer text 8,562 283×28 11px 2L

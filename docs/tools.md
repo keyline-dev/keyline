@@ -73,6 +73,14 @@ The last line of an edit's reply states facts with no threshold, per size: the s
 smallest text: instagram-portrait 28px (cta), sky 11.3px (cta); upscaled: instagram-portrait photo 1.5x
 ```
 
+### Hint lines
+
+After the facts, one line per text that writes a token as `$name` rather than [`{{name}}`](scene.md#tokens). The text is left as it is, since `$29` or `$USD` may be meant:
+
+```text
+hint: did you mean {{price}}? (cta says $price)
+```
+
 ### Drawn-text lines
 
 Under each size, `render` lists every text that wrapped, shrank or was cut, as actually drawn, so wording and line breaks can be checked without looking at the image:
@@ -186,7 +194,7 @@ Each op has a `target` and exactly one action:
 | `"delete": true` | Removes the target (and a layer's children) |
 | `"detach": true` | With an `{id}` target of a `use` layer: turns its instances into plain layers that no longer follow the component |
 
-Reply: like `layer_add`, starting with `changed` and the ids of every layer changed or deleted.
+Reply: like `layer_add`, starting with `changed` and the ids of every layer changed or deleted, then any tokens changed, as `{{name}}`.
 
 ```text
 changed cta v3
@@ -240,7 +248,7 @@ A moving format gives its length, frame count and frame rate; GIF and APNG also 
 
 A template is a scene file ([its format](scene.md#template-files)) that `scene_create` loads by `url` or `path`, the same way `asset_add` loads an image. Its images are added as assets, `tokens` sets its variables, and any other `scene_create` input (`sizes`, `background` …) replaces the template's. Nothing else is kept: the template stays wherever it came from. A token named in `tokens` that the template doesn't have is an error that lists the ones it has.
 
-`render` with `rows` makes variants: each row of token values is applied as `layer_update` with those `tokens` would, to a copy, and rendered; the saved scene doesn't change. A key that isn't one of the scene's tokens is an error naming the row and the tokens there are. `preview` shows the first row.
+`render` with `rows` makes variants: each row of token values is applied as `layer_update` with those `tokens` would, to a copy, and rendered, so a row changes every field bound to its tokens, sentences and image assets included; the saved scene doesn't change. A key that isn't one of the scene's tokens is an error naming the row and the tokens there are. `preview` shows the first row.
 
 ```json
 {"sceneId": "s5b0a42a5e", "rows": [{"headline": "Fall", "price": "$19"}, {"headline": "Winter", "price": "$24"}]}
@@ -346,8 +354,8 @@ Errors come back as an MCP tool error (`isError: true`) with one line of text th
 /Users/me/secret.png is outside the folders the server may read (--allow-read)
 layers[0]: unknown field(s) fontsize for text layer; did you mean fontsize → fontSize
 ops[0]: no layer with id nope
-text1: <span style="color:$blue">: bad color "$blue", want #RRGGBB, rgba(…), hsl(…) or a CSS name
+layers[0]: unknown token {{blue}}; tokens: brand, headline
 row 2: no token headlin; tokens: accent, headline
-layers[0]: token $big doesn't suit fontSize: invalid type: string "huge", expected f32
+layers[0]: token {{big}} doesn't suit fontSize: invalid type: string "huge", expected f32
 give exactly one of url, path or base64
 ```

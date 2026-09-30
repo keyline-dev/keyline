@@ -112,7 +112,7 @@ layoutPriority (number; lower gives way first), position absolute. Grid: gridTem
 repeat(auto-fill, minmax(160px, 1fr))), gridTemplateAreas [\"hero side\", …], gap, padding; children: gridArea, or \
 gridRow/gridColumn (\"1 / span 2\"). spacer: free space in a \
 stack. firstFit: children; draws the first that fits. text: text (markup <b> <i> <u> <s> <sup> <sub> <br>, \
-<span style=\"color:…;font-weight:…\">, style names as tags; \"$token\" alone takes its value), fontSize (the max when \
+<span style=\"color:…;font-weight:…\">, style names as tags), fontSize (the max when \
 fitting), fontWeight, color, fontFamily (Inter or any Google Font), textAlign, textAlignVertical, lineHeight (× \
 fontSize), letterSpacing (px), fill (paints the letters, wins over color), textTransform, fontStyle, textDecoration, maxLines, textWrap balance|pretty, trim \
 \"cap\", highlight, padding, curve, leader (\".\" fills a tab gap), knockout. Text box: width+height → shrinks to fit \
@@ -127,7 +127,7 @@ angle (default 180: top to bottom) or from/to, stops [colors] or [{offset, color
 color, align inside|center|outside, dash, cap, join, markerStart|markerEnd arrow|triangle|circle|diamond, \
 roughness}. Shadow: {x, y, blur, spread, color, inset}. Mask: a gradient, shape name, \
 {path}, {layer: id} or {image}; mode luminance, invert. Shared: styles {name: {fields}}; tokens \
-{name: value} used as \"$name\"; components {card: {…, text: \"{{name}}\"}} placed by {type: use, component: \"card\", each: [{name: \
+{name: value} used as {{name}} in any field or text; components {card: {…, text: \"{{name}}\"}} (props win) placed by {type: use, component: \"card\", each: [{name: \
 \"Dana\"}, …]}."
     )]
     async fn layer_add(&self, Parameters(a): Parameters<LayerAddArgs>) -> CallToolResult {
@@ -175,7 +175,11 @@ fadeOut}}} changes the scene."
             Err(e) => return reply(Err(e)),
         };
         // Changed tokens are named too, so a tokens-only edit says what it did.
-        let token_names: Vec<String> = a.tokens.keys().map(|k| format!("${k}")).collect();
+        let token_names: Vec<String> = a
+            .tokens
+            .keys()
+            .map(|k| crate::reuse::tokens::braced(k))
+            .collect();
         reply(
             self.edit(&a.scene_id, |s| {
                 ops::update_layers(
@@ -253,6 +257,7 @@ impl ServerHandler for Server {
 // the async thread; move to spawn_blocking if edits on big photos lag.
 fn edited(verb: &str, ids: &[String], scene: &Scene, assets: &std::path::Path) -> String {
     let head = format!("{verb} {} v{}", ids.join(","), scene.version);
+    let raw = scene;
     let scene = &*scene.resolved();
     let mut out = match warnings(scene, Some(assets)) {
         Some(w) => format!("{head}\n{}", w.trim_end()),
@@ -262,6 +267,10 @@ fn edited(verb: &str, ids: &[String], scene: &Scene, assets: &std::path::Path) -
     if !facts.is_empty() {
         out.push('\n');
         out.push_str(&facts);
+    }
+    for hint in crate::ops::dollar_hints(raw) {
+        out.push('\n');
+        out.push_str(&hint);
     }
     out
 }

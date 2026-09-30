@@ -39,8 +39,8 @@ fn rect_color(s: &Scene, id: &str) -> Option<Color> {
 fn changing_a_token_updates_every_layer_bound_to_it() {
     let mut s = scene();
     add_layers(&mut s, with(json!({"brand": "#D0202E"}), json!({})), vec![
-        json!({"id": "a", "type": "rect", "fill": "$brand"}),
-        json!({"id": "b", "type": "frame", "children": [{"id": "c", "type": "rect", "fill": "$brand"}]}),
+        json!({"id": "a", "type": "rect", "fill": "{{brand}}"}),
+        json!({"id": "b", "type": "frame", "children": [{"id": "c", "type": "rect", "fill": "{{brand}}"}]}),
     ])
     .unwrap();
     assert_eq!(rect_color(&s, "a"), Color::parse("#D0202E"));
@@ -55,7 +55,7 @@ fn an_explicit_value_replaces_the_token_binding() {
     add_layers(
         &mut s,
         with(json!({"brand": "#D0202E"}), json!({})),
-        vec![json!({"id": "a", "type": "rect", "fill": "$brand"})],
+        vec![json!({"id": "a", "type": "rect", "fill": "{{brand}}"})],
     )
     .unwrap();
     let op: Op =
@@ -147,10 +147,10 @@ fn unknown_tokens_and_components_say_what_exists() {
     let e = add_layers(
         &mut s,
         with(json!({"red": "#F00"}), json!({})),
-        vec![json!({"type": "rect", "fill": "$blue"})],
+        vec![json!({"type": "rect", "fill": "{{blue}}"})],
     )
     .unwrap_err();
-    assert!(e.ends_with("unknown token $blue; tokens: red"), "{e}");
+    assert!(e.ends_with("unknown token {{blue}}; tokens: red"), "{e}");
     let e = add_layers(
         &mut s,
         Shared::default(),
@@ -244,10 +244,10 @@ fn a_token_of_the_wrong_type_is_named() {
     let e = add_layers(
         &mut s,
         with(json!({"big": "huge"}), json!({})),
-        vec![json!({"type": "text", "text": "Hi", "fontSize": "$big"})],
+        vec![json!({"type": "text", "text": "Hi", "fontSize": "{{big}}"})],
     )
     .unwrap_err();
-    assert!(e.contains("token $big doesn't suit fontSize"), "{e}");
+    assert!(e.contains("token {{big}} doesn't suit fontSize"), "{e}");
 }
 
 #[test]
@@ -256,9 +256,155 @@ fn changing_a_token_to_the_wrong_type_is_named() {
     add_layers(
         &mut s,
         with(json!({"big": 40}), json!({})),
-        vec![json!({"id": "t", "type": "text", "text": "Hi", "fontSize": "$big"})],
+        vec![json!({"id": "t", "type": "text", "text": "Hi", "fontSize": "{{big}}"})],
     )
     .unwrap();
     let e = update_layers(&mut s, with(json!({"big": "huge"}), json!({})), &[]).unwrap_err();
-    assert!(e.contains("t: token $big doesn't suit it"), "{e}");
+    assert!(e.contains("t: token {{big}} doesn't suit it"), "{e}");
+}
+
+fn text_of(s: &Scene, id: &str) -> String {
+    let mut out = String::new();
+    s.walk(&mut |l| {
+        if l.id == id
+            && let Kind::Text { text, .. } = &l.kind
+        {
+            out.clone_from(text);
+        }
+    });
+    out
+}
+
+fn set(id: &str, fields: &Value) -> Op {
+    serde_json::from_value(json!({"target": {"id": id}, "set": fields})).unwrap()
+}
+
+#[test]
+fn tokens_inside_a_sentence_follow_their_changes_until_the_text_is_rewritten() {
+    let mut s = scene();
+    add_layers(
+        &mut s,
+        with(json!({"name": "Dana", "age": 7}), json!({})),
+        vec![json!({"id": "t", "type": "text", "text": "Meet {{name}}, {{age}} months old"})],
+    )
+    .unwrap();
+    assert_eq!(text_of(&s, "t"), "Meet Dana, 7 months old");
+    update_layers(&mut s, with(json!({"age": 8}), json!({})), &[]).unwrap();
+    assert_eq!(text_of(&s, "t"), "Meet Dana, 8 months old");
+    // Another field's edit keeps the binding; the text's own edit ends it.
+    update_layers(
+        &mut s,
+        Shared::default(),
+        &[set("t", &json!({"fontSize": 30}))],
+    )
+    .unwrap();
+    update_layers(&mut s, with(json!({"name": "Omar"}), json!({})), &[]).unwrap();
+    assert_eq!(text_of(&s, "t"), "Meet Omar, 8 months old");
+    update_layers(
+        &mut s,
+        Shared::default(),
+        &[set("t", &json!({"text": "Hello"}))],
+    )
+    .unwrap();
+    update_layers(&mut s, with(json!({"name": "Ruth"}), json!({})), &[]).unwrap();
+    assert_eq!(text_of(&s, "t"), "Hello");
+}
+
+#[test]
+fn a_row_of_tokens_changes_a_sentence_and_an_image() {
+    let mut s = scene();
+    for id in ["cat", "dog"] {
+        s.assets.insert(
+            id.into(),
+            serde_json::from_value(json!({"sha256": id, "width": 10, "height": 10})).unwrap(),
+        );
+    }
+    add_layers(
+        &mut s,
+        with(json!({"name": "Mia", "photo": "cat"}), json!({})),
+        vec![
+            json!({"id": "t", "type": "text", "text": "Meet {{name}}"}),
+            json!({"id": "p", "type": "image", "asset": "{{photo}}"}),
+        ],
+    )
+    .unwrap();
+    // What `rows` does for each row: the row's tokens over the scene's.
+    let mut row = s.clone();
+    update_layers(
+        &mut row,
+        with(json!({"name": "Rex", "photo": "dog"}), json!({})),
+        &[],
+    )
+    .unwrap();
+    assert_eq!(text_of(&row, "t"), "Meet Rex");
+    let mut asset = String::new();
+    row.walk(&mut |l| {
+        if let Kind::Image { asset: a, .. } = &l.kind {
+            asset.clone_from(a);
+        }
+    });
+    assert_eq!(asset, "dog");
+    assert_eq!(
+        text_of(&s, "t"),
+        "Meet Mia",
+        "the scene itself is unchanged"
+    );
+}
+
+#[test]
+fn a_dollar_token_as_a_whole_value_binds_and_in_text_gets_a_hint() {
+    let mut s = scene();
+    add_layers(
+        &mut s,
+        with(json!({"brand": "#D0202E", "price": 29}), json!({})),
+        vec![
+            json!({"id": "a", "type": "rect", "fill": "$brand"}),
+            json!({"id": "t", "type": "text", "text": "Only $price today, was $35"}),
+        ],
+    )
+    .unwrap();
+    assert_eq!(rect_color(&s, "a"), Color::parse("#D0202E"));
+    update_layers(&mut s, with(json!({"brand": "#1B2A5C"}), json!({})), &[]).unwrap();
+    assert_eq!(
+        rect_color(&s, "a"),
+        Color::parse("#1B2A5C"),
+        "bound, as {{brand}}"
+    );
+    assert_eq!(
+        text_of(&s, "t"),
+        "Only $price today, was $35",
+        "text isn't rewritten"
+    );
+    assert_eq!(
+        dollar_hints(&s),
+        ["hint: did you mean {{price}}? (t says $price)"]
+    );
+}
+
+#[test]
+fn inside_a_component_a_prop_wins_over_a_token_of_the_same_name() {
+    let mut s = scene();
+    let card = json!({"card": {"type": "text", "text": "{{name}} from {{city}}"}});
+    add_layers(
+        &mut s,
+        with(json!({"name": "token", "city": "Haifa"}), card),
+        vec![json!({"id": "u", "type": "use", "component": "card", "props": {"name": "Dana"}})],
+    )
+    .unwrap();
+    let drawn = s.resolved();
+    assert_eq!(text_of(&drawn, "u"), "Dana from Haifa");
+    // A missing prop that no token covers is named as such.
+    let badge = json!({"badge": {"type": "text", "text": "{{who}} votes"}});
+    let e = add_layers(
+        &mut s,
+        with(json!({}), badge),
+        vec![json!({"id": "v", "type": "use", "component": "badge", "props": {"city": "Acre"}})],
+    )
+    .unwrap_err();
+    assert!(
+        e.ends_with("v: {{who}} is neither a prop nor a token; props: city; tokens: city, name"),
+        "{e}"
+    );
+    let e = add_layers(&mut s, with(json!({"n": 1}), json!({})), vec![]).unwrap_err();
+    assert!(e.starts_with("{{n}} is the counting number"), "{e}");
 }

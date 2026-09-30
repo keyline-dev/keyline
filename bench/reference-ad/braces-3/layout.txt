@@ -1,0 +1,99 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×900
+portrait 1080×1350
+ root frame 0,0 1080×1350
+  head frame 0,0 1080×258
+   headline text 56,52 968×170 80px 2L
+  photoband image 0,268 1080×405 cover crop 33%h
+  candidates frame 0,684 1080×190
+   frame1 frame 48,724 315×110
+    frame2 frame 169,724 72×7
+    text1 text 48,743 315×48 44px
+    text2 text 48,803 315×31 26px
+   frame3 frame 383,724 315×110
+    frame4 frame 504,724 72×7
+    text3 text 383,743 315×48 44px
+    text4 text 383,803 315×31 26px
+   frame5 frame 717,724 315×110
+    frame6 frame 839,724 72×7
+    text5 text 717,743 315×48 44px
+    text6 text 717,803 315×31 26px
+  cta frame 0,884 1080×132
+   image1 image 236,922 72×57 contain
+   text7 text 334,910 510×80 66px
+  steps frame 0,1027 1080×242
+   frame7 frame 56,1065 968×44
+    image2 image 56,1065 44×44 contain
+    text8 text 120,1066 904×42 34px
+   frame8 frame 56,1131 968×44
+    image3 image 56,1131 44×44 contain
+    text9 text 120,1132 904×42 34px
+   frame9 frame 56,1197 968×44
+    image4 image 56,1197 44×44 contain
+    text10 text 120,1198 904×42 34px
+  footer text 0,1279 1080×71 26px
+wide 1200×1000
+ root frame 0,0 1200×1000
+  head frame 0,0 1200×186
+   headline text 48,34 1105×130 61px 2L
+  photoband image 0,193 1200×240 cover crop 64%h
+  candidates frame 0,439 1200×162
+   frame1 frame 41,473 361×94
+    frame2 frame 191,473 61×6
+    text1 text 41,489 361×41 37px
+    text2 text 41,541 361×27 22px
+   frame3 frame 419,473 361×94
+    frame4 frame 569,473 61×6
+    text3 text 419,489 361×41 37px
+    text4 text 419,541 361×27 22px
+   frame5 frame 798,473 361×94
+    frame6 frame 948,473 61×6
+    text5 text 798,489 361×41 37px
+    text6 text 798,541 361×27 22px
+  cta frame 0,608 1200×112
+   image1 image 342,640 61×48 contain
+   text7 text 425,630 433×68 56px
+  steps frame 0,727 1200×206
+   frame7 frame 48,759 1105×37
+    image2 image 48,759 37×37 contain
+    text8 text 102,760 1050×36 29px
+   frame8 frame 48,815 1105×37
+    image3 image 48,815 37×37 contain
+    text9 text 102,816 1050×36 29px
+   frame9 frame 48,871 1105×37
+    image4 image 48,871 37×37 contain
+    text10 text 102,872 1050×36 29px
+  footer text 0,939 1200×61 22px
+sky 300×600
+ root frame 0,0 300×600
+  head frame 0,0 300×73
+   headline text 16,15 269×48 22px 2L
+  photoband image 0,104 300×180 cover crop 6%w
+  candidates frame 0,315 300×56
+   frame1 frame 8,327 93×34
+    frame2 frame 44,327 20×2
+    text1 text 8,332 93×13 12px
+    text2 text 8,348 93×12 10px
+   frame3 frame 104,327 93×34
+    frame4 frame 140,327 20×2
+    text3 text 104,332 93×13 12px
+    text4 text 104,348 93×12 10px
+   frame5 frame 200,327 93×34
+    frame6 frame 236,327 20×2
+    text5 text 200,332 93×13 12px
+    text6 text 200,348 93×12 10px
+  cta frame 0,403 300×37
+   image1 image 65,413 20×16 contain
+   text7 text 92,410 143×22 18px
+  steps frame 0,471 300×76
+   frame7 frame 16,481 269×15
+    image2 image 16,483 12×12 contain
+    text8 text 34,481 251×15 12px
+   frame8 frame 16,502 269×15
+    image3 image 16,504 12×12 contain
+    text9 text 34,502 251×15 12px
+   frame9 frame 16,524 269×15
+    image4 image 16,525 12×12 contain
+    text10 text 34,524 251×15 12px
+  footer text 0,578 300×22 9px

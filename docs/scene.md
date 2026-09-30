@@ -9,7 +9,7 @@ A scene is one JSON document: a master size, the sizes it renders at, its assets
   "layers": [
     {"type": "rect", "width": "fill", "height": "fill", "fill": "#FFF4E0"},
     {"type": "text", "text": "Cold Brew <b>Season</b>", "fontSize": 96, "fontWeight": 800,
-     "color": "$brand", "width": "80%", "place": "center", "media": {"tall": {"fontSize": 64}}}
+     "color": "{{brand}}", "width": "80%", "place": "center", "media": {"tall": {"fontSize": 64}}}
   ]
 }
 ```
@@ -41,14 +41,14 @@ The tables below use these types.
 | Seconds | A number of seconds |
 | Degrees | A number of degrees, clockwise |
 | Ease | An easing name ([Easing](#easing)) |
-| Token | `"$name"` in place of any value ([Tokens](#tokens)) |
+| Token | `{{name}}` as a whole value or inside text ([Tokens](#tokens)) |
 
 ### Resolution order
 
 A layer's final values are built in this order; each step wins over the one before:
 
-1. **Tokens**, when the layer is written: every `"$name"` becomes the token's value. `text` is replaced only when it is wholly a token's name.
-2. **Components**, for a `use` layer: `{{prop}}` is filled from the instance's props, and the `use` layer's own fields replace the component root's, field by field.
+1. **Tokens**, when the layer is written: every `{{name}}` becomes the token's value.
+2. **Components**, for a `use` layer: `{{prop}}` is filled from the instance's props (a prop wins over a token of the same name; the component's other `{{name}}`s are tokens), and the `use` layer's own fields replace the component root's, field by field.
 3. **Styles**, in the order listed; a later style wins. The layer's own fields win over all styles.
 4. **`media`**, per size: aspect classes broadest first, then the size id.
 
@@ -61,7 +61,7 @@ A layer's final values are built in this order; each step wins over the one befo
 | `sizes` | list of Size | required | The sizes to render ([Sizes](#sizes)) |
 | `width`, `height` | px | the first size's | The master size: the layers are written at this size |
 | `background` | Color | `#FFFFFF` | Canvas color |
-| `tokens` | object | none | Named values, used as `"$name"` ([Tokens](#tokens)) |
+| `tokens` | object | none | Named values, used as `{{name}}` ([Tokens](#tokens)) |
 | `styles` | object | none | Named sets of layer fields ([Styles](#styles)) |
 | `components` | object | none | Named layer trees ([Components](#components)) |
 | `assets` | object | none | Images, SVGs, video clips and sounds added by `asset_add`, by id: `{sha256, width, height}` (a sound's width and height are 0) |
@@ -417,7 +417,7 @@ Frames, shapes, images, text and icons take the same paint fields.
 
 | Paint | Example |
 |---|---|
-| Color | `"#D0202E"`, `"rgba(208, 32, 46, 0.5)"`, a CSS name, or `{"color": "$red", "opacity": 0.5}` |
+| Color | `"#D0202E"`, `"rgba(208, 32, 46, 0.5)"`, a CSS name, or `{"color": "{{red}}", "opacity": 0.5}` |
 | Gradient | `{"gradient": {"type": "radial", "stops": ["#0000", "#000C"]}}`, or written flat: `{"type": "linear", "angle": 180, "stops": […]}`, or as a CSS string: `"linear-gradient(180deg, #fff 0%, #fff0 100%)"` (`radial-gradient` too, centered) |
 | Image | `{"image": "photo", "fit": "cover", "focus": [0.5, 0.3], "filter": {"grayscale": 1}}`, with the [image](#image) fields |
 | Pattern | `{"pattern": "dots", "color": "#0002", "size": 12}` |
@@ -524,7 +524,21 @@ An image fill works on any shape: a photo in a circle is `{"type": "ellipse", "f
 
 ### Tokens
 
-`tokens` holds named values; any field takes `"$name"` (a letter or `_`, then letters, digits, `_`, `.` and `-`). The server remembers which fields came from which token, so changing a token in `layer_update` changes every field bound to it; setting such a field to a value of its own unbinds it. `text` is a token only when it is wholly the name of one (`"text": "$headline"`, the way a template names its variables); other text is never scanned, so `"$29"` stays text. In markup, attribute values can be tokens. An unknown token elsewhere is an error that lists the tokens there are.
+`tokens` holds named values, used as `{{name}}` (a letter or `_`, then letters, digits, `_`, `.` and `-`), as in Mustache and Handlebars:
+
+```json
+"tokens": {"brand": "#D0202E", "h1": 64, "name": "Mia", "photo": "cat"}
+{"type": "text", "text": "Meet {{name}}, 7 months old", "fontSize": "{{h1}}", "color": "{{brand}}"}
+{"type": "image", "asset": "{{photo}}"}
+{"type": "text", "text": "Proven <span style=\"color:{{brand}}\">RESULTS</span>"}
+```
+
+- A string that is only `{{name}}` takes the token's value as it is: a number stays a number.
+- Inside a string (a sentence, a markup attribute), the value is spliced into the text; a token spliced in is a string, number or boolean.
+- The server remembers which fields came from which token, and a sentence's template, so changing a token in `layer_update` (or a render's `rows`) changes every field bound to it; setting such a field to a value of its own unbinds it.
+- A string without `{{name}}` is never touched, so `"$29"` and `"{curly}"` stay text. An unknown name is an error that lists the tokens there are.
+- `{{n}}` is the counting number ([Counting](#counting)), never a token.
+- A whole value written `"$name"`, for a token that exists, reads as `{{name}}`. Text with `$name` in it is left alone (it may be a price), and the edit's reply adds `hint: did you mean {{name}}?`.
 
 ### Styles
 
@@ -546,7 +560,7 @@ An image fill works on any shape: a photo in a circle is `{"type": "ellipse", "f
   {"name": "Omar Haddad", "office": "Council"}]}
 ```
 
-- `{{prop}}` in any string of a component is filled from the instance's props, as in Mustache; a string that is only `{{prop}}` takes the value as is (a number stays a number).
+- `{{prop}}` in any string of a component is filled from the instance's props, as in Mustache; a string that is only `{{prop}}` takes the value as is (a number stays a number). A prop wins over a token of the same name; any other `{{name}}` in the component is a token.
 - The `use` layer's own fields (width, constraints, `media`…) apply to each instance's root.
 - Instances stay linked: changing the component changes every instance. Their layers are named by the `use` id, the instance number and the inner layer's id or role, e.g. `c.1.name`, in replies. To change one, target the component (`{"component": "candidate", "role": "name"}`), or `detach` the `use` layer into plain layers.
 - Components may place other components, up to 8 levels deep.
@@ -595,7 +609,7 @@ A scene with a `duration`, or made of [shots](#shots-and-transitions), moves. On
 | `translate`, `skew` | the same, with `[x, y]` pairs | | GSAP's `x` and `y` read as `translate` |
 | `color` | the same, with Colors | | The layer's own color |
 | `draw` | list of 0–1, or `{from, to}` | 1 | The share of the layer's strokes drawn ([Drawing strokes](#drawing-strokes)); GSAP's `drawSVG` and After Effects' `trimPath` read as this |
-| `count` | list of numbers, or `{from, to}` | 0 | The number a text's `{n}` shows ([Counting](#counting)) |
+| `count` | list of numbers, or `{from, to}` | 0 | The number a text's `{{n}}` shows ([Counting](#counting)) |
 | `decimals` | 0–6 | 0 | With `count`: digits after the decimal point |
 | `separator` | string | none | With `count`: put between thousands, e.g. `","`; with `"."` the decimal mark is a comma |
 | `times` | list of 0–1 | evenly spaced | Where each listed value falls, of `duration` |
@@ -620,13 +634,13 @@ It works on every stroke: paths, shapes, lines, ellipses and text outlines. A li
 
 ### Counting
 
-`count` puts a number that counts into a text layer, wherever its text says `{n}`:
+`count` puts a number that counts into a text layer, wherever its text says `{{n}}`:
 
 ```json
-{"type": "text", "text": "{n}+ teams", "animate": {"count": [0, 1250], "separator": ",", "duration": 1.5, "ease": "power2.out"}}
+{"type": "text", "text": "{{n}}+ teams", "animate": {"count": [0, 1250], "separator": ",", "duration": 1.5, "ease": "power2.out"}}
 ```
 
-The text is measured with its widest value (usually the last), so its box holds still and nothing around it moves while the number changes; digits use the font's tabular figures when it has them. At rest, and in `scene_describe`, the text shows that value. A text that counts needs `{n}` in it.
+The text is measured with its widest value (usually the last), so its box holds still and nothing around it moves while the number changes; digits use the font's tabular figures when it has them. At rest, and in `scene_describe`, the text shows that value. A text that counts needs `{{n}}` in it.
 
 ### Easing
 
@@ -719,7 +733,7 @@ A template is a scene file that `scene_create` loads by URL or path ([tools.md](
   "assets": {"photo": "photo.jpg", "logo": "https://example.com/logo.svg"},
   "layers": [
     {"type": "image", "asset": "photo", "width": "fill", "height": "fill"},
-    {"type": "text", "text": "$headline", "fontSize": 64, "fontWeight": 800, "color": "$accent", "place": "center"}
+    {"type": "text", "text": "{{headline}}", "fontSize": 64, "fontWeight": 800, "color": "{{accent}}", "place": "center"}
   ]
 }
 ```
@@ -735,7 +749,7 @@ A change that breaks any of these rules is refused whole, with a one-line error 
 - Values whose unit was likely mistaken: a `lineHeight` above 4 (px, not × `fontSize`), a motion `duration` of 100 or more that's longer than the scene (ms, not seconds).
 - Layout fields on a frame that isn't a stack or grid (`padding` without `flexDirection`), and `margin` without `place`.
 - An unknown token, style, component, asset, parent frame or `media` key; a duplicate layer id.
-- Shots that aren't top level, have no positive `duration`, or whose transition is longer than a shot it joins; `split` on anything but text; `count` on a layer whose text has no `{n}`; `draw` or `count` on split text.
+- Shots that aren't top level, have no positive `duration`, or whose transition is longer than a shot it joins; `split` on anything but text; `count` on a layer whose text has no `{{n}}`; `draw` or `count` on split text.
 - An `audio` asset without sound, or a negative `volume`, `trimStart`, `fadeIn` or `fadeOut`; a sound used as an image or video.
 
 | Limit | Value |
@@ -760,18 +774,18 @@ The reference ad from the end-to-end tests, in one `layer_add`: tokens, styles, 
   },
   "styles": {
     "accent": {
-      "color": "$red"
+      "color": "{{red}}"
     },
     "name": {
       "fontSize": 36,
       "fontWeight": 700,
-      "color": "$navy",
+      "color": "{{navy}}",
       "textAlign": "center"
     },
     "office": {
       "fontSize": 30,
       "fontWeight": 500,
-      "color": "$grey",
+      "color": "{{grey}}",
       "textAlign": "center"
     }
   },
@@ -815,7 +829,7 @@ The reference ad from the end-to-end tests, in one `layer_add`: tokens, styles, 
           "text": "{{text}}",
           "fontSize": 32,
           "fontWeight": 500,
-          "color": "$navy",
+          "color": "{{navy}}",
           "width": "fill"
         }
       ]
@@ -845,7 +859,7 @@ The reference ad from the end-to-end tests, in one `layer_add`: tokens, styles, 
           ],
           "fontSize": 64,
           "fontWeight": 800,
-          "color": "$navy",
+          "color": "{{navy}}",
           "textAlign": "center",
           "textWrap": "balance",
           "text": "Proven <accent>RESULTS</accent> for <accent>WILLOWMERE</accent> Families"
@@ -895,7 +909,7 @@ The reference ad from the end-to-end tests, in one `layer_add`: tokens, styles, 
           "id": "cta",
           "type": "frame",
           "width": "fill",
-          "fill": "$red",
+          "fill": "{{red}}",
           "flexDirection": "row",
           "gap": 16,
           "padding": 22,
@@ -954,7 +968,7 @@ The reference ad from the end-to-end tests, in one `layer_add`: tokens, styles, 
           "width": "fill",
           "text": "Paid for by Willowmere Forward · willowmereforward.org",
           "fontSize": 20,
-          "color": "$grey",
+          "color": "{{grey}}",
           "textAlign": "center",
           "media": {
             "tall": {

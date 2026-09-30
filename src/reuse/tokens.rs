@@ -1,25 +1,99 @@
-//! Tokens: named values used as `"$name"` in any field of a layer, style or
-//! component. `text` is never scanned, so `"$29"` or `"$SALE"` stays text.
+//! Tokens: named values used as `{{name}}` in any field of a layer, style or
+//! component, Mustache-style. A string that is only `{{name}}` takes the
+//! token's value as is (a number stays a number); otherwise the value is
+//! spliced into the text, markup attributes included. A string without a
+//! `{{name}}` is never touched, so `"$29"` or `"{curly}"` stays text.
 
 use std::collections::BTreeMap;
+use std::ops::Range;
 
 use serde_json::{Map, Value};
 
 use crate::scene::{Layer, Scene};
 
-/// The token name in `s` when the whole string is a reference: `$` then a
-/// letter or `_`, then letters, digits, `_`, `.` or `-`.
-pub fn reference(s: &str) -> Option<&str> {
-    let name = s.strip_prefix('$')?;
-    let mut chars = name.chars();
-    let first = chars.next()?;
-    ((first.is_ascii_alphabetic() || first == '_')
-        && chars.all(|c| c.is_ascii_alphanumeric() || "_.-".contains(c)))
-    .then_some(name)
+/// The counting number's placeholder name (`{{n}}`): never a token.
+pub const COUNT: &str = "n";
+
+/// Whether `s` is a token name: a letter or `_`, then letters, digits, `_`,
+/// `.` or `-`.
+pub fn is_name(s: &str) -> bool {
+    let mut chars = s.chars();
+    chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || "_.-".contains(c))
 }
 
-/// Replaces token references in a raw layer tree, recording in each layer
-/// object (`"$tokens"`) which JSON pointer came from which token.
+/// The placeholders in `s`: each `{{name}}`'s byte range and name. Braces
+/// around anything but a name, and the counting `{{n}}`, aren't
+/// placeholders.
+pub fn placeholders(s: &str) -> Vec<(Range<usize>, &str)> {
+    let mut out = Vec::new();
+    let mut from = 0;
+    while let Some(open) = s[from..].find("{{").map(|i| from + i) {
+        let Some(close) = s[open + 2..].find("}}").map(|i| open + 2 + i) else {
+            break;
+        };
+        let name = s[open + 2..close].trim();
+        if is_name(name) && name != COUNT {
+            out.push((open..close + 2, name));
+        }
+        from = close + 2;
+    }
+    out
+}
+
+/// `name` as a placeholder: `{{name}}`.
+pub fn braced(name: &str) -> String {
+    format!("{{{{{name}}}}}")
+}
+
+/// The token name when all of `s` is one placeholder: `"{{brand}}"`.
+pub fn reference(s: &str) -> Option<&str> {
+    match placeholders(s).as_slice() {
+        [(range, name)] if *range == (0..s.len()) => Some(name),
+        _ => None,
+    }
+}
+
+/// `s` with every placeholder replaced by its token's value.
+///
+/// # Errors
+/// An unknown token, or one whose value is a list or object.
+fn splice(s: &str, tokens: &BTreeMap<String, Value>) -> Result<String, String> {
+    let mut out = String::with_capacity(s.len());
+    let mut last = 0;
+    for (range, name) in placeholders(s) {
+        out.push_str(&s[last..range.start]);
+        match tokens.get(name).ok_or_else(|| unknown(name, tokens))? {
+            Value::String(t) => out.push_str(t),
+            v @ (Value::Number(_) | Value::Bool(_)) => out.push_str(&v.to_string()),
+            _ => {
+                return Err(format!(
+                    "token {} is a list or object; use it as a whole value",
+                    braced(name)
+                ));
+            }
+        }
+        last = range.end;
+    }
+    out.push_str(&s[last..]);
+    Ok(out)
+}
+
+/// What a field bound to tokens was written as: one token's name (a
+/// whole value), or its template when tokens sit inside text.
+fn bound_names(written: &str) -> Vec<&str> {
+    if written.contains("{{") {
+        placeholders(written).into_iter().map(|(_, n)| n).collect()
+    } else {
+        vec![written]
+    }
+}
+
+/// Replaces tokens in a raw layer tree, recording in each layer object
+/// (`"$tokens"`) what each bound JSON pointer was written as: the token's
+/// name, or the text's template.
 ///
 /// # Errors
 /// An unknown token, naming the tokens there are.
@@ -43,8 +117,7 @@ pub fn bind(layer: &mut Value, tokens: &BTreeMap<String, Value>) -> Result<(), S
                     }
                 }
             }
-            "text" => text_token(val, "/text", tokens, &mut refs),
-            "id" | "type" | "$tokens" => {}
+            "id" | "type" | "$defaults" => {}
             _ => replace(val, &format!("/{}", escape(key)), tokens, &mut refs)?,
         }
     }
@@ -61,24 +134,8 @@ pub fn bind(layer: &mut Value, tokens: &BTreeMap<String, Value>) -> Result<(), S
     Ok(())
 }
 
-/// Text is a token only when it's wholly the name of one: a template's
-/// "$headline". "$29", or "$SALE" with no such token, stays text.
-fn text_token(
-    val: &mut Value,
-    at: &str,
-    tokens: &BTreeMap<String, Value>,
-    refs: &mut BTreeMap<String, String>,
-) {
-    if let Some(name) = val.as_str().and_then(reference)
-        && let Some(value) = tokens.get(name)
-    {
-        refs.insert(at.to_owned(), name.to_owned());
-        *val = value.clone();
-    }
-}
-
-/// Replaces token references anywhere in `v` (styles, components), without
-/// recording them.
+/// Replaces tokens anywhere in `v` (styles, components), without recording
+/// them.
 ///
 /// # Errors
 /// An unknown token.
@@ -93,11 +150,14 @@ fn replace(
     refs: &mut BTreeMap<String, String>,
 ) -> Result<(), String> {
     match v {
-        Value::String(s) => {
+        Value::String(s) if s.contains("{{") => {
             if let Some(name) = reference(s) {
                 let value = tokens.get(name).ok_or_else(|| unknown(name, tokens))?;
                 refs.insert(at.to_owned(), name.to_owned());
                 *v = value.clone();
+            } else if !placeholders(s).is_empty() {
+                let spliced = splice(s, tokens)?;
+                refs.insert(at.to_owned(), std::mem::replace(s, spliced));
             }
         }
         Value::Array(a) => {
@@ -107,12 +167,7 @@ fn replace(
         }
         Value::Object(o) => {
             for (k, x) in o.iter_mut() {
-                let ptr = format!("{at}/{}", escape(k));
-                if k == "text" {
-                    text_token(x, &ptr, tokens, refs);
-                } else {
-                    replace(x, &ptr, tokens, refs)?;
-                }
+                replace(x, &format!("{at}/{}", escape(k)), tokens, refs)?;
             }
         }
         _ => {}
@@ -123,28 +178,13 @@ fn replace(
 fn unknown(name: &str, tokens: &BTreeMap<String, Value>) -> String {
     let known: Vec<&str> = tokens.keys().map(String::as_str).collect();
     if known.is_empty() {
-        format!("unknown token ${name}; add it under tokens")
+        format!("unknown token {}; add it under tokens", braced(name))
     } else {
-        format!("unknown token ${name}; tokens: {}", known.join(", "))
-    }
-}
-
-/// Replaces tokens used as values in a span's CSS, as in
-/// `<span style="color:$red">`; the rest of the text is never scanned.
-pub fn in_markup(text: &mut String, tokens: &BTreeMap<String, Value>) {
-    if !text.contains(":$") {
-        return;
-    }
-    for (name, v) in tokens {
-        let value = match v {
-            Value::String(s) => s.clone(),
-            Value::Number(n) => n.to_string(),
-            _ => continue,
-        };
-        // Ended by the next declaration, the attribute's quote, or a space.
-        for end in [';', '"', '\'', ' '] {
-            *text = text.replace(&format!(":${name}{end}"), &format!(":{value}{end}"));
-        }
+        format!(
+            "unknown token {}; tokens: {}",
+            braced(name),
+            known.join(", ")
+        )
     }
 }
 
@@ -187,7 +227,8 @@ pub fn unbind_set(layer: &mut Value, set: &Map<String, Value>) {
     }
 }
 
-/// Re-applies `changed` tokens to every layer bound to them.
+/// Re-applies `changed` tokens to every layer bound to them: a whole value
+/// takes the token's new value, a template is spliced again.
 ///
 /// # Errors
 /// A layer that no longer parses with the new value.
@@ -197,22 +238,33 @@ pub fn rebind(scene: &mut Scene, changed: &[String]) -> Result<(), String> {
         tokens: &BTreeMap<String, Value>,
         changed: &[String],
     ) -> Result<(), String> {
+        let hit = |written: &str| {
+            bound_names(written)
+                .iter()
+                .any(|n| changed.iter().any(|c| c == n))
+        };
         for l in layers.iter_mut() {
-            if l.token_refs.values().any(|t| changed.contains(t)) {
+            if l.token_refs.values().any(|w| hit(w)) {
                 let mut v = serde_json::to_value(&*l).map_err(|e| e.to_string())?;
-                for (ptr, name) in &l.token_refs {
-                    if changed.contains(name)
-                        && let Some(value) = tokens.get(name)
-                    {
-                        set_at(&mut v, ptr, value.clone());
-                    }
+                for (ptr, written) in l.token_refs.iter().filter(|(_, w)| hit(w)) {
+                    let value = if written.contains("{{") {
+                        Value::String(
+                            splice(written, tokens).map_err(|e| format!("{}: {e}", l.id))?,
+                        )
+                    } else if let Some(value) = tokens.get(written) {
+                        value.clone()
+                    } else {
+                        continue;
+                    };
+                    set_at(&mut v, ptr, value);
                 }
                 *l = serde_json::from_value(v).map_err(|e| {
                     let names: Vec<String> = l
                         .token_refs
                         .values()
-                        .filter(|t| changed.contains(t))
-                        .map(|t| format!("${t}"))
+                        .flat_map(|w| bound_names(w))
+                        .filter(|n| changed.iter().any(|c| c == n))
+                        .map(braced)
                         .collect();
                     format!("{}: token {} doesn't suit it: {e}", l.id, names.join(", "))
                 })?;
@@ -227,71 +279,4 @@ pub fn rebind(scene: &mut Scene, changed: &[String]) -> Result<(), String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{bind, in_markup, reference};
-    use serde_json::json;
-
-    #[test]
-    fn only_whole_token_strings_are_references() {
-        assert_eq!(reference("$brand"), Some("brand"));
-        assert_eq!(reference("$color.brand"), Some("color.brand"));
-        assert_eq!(reference("$29"), None);
-        assert_eq!(reference("pay $5"), None);
-    }
-
-    #[test]
-    fn binding_substitutes_and_remembers_but_leaves_text_alone() {
-        let tokens = serde_json::from_value(json!({"red": "#D0202E", "pad": 24})).unwrap();
-        let mut v = json!({"type": "frame", "color": "$red", "stack": {"dir": "row", "padding": "$pad"},
-            "children": [{"type": "text", "text": "$SALE", "color": "$red"}]});
-        bind(&mut v, &tokens).unwrap();
-        assert_eq!(v["color"], "#D0202E");
-        assert_eq!(v["stack"]["padding"], 24);
-        assert_eq!(
-            v["$tokens"],
-            json!({"/color": "red", "/stack/padding": "pad"})
-        );
-        assert_eq!(v["children"][0]["text"], "$SALE");
-        assert_eq!(v["children"][0]["$tokens"], json!({"/color": "red"}));
-        let e = bind(&mut json!({"type": "rect", "color": "$blue"}), &tokens).unwrap_err();
-        assert_eq!(e, "unknown token $blue; tokens: pad, red");
-    }
-
-    #[test]
-    fn a_default_first_value_still_follows_its_token() {
-        let mut v = json!({"type": "text"});
-        super::set_at(&mut v, "/color", json!("#D0202E"));
-        super::set_at(&mut v, "/stack/padding", json!(8));
-        assert_eq!(
-            v,
-            json!({"type": "text", "color": "#D0202E", "stack": {"padding": 8}})
-        );
-    }
-
-    #[test]
-    fn text_that_is_wholly_a_token_name_is_bound() {
-        let tokens = serde_json::from_value(json!({"headline": "Summer sale"})).unwrap();
-        let mut v = json!({"type": "text", "text": "$headline"});
-        bind(&mut v, &tokens).unwrap();
-        assert_eq!(v["text"], "Summer sale");
-        assert_eq!(v["$tokens"], json!({"/text": "headline"}));
-        let mut v =
-            json!({"type": "text", "text": "$headline", "at": {"sky": {"text": "$headline"}}});
-        bind(&mut v, &tokens).unwrap();
-        assert_eq!(v["at"]["sky"]["text"], "Summer sale", "in at too");
-        let mut v = json!({"type": "text", "text": "$headlines"});
-        bind(&mut v, &tokens).unwrap();
-        assert_eq!(v["text"], "$headlines", "no such token: still text");
-    }
-
-    #[test]
-    fn tokens_fill_span_css_only() {
-        let tokens = serde_json::from_value(json!({"red": "#D0202E", "big": 60})).unwrap();
-        let mut t = r#"Pay $red <span style="color:$red;font-size:$big">now</span>"#.to_owned();
-        in_markup(&mut t, &tokens);
-        assert_eq!(
-            t,
-            r##"Pay $red <span style="color:#D0202E;font-size:60">now</span>"##
-        );
-    }
-}
+mod tests;

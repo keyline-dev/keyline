@@ -58,7 +58,7 @@ pub struct LayerAddArgs {
     /// Named styles to add or replace: layer fields a layer's `style` pulls in.
     #[serde(default)]
     pub(super) styles: serde_json::Map<String, Value>,
-    /// Named values to add or replace, used as "$name" in any field.
+    /// Named values to add or replace, used as {{name}} in any field or text.
     #[serde(default)]
     pub(super) tokens: serde_json::Map<String, Value>,
     /// Named layer trees to add or replace, placed by `use` layers.

@@ -49,7 +49,7 @@ pub struct LayerTime {
     /// a `draw` track. Never stored.
     #[serde(skip)]
     pub drawn: Option<f32>,
-    /// Set when drawing a moment: the number its text's `{n}` shows, from a
+    /// Set when drawing a moment: the number its text's `{{n}}` shows, from a
     /// `count` track. Never stored.
     #[serde(skip)]
     pub count: Option<f32>,

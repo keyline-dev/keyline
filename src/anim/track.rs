@@ -31,7 +31,7 @@ pub enum Val {
 /// The properties that animate, and the kind of value each takes. Only
 /// ones that don't change layout: the layout runs once, time only redraws.
 /// `draw` is the share of a stroke drawn (0–1); `count` is the number a
-/// text's `{n}` shows.
+/// text's `{{n}}` shows.
 pub const PROPS: &[(&str, Kind)] = &[
     ("opacity", Kind::Num),
     ("draw", Kind::Num),

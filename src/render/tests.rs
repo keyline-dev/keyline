@@ -318,7 +318,7 @@ fn a_draw_track_draws_that_share_of_the_stroke() {
 
 #[test]
 fn a_count_track_draws_the_number_of_the_moment() {
-    let text = json!([{"id": "n", "type": "text", "text": "{n}", "fontSize": 40, "color": "#000000",
+    let text = json!([{"id": "n", "type": "text", "text": "{{n}}", "fontSize": 40, "color": "#000000",
         "animate": {"count": [0, 1000], "ease": "none"}}]);
     let ink = |px: &dyn Fn(i32, i32) -> (u8, u8, u8)| {
         (0..100)

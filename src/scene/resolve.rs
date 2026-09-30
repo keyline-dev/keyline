@@ -166,14 +166,12 @@ impl Scene {
                     *l = s;
                 }
                 // Style-name tags in markup become spans with the style's
-                // fields, and tokens in span attributes take their values.
+                // fields (their tokens already in place).
                 if let Kind::Text { text, .. } = &mut l.kind
                     && text.contains('<')
+                    && !scene.styles.is_empty()
                 {
-                    if !scene.styles.is_empty() {
-                        *text = crate::text::markup::expand_styles(text, &scene.styles);
-                    }
-                    crate::reuse::tokens::in_markup(text, &scene.tokens);
+                    *text = crate::text::markup::expand_styles(text, &scene.styles);
                 }
             }
             Ok(())
