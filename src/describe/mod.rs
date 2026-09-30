@@ -92,6 +92,18 @@ pub fn describe(
                     render_image(scene, size, 1.0, dir, true).ok()
                 }
             });
+            // What knockout letters show: the scene without the frames they
+            // cut through.
+            let knocked = knockout_frames(&placed);
+            let through = if knocked.is_empty() || crate::video::frame::has_video(scene) {
+                None
+            } else {
+                assets.and_then(|dir| {
+                    let mut open = scene.clone();
+                    hide(&mut open.layers, &knocked);
+                    render_image(&open, size, 1.0, dir, true).ok()
+                })
+            };
             let [st, sr, sb, sl] = size.safe;
             let checks = Checks {
                 scene,
@@ -103,6 +115,7 @@ pub fn describe(
                 }),
                 overlaps: overlaps(&placed),
                 backdrop: backdrop.as_ref().and_then(skia_safe::Image::peek_pixels),
+                through: through.as_ref().and_then(skia_safe::Image::peek_pixels),
             };
             let clip = Clip {
                 rect: Rect {
@@ -194,6 +207,36 @@ struct Checks<'s, 'i> {
     overlaps: HashMap<&'s str, Vec<&'s str>>,
     /// The size rendered without text: what each text is read against.
     backdrop: Option<Pixmap<'i>>,
+    /// The size without text or the frames knockout text cuts through:
+    /// what shows in its letters. `None` when there's no knockout text.
+    through: Option<Pixmap<'i>>,
+}
+
+/// Ids of the frames whose knockout text cuts through them.
+fn knockout_frames(placed: &[Placed]) -> Vec<String> {
+    let mut out = Vec::new();
+    for p in placed {
+        if p.children
+            .iter()
+            .any(|c| matches!(&c.layer.kind, Kind::Text { more, .. } if more.knockout))
+        {
+            out.push(p.layer.id.clone());
+        }
+        out.extend(knockout_frames(&p.children));
+    }
+    out
+}
+
+/// Hides the layers with these ids, wherever they are.
+fn hide(layers: &mut [crate::scene::Layer], ids: &[String]) {
+    for l in layers {
+        if ids.contains(&l.id) {
+            l.hidden = true;
+        }
+        if let Some(children) = l.kind.children_mut() {
+            hide(children, ids);
+        }
+    }
 }
 
 /// The visible area: the canvas intersected with every clipping ancestor,
@@ -300,7 +343,8 @@ fn line(
                 let _ = write!(out, " !leader \"{short}{more}\" meets \"{right}\"");
             }
             if let (Some(backdrop), Some(ink)) = (&checks.backdrop, ink(p))
-                && let Some((ratio, min)) = contrast(p, ink, backdrop, (opacity, m))
+                && let Some((ratio, min)) =
+                    contrast(p, ink, (backdrop, checks.through.as_ref()), (opacity, m))
             {
                 let _ = write!(out, " warn contrast {ratio:.1}:1 (WCAG {min})");
             }
@@ -324,6 +368,9 @@ fn line(
                 if !a.svg && up > 1.005 {
                     let _ = write!(out, " upscaled {up:.1}x");
                 }
+                if fit == Fit::Cover && crop.is_none() {
+                    crop_warning(&mut out, (cw, ch), kind.focus().unwrap_or([0.5, 0.5]));
+                }
             }
         }
         _ => {}
@@ -346,7 +393,7 @@ fn line(
     if clip.quiet {
     } else if intersect(shown, visible).is_none() && !matches!(l.kind, Kind::Spacer { .. }) {
         out.push_str(" !hidden");
-    } else if matches!(l.kind, Kind::Text { .. }) && !contains(visible, r) {
+    } else if let Some(r) = text_cut(p, visible) {
         let _ = write!(out, " !clipped by {}:", clip.by);
         let cut = [
             ("left", visible.x - r.x),
@@ -381,6 +428,59 @@ fn line(
         };
         line(lines, checks, c, own, depth + 1, (opacity, m));
     }
+}
+
+/// What of text `p` falls outside `visible`: its box, or its letters
+/// where they reach past the box (tall caps at a tight `lineHeight` in a
+/// frame that clips). `None` when all of it shows. Ink gets a pixel of
+/// slack for antialiasing.
+fn text_cut(p: &Placed, visible: Rect) -> Option<Rect> {
+    if !matches!(p.layer.kind, Kind::Text { .. }) {
+        return None;
+    }
+    let r = p.rect;
+    let ink = ink(p).map(|i| Rect {
+        x: i.x + 1.0,
+        y: i.y + 1.0,
+        w: (i.w - 2.0).max(0.0),
+        h: (i.h - 2.0).max(0.0),
+    });
+    let shown = ink.map_or(r, |i| {
+        let (x, y) = (r.x.min(i.x), r.y.min(i.y));
+        Rect {
+            x,
+            y,
+            w: r.right().max(i.right()) - x,
+            h: r.bottom().max(i.bottom()) - y,
+        }
+    });
+    (!contains(visible, shown)).then_some(shown)
+}
+
+/// `warn crop` when a cover crop hides more than half the image on an
+/// axis: the window then can't hold the half of the image around the
+/// focus (the focus point itself always stays in view), so a subject there
+/// is cut, e.g. a house in a band too short for it.
+fn crop_warning(out: &mut String, (cw, ch): (f32, f32), focus: [f32; 2]) {
+    let (share, bigger) = if ch >= cw {
+        (ch, "taller")
+    } else {
+        (cw, "wider")
+    };
+    if share <= 0.505 {
+        return;
+    }
+    let what = if focus == [0.5, 0.5] {
+        "the image's middle"
+    } else {
+        "the area around its focus"
+    };
+    let _ = write!(
+        out,
+        " warn crop cuts {what} (focus {}%,{}%): a {bigger} box keeps more",
+        (focus[0] * 100.0).round(),
+        (focus[1] * 100.0).round()
+    );
 }
 
 /// Whether a frame that clips its content cuts `p`'s drop shadow: where

@@ -95,9 +95,13 @@ async fn one_master_adapts_to_every_size_without_at() {
     assert!(!line(&d, "portrait", "footer").is_empty());
     assert!(line(&d, "sky", "footer").is_empty(), "{d}");
 
-    // Nothing needs fixing at any size.
+    // Nothing needs fixing at any size; the skyscraper's photo, as tall as
+    // what's left, is cropped past half: an advisory.
     let problems = mcp.ok("scene_describe", json!({"sceneId": id})).await;
-    assert_eq!(problems, "ok");
+    assert_eq!(
+        problems,
+        "sky photo image 20,71 260×409 cover crop 64%w warn crop cuts the image's middle (focus 50%,50%): a wider box keeps more\n"
+    );
     mcp.stop().await;
 }
 

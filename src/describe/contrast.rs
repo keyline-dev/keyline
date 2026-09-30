@@ -11,13 +11,15 @@ use crate::scene::{Color, Kind};
 /// blended over the backdrop), each against the average luminance behind
 /// its own letters (highlights included). Returns `(worst ratio, required)`
 /// when below the requirement: 3:1 for large text (≥ 24 px, or ≥ 18.66 px
-/// bold), else 4.5:1.
+/// bold), else 4.5:1. Knockout letters show `through` (what's behind the
+/// frame they cut) against the frame around them; with no `through`
+/// they aren't judged.
 // ponytail: averages the backdrop; text over a busy photo can pass on
 // average yet fail in places. Check per-glyph region if that bites.
 pub(super) fn contrast(
     p: &Placed,
     ink: Rect,
-    backdrop: &Pixmap,
+    (backdrop, through): (&Pixmap, Option<&Pixmap>),
     (opacity, m): (f32, &skia_safe::Matrix),
 ) -> Option<(f32, f32)> {
     let (_, fit) = p.text.as_ref()?;
@@ -25,12 +27,14 @@ pub(super) fn contrast(
         weight,
         fill,
         gradient,
+        more,
         ..
     } = &p.layer.kind
     else {
         return None;
     };
-    if fill.is_some() || gradient.is_some() {
+    let through = if more.knockout { Some(through?) } else { None };
+    if through.is_none() && (fill.is_some() || gradient.is_some()) {
         return None; // letters painted with an image or gradient: no single color to judge
     }
     // `fills` paint the letters instead of `color`: judged by the top one
@@ -57,6 +61,7 @@ pub(super) fn contrast(
         .collect();
     // A plain `fills` color paints every letter instead.
     let letters = match paints {
+        _ if through.is_some() => None,
         None => None,
         Some(paints) => match paints.last() {
             Some(crate::scene::Paint::Solid(s)) => Some(s.color),
@@ -82,10 +87,16 @@ pub(super) fn contrast(
             let at = m.map_point((x, y));
             let c = backdrop.get_color(((at.x as i32).clamp(0, bw), (at.y as i32).clamp(0, bh)));
             let under = [c.r(), c.g(), c.b()];
-            let fg = letters.unwrap_or(runs[i].0);
+            let shown = match through {
+                Some(t) => {
+                    let c = t.get_color(((at.x as i32).clamp(0, bw), (at.y as i32).clamp(0, bh)));
+                    [c.r(), c.g(), c.b()]
+                }
+                None => over(letters.unwrap_or(runs[i].0), opacity, under),
+            };
             let s = &mut sums[i];
             s.0 += luminance(under);
-            s.1 += luminance(over(fg, opacity, under));
+            s.1 += luminance(shown);
             s.2 += 1.0;
         }
     }

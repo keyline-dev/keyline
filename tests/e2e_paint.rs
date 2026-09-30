@@ -145,3 +145,46 @@ async fn torn_edges_rough_strokes_and_halftone_look_hand_made() {
     assert!(e.contains("unknown variant `up`"), "{e}");
     mcp.stop().await;
 }
+
+#[tokio::test]
+async fn a_band_too_short_for_its_photo_is_an_advisory() {
+    let mcp = Mcp::start("crop-warn").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 1200, "height": 1000, "sizes": [{"id": "wide", "width": 1200, "height": 1000}]}),
+        )
+        .await
+        .split_whitespace()
+        .next()
+        .unwrap()
+        .to_owned();
+    mcp.ok(
+        "asset_add",
+        json!({"sceneId": id, "id": "photo", "base64": b64(&photo_png())}),
+    )
+    .await;
+    // A 1600×900 photo in a 1200×238 band: cover hides 65% of its height.
+    let reply = mcp
+        .ok(
+            "layer_add",
+            json!({"sceneId": id, "layers": [{"id": "photo-band", "type": "image", "asset": "photo", "y": 235, "width": 1200, "height": 238}]}),
+        )
+        .await;
+    assert!(
+        reply.contains("wide photo-band image 0,235 1200×238 cover crop 65%h warn crop cuts the image's middle (focus 50%,50%): a taller box keeps more"),
+        "{reply}"
+    );
+    // A taller band keeps most of it: the edit is clean.
+    let reply = mcp
+        .ok(
+            "layer_update",
+            json!({"sceneId": id, "ops": [{"target": {"id": "photo-band"}, "set": {"height": 420}}]}),
+        )
+        .await;
+    assert!(
+        reply.starts_with("changed photo-band v") && !reply.contains("warn"),
+        "{reply}"
+    );
+    mcp.stop().await;
+}

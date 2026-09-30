@@ -58,12 +58,13 @@ A **layer line** is `id type x,y w×h`, in px at that size, then:
 | `!truncated at maxLines N` | defect | Text was cut at its `maxLines`; allow more lines or widen the box. Without a height it adds `(a height lets it shrink instead)`: with one, text shrinks to fit before it's cut |
 | `!breaks "<word>" (needs W wide)` | defect | A word is wider than its text box, so a line breaks inside it ("Winsto" / "n"); the box needs W px |
 | `!overflow needs W×H` | defect | A stack's children don't fit it even at their smallest; the stack needs W×H. The children it pushes out aren't listed one by one |
-| `!clipped by <frame or canvas>: <side> <px>` | defect | Part of the layer falls outside what shows |
+| `!clipped by <frame or canvas>: <side> <px>` | defect | Part of the layer falls outside what shows; for text, its letters too, where they reach past its box (tall caps at a tight `lineHeight` in a frame that clips) |
 | `!hidden` | defect | The layer is entirely outside what shows |
 | `!overlaps <ids>` | defect | Text ink overlaps other text |
 | `!leader "<left…>" meets "<right>"` | defect | In a `leader` line, the text before the tab runs into the text after it |
 | `!unsafe` | defect | Text sits under the size's `safeArea` |
-| `warn contrast R:1 (WCAG N)` | advisory | Text contrast against what's behind it is below the WCAG level for its size |
+| `warn contrast R:1 (WCAG N)` | advisory | Text contrast against what's behind it is below the WCAG level for its size. Knockout text is judged by what shows through its letters against the frame around them |
+| `warn crop cuts the image's middle (focus X%,Y%): a taller box keeps more` | advisory | A cover crop hides more than half the image on one axis, so whatever sits around its focus is cut (a house in a band too short for it); make the box taller (or wider), or move `focus`. Names "the area around its focus" when `focus` isn't the center |
 | `warn shadow clipped by <frame>` | advisory | A frame that clips its content (`clipsContent`, on by default) cuts the layer's drop shadow; give it room (padding) or set `clipsContent: false` |
 
 Defects need fixing; advisories need judgment ([concepts](concepts.md#checks-defects-advisories-facts)). In a scene of [shots](scene.md#shots-and-transitions), every shot is checked, each with the layers around it.

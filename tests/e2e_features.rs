@@ -293,7 +293,13 @@ async fn styles_icons_shapes_masks_and_focus_work_end_to_end() {
                 {"id": "rule", "type": "line", "x": 40, "y": 290, "width": 880, "constraints": {"horizontal": "stretch", "vertical": "bottom"}, "stroke": {"width": 2, "color": "#CFD3DA"}},
                 {"id": "steps", "type": "frame", "y": 320, "width": 960, "height": 190, "constraints": {"horizontal": "stretch", "vertical": "bottom"}, "flexDirection": "row", "alignItems": "flex-start", "justifyContent": "space-evenly", "children": [step("mail", "lucide", "MAIL IT"), step("location-dot", "solid", "DROP IT"), step("landmark", "lucide", "HAND IT IN")]}]}))
         .await;
-    assert!(reply.lines().next().unwrap().ends_with(" ok"), "{reply}");
+    // No defects; the band is short for its photo, a call for the designer.
+    assert!(
+        reply.lines().nth(1).unwrap().ends_with(
+            "warn crop cuts the area around its focus (focus 50%,20%): a taller box keeps more"
+        ) && !reply.contains(" !"),
+        "{reply}"
+    );
 
     // Restyling is one edit to the style, not one per layer.
     let reply = mcp

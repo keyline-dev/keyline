@@ -89,8 +89,9 @@ async fn the_reference_ad_with_components_tokens_and_adaptive_layout() {
             json!({"sceneId": id, "tokens": {"red": "#B0101C"}, "ops": []}),
         )
         .await;
+    // No defects (the skyscraper's photo is cropped past half: advisory).
     assert!(
-        reply.starts_with("changed {{red}} v") && reply.contains("ok"),
+        reply.starts_with("changed {{red}} v") && !reply.contains(" !"),
         "{reply}"
     );
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;

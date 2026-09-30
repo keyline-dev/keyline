@@ -84,6 +84,30 @@ fn clipped_warning_names_the_frame_and_the_cut() {
 }
 
 #[test]
+fn letters_taller_than_their_line_are_clipped_by_the_frame() {
+    // Caps at lineHeight 0.6 reach above their own box; the frame sized to
+    // that box cuts their tops, though the box itself fits.
+    let s = scene(json!([
+        {"id": "band", "type": "frame", "y": 20, "width": 400, "height": 60, "children": [
+            {"id": "title", "type": "text", "text": "HELLO", "fontSize": 100, "fontWeight": 900, "lineHeight": 0.6}
+        ]}
+    ]));
+    let d = describe(&s, Some("wide"), true, None).unwrap();
+    let line = d.lines().find(|l| l.contains("title text")).unwrap();
+    assert!(
+        line.contains("0,20 ") && line.contains("×60"),
+        "the box fits: {line}"
+    );
+    assert!(line.contains("!clipped by band: top "), "{line}");
+    // With room above, nothing is cut.
+    let s = scene(json!([
+        {"id": "title", "type": "text", "text": "HELLO", "y": 40, "fontSize": 100, "fontWeight": 900, "lineHeight": 0.6}
+    ]));
+    let d = describe(&s, Some("wide"), false, None).unwrap();
+    assert!(!d.contains("!clipped"), "{d}");
+}
+
+#[test]
 fn overlapping_text_is_a_defect() {
     let s = scene(json!([
         {"id": "a", "type": "text", "text": "Hello", "fontSize": 30},
@@ -151,7 +175,13 @@ fn small_text_and_upscaling_are_facts_not_warnings() {
         // A 400 px image covering 800 px; at half scale it's drawn 1:1.
         {"id": "big", "type": "image", "asset": "img", "y": 100, "width": 800, "height": 100}
     ]));
-    assert_eq!(warnings(&s, None), None);
+    // The crop of an image this wide is an advisory of its own.
+    let w = warnings(&s, None).unwrap();
+    assert!(
+        w.lines()
+            .all(|l| l.contains(" big image ") && l.contains("warn crop")),
+        "{w}"
+    );
     assert_eq!(
         facts(&s),
         "smallest text: wide 14px (fine), small 7px (fine); upscaled: wide big 2.0x"
@@ -180,6 +210,29 @@ fn warns_on_low_contrast_against_what_is_behind() {
     );
     // Without an asset store the check is skipped.
     assert_eq!(warnings(&s, None), None);
+}
+
+#[test]
+fn knockout_text_is_judged_by_what_shows_through_it() {
+    // Magenta behind the left frame, white behind the right; both frames
+    // magenta. The letters' own color is never drawn: here it would pass
+    // on the left and fail on the right.
+    let s: Scene = serde_json::from_value(json!({"width": 400,
+        "height": 100,
+        "background": "#FFFFFF",
+        "sizes": [{"id": "a", "width": 400, "height": 100}],
+        "layers": [{"id": "photo", "type": "rect", "width": 200, "height": 100, "fill": "#C0187A"},
+            {"id": "over", "type": "frame", "width": 200, "height": 100, "fill": "#C8207F", "children": [
+                {"id": "lost", "type": "text", "text": "LOST", "x": 10, "y": 10, "fontSize": 60, "fontWeight": 900, "color": "#FFFFFF", "knockout": true}]},
+            {"id": "clear", "type": "frame", "x": 200, "width": 200, "height": 100, "fill": "#C8207F", "children": [
+                {"id": "seen", "type": "text", "text": "SEEN", "x": 10, "y": 10, "fontSize": 60, "fontWeight": 900, "color": "#C8207F", "knockout": true}]}]}))
+    .unwrap();
+    let w = warnings(&s, Some(&std::env::temp_dir())).unwrap();
+    assert_eq!(w.lines().count(), 1, "{w}");
+    assert!(
+        w.starts_with("a lost text") && w.contains(" warn contrast 1.1:1 (WCAG 3)"),
+        "{w}"
+    );
 }
 
 #[test]
@@ -358,4 +411,60 @@ fn a_video_is_cropped_and_scaled_like_an_image() {
     let d = describe(&s, Some("wide"), true, None).unwrap();
     assert!(d.contains("assets img 400×400 2s sound"), "{d}");
     assert!(d.contains(" clip video 0,0 400×200 cover crop 50%h"), "{d}");
+}
+
+#[test]
+fn a_cover_crop_that_hides_over_half_the_image_is_an_advisory() {
+    let band = |h: u32, extra: serde_json::Value| {
+        let mut l =
+            json!({"id": "band", "type": "image", "asset": "photo", "width": 1200, "height": h});
+        l.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        let mut s = scene(json!([l]));
+        s.width = 1200.0;
+        s.height = 800.0;
+        s.sizes.truncate(1);
+        s.sizes[0].width = 1200.0;
+        s.sizes[0].height = 800.0;
+        s.assets.insert(
+            "photo".into(),
+            serde_json::from_value(json!({"sha256": "x", "width": 1200, "height": 800})).unwrap(),
+        );
+        warnings(&s, None).unwrap_or_default()
+    };
+    // A 1200×800 photo in a 1200×238 band: 70% of its height hidden.
+    assert_eq!(
+        band(238, json!({})),
+        "wide band image 0,0 1200×238 cover crop 70%h warn crop cuts the image's middle (focus 50%,50%): a taller box keeps more\n"
+    );
+    // Less than half hidden (crop 48%h): the subject fits.
+    assert_eq!(band(420, json!({})), "");
+    assert!(
+        band(238, json!({"focus": [0.3, 0.2]}))
+            .contains("warn crop cuts the area around its focus (focus 30%,20%): a taller box"),
+    );
+    // Contain never crops; a crop picks its part on purpose.
+    assert_eq!(band(238, json!({"fit": "contain"})), "");
+    assert_eq!(
+        band(
+            238,
+            json!({"crop": {"x": 0, "y": 0.3, "width": 1, "height": 0.3}})
+        ),
+        ""
+    );
+}
+
+#[test]
+fn a_crop_across_says_a_wider_box() {
+    let s = scene(
+        json!([{"id": "strip", "type": "image", "asset": "img", "width": 100, "height": 400}]),
+    );
+    let w = describe(&s, Some("wide"), false, None).unwrap();
+    assert!(
+        w.contains(
+            "crop 75%w warn crop cuts the image's middle (focus 50%,50%): a wider box keeps more"
+        ),
+        "{w}"
+    );
 }

@@ -39,14 +39,20 @@ fn golden_check_tolerates_glyph_edges_but_not_changed_content() {
     assert!(why.starts_with("10000 of 1458000 pixels past"), "{why}");
 }
 
+/// The reference ad's advisories: its photo band cropped past half in the
+/// wide and sky sizes.
+const REFERENCE_CROPS: &str = "wide photo image 0,187 1200×244 cover crop 64%h warn crop cuts the image's middle (focus 50%,50%): a taller box keeps more\n\
+sky photo image 0,62 300×351 cover crop 52%w warn crop cuts the image's middle (focus 50%,50%): a wider box keeps more\n";
+
 #[tokio::test]
-async fn reference_ad_renders_all_sizes_without_warnings() {
+async fn reference_ad_renders_all_sizes_without_defects() {
     let mcp = Mcp::start("reference").await;
     let id = build_reference_ad(&mcp).await;
 
-    // A clean layout costs two characters.
+    // No defects; the photo band's stretch constraint squeezes it in the
+    // wide and sky sizes, and cover then hides over half the photo.
     let described = mcp.ok("scene_describe", json!({"sceneId": id})).await;
-    assert_eq!(described, "ok");
+    assert_eq!(described, REFERENCE_CROPS);
     let described = mcp
         .ok("scene_describe", json!({"sceneId": id, "full": true}))
         .await;
@@ -123,9 +129,13 @@ async fn edits_are_batched_atomic_and_terse() {
         reply.starts_with("changed text1,text3,text5,footer v"),
         "{reply}"
     );
-    // Line 1: ids, version, ok. Line 2: facts for the agent to judge.
-    let (status, facts) = reply.split_once('\n').expect("status and facts");
-    assert!(status.ends_with(" ok") && status.len() < 60, "{reply}");
+    // Line 1: ids and version, then the advisories, then facts for the
+    // agent to judge.
+    let (status, rest) = reply.split_once('\n').expect("status and facts");
+    assert!(status.len() < 60, "{reply}");
+    let facts = rest
+        .strip_prefix(REFERENCE_CROPS)
+        .expect("the photo's crops");
     assert_eq!(
         facts,
         "smallest text: portrait 30px (text2), wide 26px (text2), sky 8.4px (text2)"

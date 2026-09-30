@@ -208,7 +208,7 @@ fadeOut}}} changes the scene."
 
     #[tool(
         description = "Problems per size, or ok. Defects: !truncated|!overflow (needs W×H) !clipped !hidden !overlaps !unsafe (under \
-safeArea). Advisory: warn contrast. full: one line per layer per size: id type x,y w×h, font px, lines, image crop, upscale."
+safeArea). Advisory: warn contrast|crop. full: one line per layer per size: id type x,y w×h, font px, lines, image crop, upscale."
     )]
     async fn scene_describe(&self, Parameters(a): Parameters<SceneDescribeArgs>) -> CallToolResult {
         let scene = self.store.load(&a.scene_id).map_err(err);

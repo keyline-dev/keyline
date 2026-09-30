@@ -370,6 +370,14 @@ impl Kind {
         }
     }
 
+    /// An image's or a video's `focus`, 0–1 per axis.
+    pub fn focus(&self) -> Option<[f32; 2]> {
+        match self {
+            Kind::Image { focus, .. } | Kind::Video { focus, .. } => Some(*focus),
+            _ => None,
+        }
+    }
+
     /// Child layers, for types that hold them (frames and `firstFit`).
     pub fn children(&self) -> Option<&Vec<Layer>> {
         match self {
