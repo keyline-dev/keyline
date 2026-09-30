@@ -251,10 +251,8 @@ impl Run<'_> {
             format!("{}\n\n{}", self.problems, self.described),
         )
         .unwrap();
-        for line in self.rendered.lines().filter(|l| !l.starts_with(' ')) {
-            if let Some((size, path)) = common::file_of(line) {
-                std::fs::copy(path, dir.join(format!("{size}.png"))).unwrap();
-            }
+        for (size, path) in common::files(self.rendered) {
+            std::fs::copy(path, dir.join(format!("{size}.png"))).unwrap();
         }
 
         let r = self.result;

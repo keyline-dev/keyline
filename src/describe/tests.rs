@@ -48,7 +48,8 @@ fn warns_on_overflow_clipping_and_hidden_layers() {
     );
     let d = describe(&s, Some("wide"), true, None).unwrap();
     assert!(
-        d.contains("long text 0,0 100×30 15px (max 30)") && d.contains("!truncated needs 100×"),
+        d.contains("long text 0,0 100×30 15px (max 30, width)")
+            && d.contains("!truncated needs 100×"),
         "{d}"
     );
     assert!(
@@ -286,10 +287,7 @@ fn a_clipping_frame_that_cuts_a_shadow_says_so() {
         )
     };
     let w = warnings(&card(0.0), None).unwrap_or_default();
-    assert!(
-        w.contains("cta rect") && w.contains("warn shadow clipped by copy"),
-        "{w}"
-    );
+    assert!(w == "all cta warn shadow clipped by copy\n", "{w}");
     let w = warnings(&card(24.0), None).unwrap_or_default();
     assert!(!w.contains("shadow clipped"), "room for it: {w}");
 }
@@ -386,7 +384,7 @@ fn text_report_shows_only_wrapped_shrunk_or_cut_text() {
     assert!(!r.contains("plain"), "{r}");
     assert!(r.contains(" wrap 20px: \"one two\" / "), "{r}");
     assert!(
-        r.contains(" fit ") && r.contains("(max 40): \"SHRINK ME\""),
+        r.contains(" fit ") && r.contains("(max 40, height): \"SHRINK ME\""),
         "{r}"
     );
 }
@@ -467,4 +465,128 @@ fn a_crop_across_says_a_wider_box() {
         ),
         "{w}"
     );
+}
+
+#[test]
+fn a_halftone_on_a_dark_page_is_hinted() {
+    let page = |bg: &str, layers: serde_json::Value| {
+        let mut s = scene(layers);
+        s.background = crate::scene::Color::parse(bg).unwrap();
+        halftone_hints(&s)
+    };
+    let dots = json!({"id": "photo", "type": "image", "asset": "img", "width": 100, "height": 100, "filter": {"halftone": 6}});
+    assert_eq!(
+        page("#141414", json!([dots.clone()])),
+        [
+            "hint: photo halftone draws black dots; on #141414 it barely shows (a light fill behind it, or duotone instead)"
+        ]
+    );
+    assert!(page("#FFFFFF", json!([dots.clone()])).is_empty());
+    // A light frame between the photo and the dark page.
+    assert!(
+        page("#141414", json!([{"type": "frame", "width": 200, "height": 200, "fill": "#F4EFE6", "children": [dots]}]))
+            .is_empty()
+    );
+}
+
+#[test]
+fn an_advisory_at_every_size_is_one_line_naming_the_text() {
+    // An unnamed dim text at both sizes: one line, its words for a name.
+    let s = scene(json!([
+        {"id": "text1", "type": "text", "text": "Today at the park", "x": 10, "y": 10, "fontSize": 30, "color": "#DDDDDD"}
+    ]));
+    let w = warnings(&s, Some(&std::env::temp_dir())).unwrap();
+    assert!(
+        w.starts_with("all text1 \"Today at the par…\" warn contrast 1.") && w.lines().count() == 1,
+        "{w}"
+    );
+    // Defects stay one line per size: their numbers differ.
+    let s = scene(json!([
+        {"id": "text1", "type": "text", "text": "Much too long for its box", "width": 60, "height": 20, "fontSize": 30, "minFontSize": 30}
+    ]));
+    let w = warnings(&s, None).unwrap();
+    assert_eq!(w.lines().count(), 2, "{w}");
+    assert!(
+        w.starts_with("wide text1 \"Much too long fo…\" text "),
+        "{w}"
+    );
+    // A named text keeps its id alone.
+    let s = scene(json!([
+        {"id": "note", "type": "text", "text": "Today", "x": 10, "y": 10, "fontSize": 30, "color": "#DDDDDD"}
+    ]));
+    let w = warnings(&s, Some(&std::env::temp_dir())).unwrap();
+    assert!(w.starts_with("all note warn contrast"), "{w}");
+}
+
+#[test]
+fn a_first_fit_says_why_it_skipped_an_option_when_its_choice_has_a_problem() {
+    let pick = |over: bool| {
+        let mut layers = vec![
+            json!({"id": "pick", "type": "firstFit", "width": 400, "height": 60, "children": [
+            {"id": "long", "type": "text", "text": "A very long headline that wraps", "width": 400, "fontSize": 30, "maxLines": 1},
+            {"id": "short", "type": "text", "text": "Short", "fontSize": 30}]}),
+        ];
+        if over {
+            layers.push(json!({"id": "over", "type": "text", "text": "Over", "fontSize": 30}));
+        }
+        let s = scene(serde_json::Value::Array(layers));
+        describe(&s, Some("wide"), false, None).unwrap()
+    };
+    let d = pick(true);
+    let mut lines = d.lines();
+    assert_eq!(
+        lines.next().unwrap(),
+        "wide pick firstFit 0,0 400×60 → short (long: long cut at maxLines 1)",
+        "{d}"
+    );
+    assert!(
+        lines.next().unwrap().contains("short text") && d.contains("!overlaps over"),
+        "{d}"
+    );
+    // Nothing wrong in what it drew: nothing to say.
+    assert_eq!(pick(false), "ok");
+}
+
+#[test]
+fn the_fonts_line_names_each_family_and_weight_drawn() {
+    let s = scene(json!([
+        {"id": "a", "type": "text", "text": "Plain <b>bold</b>", "fontSize": 20},
+        {"id": "b", "type": "text", "text": "Heavy", "fontSize": 20, "fontWeight": 800},
+        {"id": "c", "type": "text", "text": "Gone", "fontSize": 20, "fontFamily": "No Such Family"}
+    ]));
+    // A variable font has every weight; a family with no face falls back.
+    assert_eq!(
+        fonts_line(&s),
+        "fonts: Inter 400/700/800, No Such Family (fallback)"
+    );
+}
+
+#[test]
+fn a_photos_print_resolution_counts_the_page_points() {
+    let s =
+        scene(json!([{"id": "p", "type": "image", "asset": "img", "width": 100, "height": 100}]));
+    // 400 px drawn over 100 px: at 1 pt a px, 288 dpi; on a 300 dpi page
+    // (0.24 pt a px), 1200.
+    assert_eq!(image_dpi(&s, &s.sizes[0], 1.0).map(f32::round), Some(288.0));
+    assert_eq!(
+        image_dpi(&s, &s.sizes[0], 0.24).map(f32::round),
+        Some(1200.0)
+    );
+    assert_eq!(image_dpi(&scene(json!([])), &s.sizes[0], 1.0), None);
+}
+
+#[test]
+fn a_shrunk_text_says_which_side_bound_it() {
+    let s = scene(json!([
+        // Tall enough for two lines, but held to one: maxLines.
+        {"id": "one", "type": "text", "text": "two words", "fontSize": 30, "width": 100, "height": 100, "maxLines": 1},
+        // Wide enough, too short: height.
+        {"id": "low", "type": "text", "text": "Low", "fontSize": 40, "width": 300, "height": 30, "y": 120}
+    ]));
+    let r = text_report(&s, &s.sizes[0]);
+    assert!(
+        r.contains(" one ") && r.contains("(max 30, maxLines)"),
+        "{r}"
+    );
+    assert!(r.contains(" low ") && r.contains("(max 40, height)"), "{r}");
 }

@@ -94,10 +94,8 @@ pub async fn references() -> PathBuf {
     let mcp = Mcp::start("vs-ref").await;
     let scene = common::build_reference_ad(&mcp).await;
     let rendered = mcp.ok("render", json!({"sceneId": scene})).await;
-    for line in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        if let Some((size, path)) = common::file_of(line) {
-            std::fs::copy(path, root.join(format!("keyline/{size}.png"))).unwrap();
-        }
+    for (size, path) in common::files(&rendered) {
+        std::fs::copy(path, root.join(format!("keyline/{size}.png"))).unwrap();
     }
     mcp.stop().await;
 

@@ -79,7 +79,10 @@ async fn one_master_adapts_to_every_size_without_at() {
     );
     // The long headline fits the portrait width; the skyscraper gets the short one.
     assert!(line(&d, "portrait", "headline").ends_with("→ long"), "{d}");
-    assert!(line(&d, "sky", "headline").ends_with("→ short"), "{d}");
+    assert!(
+        line(&d, "sky", "headline").ends_with("→ short (long: needs 368×39)"),
+        "{d}"
+    );
     // Candidates sit in a row where three fit, a column where they don't.
     assert!(line(&d, "portrait", "cands").ends_with("→ row"), "{d}");
     assert!(line(&d, "sky", "cands").ends_with("→ column"), "{d}");
@@ -244,8 +247,7 @@ async fn a_grid_collage_rearranges_per_aspect_with_one_at() {
     // 1200 - 2 × 9.6 - 2 × 9.6 = 1161.6 → 580.8 + 290.4 + 290.4.
     assert_eq!(cx, 600, "{d}");
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
-    for l in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = common::file_of(l).unwrap();
+    for (size, path) in common::files(&rendered) {
         check_golden(&format!("grid-{size}.png"), &std::fs::read(path).unwrap());
     }
     mcp.stop().await;

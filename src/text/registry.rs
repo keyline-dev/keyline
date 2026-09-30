@@ -153,6 +153,38 @@ pub(super) fn cap_height(family: &str, size: f32) -> Option<f32> {
     })
 }
 
+/// The weight a text in `family` at `weight` is drawn at: the closest
+/// registered face's (any weight along a variable font's axis). `None`
+/// when no face of the family is registered, so a fallback draws it.
+pub fn drawn_weight(family: &str, weight: u16, italic: bool) -> Option<u16> {
+    // The collection falls back to another family rather than fail.
+    if !families().iter().any(|f| f.eq_ignore_ascii_case(family)) {
+        return None;
+    }
+    with_fonts(|fc| {
+        let mut fc = fc.clone();
+        let slant = if italic {
+            skia_safe::font_style::Slant::Italic
+        } else {
+            skia_safe::font_style::Slant::Upright
+        };
+        let style = skia_safe::FontStyle::new(
+            skia_safe::font_style::Weight::from(i32::from(weight)),
+            skia_safe::font_style::Width::NORMAL,
+            slant,
+        );
+        let tf = fc.find_typefaces(&[family], style).into_iter().next()?;
+        let wght = skia_safe::FourByteTag::from(('w', 'g', 'h', 't'));
+        let axis = tf
+            .variation_design_parameters()
+            .and_then(|axes| axes.into_iter().find(|a| a.tag == wght));
+        Some(match axis {
+            Some(a) => f32::from(weight).clamp(a.min, a.max).round() as u16,
+            None => u16::try_from(*tf.font_style().weight()).unwrap_or(weight),
+        })
+    })
+}
+
 /// The registered typeface for `family` at `weight` (on a variable font's
 /// `wght` axis) and slant, for drawing glyphs outside a paragraph.
 pub fn typeface(family: &str, weight: u16, italic: bool) -> Option<skia_safe::Typeface> {

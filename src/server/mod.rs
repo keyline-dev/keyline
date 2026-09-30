@@ -269,6 +269,15 @@ fn edited(verb: &str, ids: &[String], scene: &Scene, assets: &std::path::Path) -
         Some(w) => format!("{head}\n{}", w.trim_end()),
         None => format!("{head} ok"),
     };
+    out.push_str(&notes(raw, scene));
+    out
+}
+
+/// What follows a check's problems: the facts line, then hints about
+/// fields that do nothing, each on its own line after a newline. `raw` is
+/// the scene as stored, `scene` resolved.
+pub(crate) fn notes(raw: &Scene, scene: &Scene) -> String {
+    let mut out = String::new();
     let facts = facts(scene);
     if !facts.is_empty() {
         out.push('\n');
@@ -277,6 +286,7 @@ fn edited(verb: &str, ids: &[String], scene: &Scene, assets: &std::path::Path) -
     for hint in crate::ops::dollar_hints(raw)
         .into_iter()
         .chain(crate::text::markup::tag_hints(raw))
+        .chain(crate::describe::halftone_hints(scene))
     {
         out.push('\n');
         out.push_str(&hint);

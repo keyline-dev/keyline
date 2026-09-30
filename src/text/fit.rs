@@ -102,8 +102,21 @@ impl Text<'_> {
             q
         });
         let whole = whole.as_ref().unwrap_or(&p);
+        // What made it shrink: tried a hair bigger, what doesn't fit.
+        let bound = (size < self.font_size - 0.01).then(|| {
+            let mut q = self.paragraph(size + 1.0 / 32.0, self.max_lines);
+            super::wrap(&mut q, width);
+            if q.min_intrinsic_width() > width + 0.5 {
+                "width"
+            } else if q.did_exceed_max_lines() {
+                "maxLines"
+            } else {
+                "height"
+            }
+        });
         let fit = Fit {
             font_size: size,
+            bound,
             overflow: matches!(self.resize, Resize::Fit | Resize::Fixed | Resize::Truncate)
                 && (p.height() > height + 0.5 || p.longest_line() > width + 0.5),
             truncated,

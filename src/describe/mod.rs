@@ -36,7 +36,7 @@ use crate::scene::{Fit, Kind, Position, Scene};
 use contrast::contrast;
 use overlap::{ink, overlaps};
 
-pub use facts::{facts, scale_hints, text_report};
+pub use facts::{facts, fonts_line, halftone_hints, image_dpi, scale_hints, text_report};
 
 /// `assets` enables the contrast check, which renders each size without its
 /// text and samples what lies behind every text. `None` skips it.
@@ -57,6 +57,7 @@ pub fn describe(
         None => scene.sizes.iter().collect(),
     };
     let mut out = String::new();
+    let mut problems = Vec::new();
     // The intrinsic sizes, so the agent can place images without cropping.
     if full && !scene.assets.is_empty() {
         let list: Vec<_> = scene
@@ -75,7 +76,7 @@ pub fn describe(
             .collect();
         let _ = writeln!(out, "assets {}", list.join(", "));
     }
-    for size in sizes {
+    for &size in &sizes {
         let sized = &*scene.for_size(size);
         for (view, t, first) in views(sized) {
             let scene = &view;
@@ -149,19 +150,135 @@ pub fn describe(
                     let _ = writeln!(out, "{l}");
                 }
             } else {
-                for l in lines
-                    .iter()
-                    .filter(|l| l.contains(" !") || l.contains(" warn "))
-                {
-                    let _ = writeln!(out, "{} {}", size.id, l.trim_start());
-                }
+                problems
+                    .extend(shown(&lines).map(|l| (size.id.as_str(), l.trim_start().to_owned())));
             }
         }
     }
+    out.push_str(&grouped(&problems, sizes.len()));
     if out.is_empty() {
         out.push_str("ok");
     }
     Ok(out)
+}
+
+/// The lines with a problem, and above them a `firstFit` that skipped
+/// an option, since its choice may be why (`→ short (long: headline cut
+/// at maxLines 3)`).
+fn shown(lines: &[String]) -> impl Iterator<Item = &String> {
+    let problem = |l: &str| l.contains(" !") || l.contains(" warn ");
+    let indent = |l: &str| l.len() - l.trim_start().len();
+    lines.iter().enumerate().filter_map(move |(i, l)| {
+        let chose = l.contains(" firstFit ") && l.contains(" → ") && l.ends_with(')');
+        let below = || {
+            lines[i + 1..]
+                .iter()
+                .take_while(|c| indent(c) > indent(l))
+                .any(|c| problem(c))
+        };
+        (problem(l) || (chose && below())).then_some(l)
+    })
+}
+
+/// Problem lines, `(size, line)`, as the reply shows them: each with its
+/// size in front, except an advisory alone on its line that the same
+/// layer has at several sizes, and whose fix is the same at each
+/// (contrast, a clipped shadow; not a crop, which may need a taller box
+/// here and a wider one there). That becomes one line, after the others,
+/// naming the sizes (`all` for every one of the `total`) and keeping the
+/// worst value, without the box that differs per size:
+/// `all text2 "TODAY" warn contrast 2.9:1 (WCAG 4.5)`.
+fn grouped(problems: &[(&str, String)], total: usize) -> String {
+    // The layer (and its quoted text), and the advisory from `warn` on.
+    let split = |l: &str| -> Option<(String, String)> {
+        if l.contains(" !") {
+            return None;
+        }
+        let at = l.find(" warn ")?;
+        let mut words = l.split(' ');
+        let id = words.next()?;
+        let name = l
+            .split_once(" \"")
+            .filter(|(head, _)| !head.contains(' '))
+            .and_then(|(_, rest)| rest.split_once('"'))
+            .map_or_else(String::new, |(q, _)| format!(" \"{q}\""));
+        // A crop's fix differs per size (taller here, wider there): kept apart.
+        if l[at..].starts_with(" warn crop ") {
+            return None;
+        }
+        Some((format!("{id}{name}"), l[at + 1..].to_owned()))
+    };
+    // How bad an advisory is, to keep the worst: the lowest contrast ratio.
+    let badness = |warn: &str| -> f32 {
+        let num = |s: &str| {
+            s.split(|c: char| !c.is_ascii_digit() && c != '.')
+                .next()
+                .and_then(|n| n.parse::<f32>().ok())
+                .unwrap_or(0.0)
+        };
+        warn.strip_prefix("warn contrast ").map_or(0.0, |r| -num(r))
+    };
+    // Which advisory: `warn contrast`, `warn shadow`.
+    let advisory = |warn: &str| warn.split(' ').take(2).collect::<Vec<_>>().join(" ");
+    let mut groups: Vec<(String, String, Vec<&str>, String, f32)> = Vec::new();
+    for (size, line) in problems {
+        let Some((who, warn)) = split(line) else {
+            continue;
+        };
+        let kind = advisory(&warn);
+        let bad = badness(&warn);
+        match groups.iter_mut().find(|g| g.0 == who && g.1 == kind) {
+            Some(g) => {
+                g.2.push(size);
+                if bad > g.4 {
+                    (g.3, g.4) = (warn, bad);
+                }
+            }
+            None => groups.push((who, kind, vec![size], warn, bad)),
+        }
+    }
+    let many = |who: &str, kind: &str| {
+        groups
+            .iter()
+            .any(|g| g.0 == who && g.1 == kind && g.2.len() > 1)
+    };
+    let mut out = String::new();
+    for (size, line) in problems {
+        match split(line) {
+            Some((who, warn)) if many(&who, &advisory(&warn)) => {}
+            _ => {
+                let _ = writeln!(out, "{size} {line}");
+            }
+        }
+    }
+    for (who, _, sizes, warn, _) in groups.iter().filter(|g| g.2.len() > 1) {
+        let sizes = if sizes.len() == total {
+            "all".to_owned()
+        } else {
+            sizes.join(",")
+        };
+        let _ = writeln!(out, "{sizes} {who} {warn}");
+    }
+    out
+}
+
+/// A text layer's words, quoted, when its id was made up by the server
+/// (`text7`, or `card.text2` inside a component), so a problem line says
+/// which text it is: `"TODAY"`. Up to 16 characters.
+fn named(l: &crate::scene::Layer) -> Option<String> {
+    let Kind::Text { text, .. } = &l.kind else {
+        return None;
+    };
+    let last = l.id.rsplit('.').next()?;
+    let digits = last.strip_prefix("text")?;
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let (plain, _) = crate::text::markup::parse(text);
+    let plain = plain.split_whitespace().collect::<Vec<_>>().join(" ");
+    let short: String = plain.chars().take(16).collect();
+    let more = if short.len() < plain.len() { "…" } else { "" };
+    Some(format!("\"{short}{more}\""))
 }
 
 /// The scene as checked: whole, or once per shot with only that shot
@@ -289,6 +406,9 @@ fn line(
     if let Some(c) = &p.chosen {
         let _ = write!(out, " → {c}");
     }
+    if let Some(why) = &p.skipped {
+        let _ = write!(out, " ({why})");
+    }
     match &l.kind {
         Kind::Text {
             font_size,
@@ -299,7 +419,7 @@ fn line(
             if let Some((_, fit)) = &p.text {
                 let _ = write!(out, " {}px", n(fit.font_size));
                 if n(max) != n(fit.font_size) {
-                    let _ = write!(out, " (max {})", n(max));
+                    let _ = write!(out, " {}", shrunk(max, fit));
                 }
                 if fit.lines > 1 {
                     let _ = write!(out, " {}L", fit.lines);
@@ -407,6 +527,13 @@ fn line(
     } else if clip.by != "canvas" && shadow_cut(p, visible) {
         let _ = write!(out, " warn shadow clipped by {}", clip.by);
     }
+    // An unnamed text's words, when there's something to fix or judge.
+    if (out.contains(" !") || out.contains(" warn "))
+        && let Some(name) = named(l)
+    {
+        let at = depth + l.id.len();
+        out.insert_str(at, &format!(" {name}"));
+    }
     lines.push(out);
     let inner = match &l.kind {
         Kind::Frame { clip: true, .. } => Clip {
@@ -458,9 +585,9 @@ fn text_cut(p: &Placed, visible: Rect) -> Option<Rect> {
 }
 
 /// `warn crop` when a cover crop hides more than half the image on an
-/// axis: the window then can't hold the half of the image around the
-/// focus (the focus point itself always stays in view), so a subject there
-/// is cut, e.g. a house in a band too short for it.
+/// axis: with the focus at the center (the default), the box then can't
+/// hold the image's middle half, so a subject there is cut, e.g. a house
+/// in a band too short for it.
 fn crop_warning(out: &mut String, (cw, ch): (f32, f32), focus: [f32; 2]) {
     let (share, bigger) = if ch >= cw {
         (ch, "taller")
@@ -530,6 +657,15 @@ fn contains(outer: Rect, inner: Rect) -> bool {
         && inner.y >= outer.y - 0.5
         && inner.right() <= outer.right() + 0.5
         && inner.bottom() <= outer.bottom() + 0.5
+}
+
+/// A shrunk text's `(max 180, height)`: its size before shrinking, and
+/// the side that kept it from being bigger.
+fn shrunk(max: f32, fit: &crate::text::Fit) -> String {
+    match fit.bound {
+        Some(side) => format!("(max {}, {side})", n(max)),
+        None => format!("(max {})", n(max)),
+    }
 }
 
 /// Rounds to whole pixels for display.

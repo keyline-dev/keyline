@@ -239,6 +239,10 @@ impl<'de> Deserialize<'de> for Highlight {
                     style: HighlightStyle::Box,
                 })
                 .ok_or_else(|| D::Error::custom(format!("bad color {s}"))),
+            // CSS habit: `padding: [4, 8]`. A highlight's is one number.
+            v if v.get("padding").is_some_and(|p| !p.is_number()) => Err(D::Error::custom(
+                "highlight: padding is one number (px around the text, e.g. 6), not a list",
+            )),
             v => serde_json::from_value::<Full>(v)
                 .map(|f| Highlight {
                     color: f.color,
@@ -255,6 +259,17 @@ impl<'de> Deserialize<'de> for Highlight {
 mod tests {
     use super::{Highlight, HighlightStyle, TextMore, VAlign};
     use serde_json::json;
+
+    #[test]
+    fn a_highlight_padding_list_says_it_takes_one_number() {
+        let e = serde_json::from_value::<Highlight>(json!({"color": "#FFEE00", "padding": [4, 8]}))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(
+            e,
+            "highlight: padding is one number (px around the text, e.g. 6), not a list"
+        );
+    }
 
     #[test]
     fn vertical_alignment_is_top_center_or_bottom() {

@@ -43,12 +43,16 @@ impl Server {
                 let _ = write!(out, " tokens: {}", names.join(", "));
             }
             let assets = self.store.assets_dir();
-            match crate::describe::warnings(&scene.resolved(), Some(&assets)) {
+            let resolved = scene.resolved();
+            match crate::describe::warnings(&resolved, Some(&assets)) {
                 Some(w) => {
                     let _ = write!(out, "\n{}", w.trim_end());
                 }
                 None => out.push_str(" ok"),
             }
+            // The facts and hints an edit's reply carries, so a loaded
+            // template (and the CLI) gets them too.
+            out.push_str(&super::notes(&scene, &resolved));
         }
         for hint in crate::describe::scale_hints(&scene) {
             let _ = write!(out, "\n{hint}");
@@ -316,6 +320,13 @@ impl Server {
                 ));
             }
         }
+        // The fonts actually drawn, so a fallback weight or family shows.
+        if let Some(scene) = drawn.first() {
+            let fonts = crate::describe::fonts_line(&scene.resolved());
+            if !fonts.is_empty() {
+                let _ = writeln!(text, "{fonts}");
+            }
+        }
         // The preview shows what was rendered: stills side by side, a row
         // per row of tokens; a moving format, moments through it, a row per
         // size (of the first row of tokens).
@@ -514,6 +525,18 @@ fn facts(
     sound: bool,
 ) -> String {
     let mut out = format!("{}×{}", size.width.round(), size.height.round());
+    // A PDF's page is in points, and its photos' print resolution matters.
+    if format == Format::Pdf {
+        let pt = crate::scene::pdf_points_per_px(&size.id);
+        out = format!(
+            "{}×{} pt",
+            (size.width * pt).round(),
+            (size.height * pt).round()
+        );
+        if let Some(dpi) = crate::describe::image_dpi(scene, size, pt) {
+            let _ = write!(out, ", images ≥ {} dpi", dpi.round());
+        }
+    }
     let moving = matches!(
         format,
         Format::Apng | Format::Gif | Format::Mp4 | Format::Webm

@@ -43,11 +43,18 @@ An edit's reply (`scene_create` from a template, `layer_add`, `layer_update`) en
 sky headline text 24,360 384×70 29px 2L !clipped by canvas: right 108px
 ```
 
+A text whose id the server made up (`text7`) is also named by its first words, in quotes: `sky text7 "TODAY" text …`. A contrast advisory, or a clipped shadow, that the same layer has at several sizes comes once, after the other lines, naming the sizes (`all` when every size has it), with the worst ratio and without the box, which differs per size:
+
+```text
+all text2 "Thu 14" warn contrast 2.9:1 (WCAG 4.5)
+portrait,square toast warn shadow clipped by card
+```
+
 A **layer line** is `id type x,y w×h`, in px at that size, then:
 
-- **text:** the font size drawn, `(max N)` when it shrank to fit, and `2L` for the number of lines
+- **text:** the font size drawn, `(max N, side)` when it shrank to fit, with the side that kept it from being bigger (`width` for a word too wide, `height`, or `maxLines`), and `2L` for the number of lines
 - **image** and **video:** the fit, `crop N%w` / `N%h` for how much is cut, and `upscaled N×` when it's enlarged past its pixels
-- **adaptive layouts:** `→ row` for the direction a stack chose, or `→ <id>` for the child a `firstFit` drew
+- **adaptive layouts:** `→ row` for the direction a stack chose, or `→ <id>` for the child a `firstFit` drew, then why it passed over its first option when it did: `→ short (long: headline cut at maxLines 3)` (or `shrinks to 48px`, `cut`, `overflows`, `needs W×H`). The `firstFit`'s line also comes with the problem lines whenever what it drew has a problem, since its choice may be the cause
 - `rot N°` for a rotated layer
 
 ### Markers
@@ -71,7 +78,7 @@ Defects need fixing; advisories need judgment ([concepts](concepts.md#checks-def
 
 ### Facts line
 
-The last line of an edit's reply states facts with no threshold, per size: the smallest text and any image drawn larger than its pixels.
+The last line of an edit's reply (and of `scene_create` from a template, which is what `keyline-mcp render` prints first) states facts with no threshold, per size: the smallest text and any image drawn larger than its pixels.
 
 ```text
 smallest text: instagram-portrait 28px (cta), sky 11.3px (cta); upscaled: instagram-portrait photo 1.5x
@@ -85,16 +92,22 @@ After the facts, one line per text that writes a token as `$name` rather than [`
 hint: did you mean {{price}}? (cta says $price)
 ```
 
-`scene_create` adds one per size at least twice the master's width with no `scale` (a print preset for a screen-sized master):
+`scene_create` adds one per size at least twice the master's width with no `scale` (a print preset for a screen-sized master). A smaller difference gets no hint (a 1280 px size for a 1080 px master is laid out as is); if it doesn't fit, `!overflow` gives the size it needs:
 
 ```text
 hint: a4-portrait is 2.3× the master's width; give it "scale": 2.3 to keep the layout's proportions
 ```
 
-And an edit, one per style used as a markup tag whose fields a tag can't carry (a tag carries `color`, `fontWeight`, `fontStyle`, `fontSize`, `fontFamily`, `textDecoration` and `highlight`):
+And an edit, one per style used as a markup tag whose fields a tag can't carry (a tag carries `color`, `fontWeight`, `fontStyle`, `fontSize`, `fontFamily`, `textDecoration` and `highlight`). A dropped `media` adds what to do instead: `; set per-size text in the layer's media`.
 
 ```text
 hint: <accent> drops letterSpacing (a tag carries color, fontWeight, fontStyle, fontSize, fontFamily, textDecoration, highlight)
+```
+
+One per image drawn as a `halftone` over a dark background (its closest frame's plain fill, else the canvas), since the dots are black:
+
+```text
+hint: photo halftone draws black dots; on #141414 it barely shows (a light fill behind it, or duotone instead)
 ```
 
 ### Drawn-text lines
@@ -179,7 +192,7 @@ smallest text: instagram-portrait 40px (cta), 1200x628 40px (cta)
 
 ```text
 added photo,headline,cta v2
-instagram-portrait cta text 60,1180 300×60 28px (max 48) warn contrast 1.2:1 (WCAG 3)
+instagram-portrait cta text 60,1180 300×60 28px (max 48, height) warn contrast 1.2:1 (WCAG 3)
 sky headline text 24,360 384×70 29px 2L !clipped by canvas: right 108px
 1200x628 headline text 60,900 960×174 72px 2L !hidden
 smallest text: instagram-portrait 28px (cta), sky 11.3px (cta), 1200x628 28px (cta); upscaled: instagram-portrait photo 1.5x
@@ -256,7 +269,11 @@ Reply: per size, the size id, the file's path ([Output files](#output-files)) an
 wide /…/renders/s1a2b3c4d5/wide-v3.png (1200×628, 212 KB)
 wide /…/renders/s1a2b3c4d5/wide-v3.gif (1200×628, 2s, 60 frames at 30 fps, plays once, 1840 KB)
 wide /…/renders/s1a2b3c4d5/wide-v3.mp4 (1200×628, 2s, 60 frames at 30 fps, with sound, 610 KB) quality 90
+a4-portrait /…/renders/s1a2b3c4d5/a4-portrait-v3.pdf (595×842 pt, images ≥ 212 dpi, 1840 KB)
+fonts: Bricolage Grotesque 800, Inter 400/600
 ```
+
+A PDF gives its page in points (a print preset's, such as A4's 595×842, or 1 pt per px) and the lowest resolution of its photos on that page. The last line names the fonts the texts are drawn in, once per render: each family with its weights, `900→700` when the family has no face for a weight and a nearer one is drawn, `(fallback)` when the family has no face at all.
 
 A moving format gives its length, frame count and frame rate; GIF and APNG also say whether they loop (`loops`) or stop on their last frame (`plays once`), from the scene's `loop`; MP4 and WebM say `with sound` when they carry any; `last shot held 0.4s` means the scene's `duration` outlasts its shots and the last one holds. An agent opening an animated file sees only its first frame, so these facts are how it checks one. With `maxKB`, `quality N` follows when the quality was lowered (a lowered frame rate shows in the facts), or `!too-big` when even the lowest setting doesn't fit. MP4 and WebM always say how they were encoded, with any encoder: `quality N` (1–100, default 90, lower when `maxKB` needed it), or `bitrate Nk` when a hardware encoder needed a lower one for `maxKB`. With `rows`, each line starts with `r<row>`. With `preview`, the reply also carries the preview as an image of what was rendered, each row no wider than 2000 px: the sizes side by side, a row per row of tokens (up to 6); or, for a moving format (APNG, GIF, MP4, WebM), a row per size of 6 moments through it, most near the start (from the first row of tokens), named in a last line (`preview at 0.2 0.5 1 2.7 4.2 5.4s`).
 

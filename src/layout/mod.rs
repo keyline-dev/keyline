@@ -60,6 +60,9 @@ pub struct Placed<'a> {
     /// What an adaptive layout chose at this size: a stack's direction
     /// when it had several, or the id of a `firstFit`'s child.
     pub chosen: Option<String>,
+    /// Why a `firstFit` passed over its first option, when it did:
+    /// `long: headline cut at maxLines 3`.
+    pub skipped: Option<String>,
     /// For a stack whose children don't fit even at their smallest: the
     /// size it needs, px.
     pub overflow: Option<(f32, f32)>,
@@ -300,6 +303,7 @@ fn finish<'a>(
         (p, fit)
     });
     let mut overflow = None;
+    let mut skip = None;
     let (children, chosen) = match &layer.kind {
         Kind::Frame {
             children,
@@ -382,13 +386,14 @@ fn finish<'a>(
             None,
         ),
         Kind::FirstFit { children } => {
-            let (_, i) = first_fit::content(
+            let (_, i, skipped) = first_fit::content(
                 scene,
                 children,
                 k,
                 (rect.w, rect.h),
                 (Some(rect.w), Some(rect.h)),
             );
+            skip = skipped;
             let chosen = children.get(i).map(|c| c.id.clone());
             let placed = children
                 .get(i)
@@ -414,6 +419,7 @@ fn finish<'a>(
         text,
         children,
         chosen,
+        skipped: skip,
         overflow,
     }
 }

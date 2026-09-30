@@ -42,9 +42,10 @@ async fn a_template_loads_with_its_variables_and_renders_a_file_per_row() {
             json!({"path": path.to_str().unwrap(), "tokens": {"headline": "Summer sale"}}),
         )
         .await;
+    // What can be set, that it fits, and the facts an edit would give.
     assert!(
-        reply.ends_with(" v0 tokens: accent, headline ok"),
-        "names what can be set, and that it fits: {reply}"
+        reply.ends_with(" v0 tokens: accent, headline ok\nsmallest text: 400x200 40px (headline)"),
+        "{reply}"
     );
     let id = reply.split(' ').next().unwrap().to_owned();
 
@@ -54,9 +55,10 @@ async fn a_template_loads_with_its_variables_and_renders_a_file_per_row() {
             json!({"sceneId": id, "rows": [{"headline": "Fall"}, {"headline": "Winter", "accent": "#D0202E"}]}),
         )
         .await;
+    assert!(reply.ends_with("\nfonts: Inter 800"), "{reply}");
     let files: Vec<&str> = reply
         .lines()
-        .filter(|l| !l.starts_with(' '))
+        .filter(|l| !l.starts_with(' ') && !l.starts_with("fonts: "))
         .map(|l| {
             let mut parts = l.split(' ');
             let (row, size, file) = (parts.next(), parts.next(), parts.next().unwrap());

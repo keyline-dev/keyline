@@ -119,7 +119,7 @@ fn over(text: Color, opacity: f32, under: [u8; 3]) -> [u8; 3] {
 }
 
 /// WCAG relative luminance of an sRGB color.
-fn luminance([r, g, b]: [u8; 3]) -> f32 {
+pub(super) fn luminance([r, g, b]: [u8; 3]) -> f32 {
     let lin = |v: u8| {
         let c = f32::from(v) / 255.0;
         if c <= 0.04045 {

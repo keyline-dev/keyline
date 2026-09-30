@@ -355,6 +355,15 @@ pub const LEOPARD_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBo
 
 /// A `render` reply line's size id and file path: `<size> <path> (<facts>)`;
 /// the path may hold spaces.
+/// Every rendered file a render reply names, `(size, path)`: its lines
+/// that aren't drawn text (indented), the fonts or the preview.
+pub fn files(reply: &str) -> impl Iterator<Item = (&str, &str)> {
+    reply
+        .lines()
+        .filter(|l| !l.starts_with(' ') && !l.starts_with("fonts: ") && !l.starts_with("preview "))
+        .filter_map(file_of)
+}
+
 pub fn file_of(line: &str) -> Option<(&str, &str)> {
     let (size, rest) = line.split_once(' ')?;
     Some((size, rest.rsplit_once(" (").map_or(rest, |(path, _)| path)))

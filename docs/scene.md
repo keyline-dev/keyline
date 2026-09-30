@@ -365,7 +365,7 @@ A size can rearrange the whole grid by changing only its templates in `media`.
 | `maxLines` | number | none | Lines before the ellipsis, in any box; cut text is reported `!truncated` |
 | `trim` | `cap` | none | Trims the space above cap height and below the baseline, so text centers optically in pills and buttons |
 | `padding` | Sides | 0 | Space around the text inside its box |
-| `highlight` | Color or `{color, padding, borderRadius, shape: box\|brush}` | none | A box behind each line; CSS `background-color` on text reads as this |
+| `highlight` | Color or `{color, padding, borderRadius, shape: box\|brush}` | none | A box behind each line; CSS `background-color` on text reads as this. `padding` is one number, px (4): that much on the sides, half above and below |
 | `curve` | px | none | Sets one line on a circular arc of this radius; negative bends down |
 | `leader` | string | none | A character that fills each tab's gap: `"Espresso\t$3"` with `leader: "."` draws dot leaders, the price flush right. Each side keeps its markup, on one baseline; the letters take `color` (not `fill`, strokes or `knockout`) |
 | `knockout` | boolean | false | The letters cut through their parent frame's fill, showing what's behind |
@@ -461,7 +461,7 @@ An image fill works on any shape: a photo in a circle is `{"type": "ellipse", "f
 | `hueRotate` | Degrees | 0 | |
 | `duotone` | `[dark, light]` Colors | none | Maps dark to light |
 | `tint` | Color | none | Recolors every visible pixel, e.g. a logo in white |
-| `halftone` | px | 0 | Redraws the image as black dots this far apart, larger where it's darker |
+| `halftone` | px | 0 | Redraws the image as black dots this far apart, larger where it's darker; over a dark background they barely show |
 
 ### Strokes
 

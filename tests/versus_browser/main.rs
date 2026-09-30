@@ -315,10 +315,8 @@ async fn claude_makes_the_images() {
         )
         .unwrap();
         if let Ok(rendered) = mcp.call("render", json!({"sceneId": scene})).await {
-            for line in rendered.lines().filter(|l| !l.starts_with(' ')) {
-                if let Some((size, path)) = common::file_of(line) {
-                    let _ = std::fs::copy(path, run.join(format!("{size}.png")));
-                }
+            for (size, path) in common::files(&rendered) {
+                let _ = std::fs::copy(path, run.join(format!("{size}.png")));
             }
         }
         mcp.stop().await;

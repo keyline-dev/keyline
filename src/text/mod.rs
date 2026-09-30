@@ -25,7 +25,7 @@ pub(crate) fn wrap(p: &mut skia_safe::textlayout::Paragraph, width: f32) {
     p.layout(width + WRAP_SLACK);
 }
 
-pub use registry::{add_fonts, families, load_fonts, typeface};
+pub use registry::{add_fonts, drawn_weight, families, load_fonts, typeface};
 pub use runs::Run;
 
 /// A text layer's content and style at a given scale factor.
@@ -57,6 +57,9 @@ pub struct Text<'a> {
 pub struct Fit {
     /// Font size used, px; below the requested size when `fit` shrank it.
     pub font_size: f32,
+    /// When it shrank, what stopped it being bigger: `width` (a word too
+    /// wide), `height` or `maxLines`.
+    pub bound: Option<&'static str>,
     /// Text runs past the box (fit / fixed / truncate modes only).
     pub overflow: bool,
     /// An ellipsis was applied (truncate, or fit at its minimum size).

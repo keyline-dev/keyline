@@ -329,8 +329,14 @@ pub fn tag_hints(scene: &crate::scene::Scene) -> Vec<String> {
                 .collect();
             (!dropped.is_empty()).then(|| {
                 let carried: Vec<&str> = SPAN_FIELDS.iter().map(|(f, _)| *f).collect();
+                // Per-size changes: the layer's own media can restyle its text.
+                let instead = if dropped.contains(&"media") {
+                    "; set per-size text in the layer's media"
+                } else {
+                    ""
+                };
                 format!(
-                    "hint: <{name}> drops {} (a tag carries {})",
+                    "hint: <{name}> drops {} (a tag carries {}{instead})",
                     dropped.join(", "),
                     carried.join(", ")
                 )
@@ -447,6 +453,22 @@ mod tests {
             [
                 "hint: <accent> drops letterSpacing (a tag carries color, fontWeight, fontStyle, fontSize, fontFamily, textDecoration, highlight)"
             ]
+        );
+    }
+
+    #[test]
+    fn a_style_tag_says_its_media_is_dropped_and_what_to_do() {
+        let s: crate::scene::Scene =
+            serde_json::from_value(serde_json::json!({"width": 100, "height": 100,
+            "sizes": [{"id": "a", "width": 100, "height": 100}],
+            "styles": {"price": {"fontSize": 20, "media": {"a": {"fontSize": 28}}}},
+            "layers": [{"id": "t", "type": "text", "text": "Soup <price>$9</price>"}]}))
+            .unwrap();
+        let hints = super::tag_hints(&s);
+        assert!(
+            hints[0].starts_with("hint: <price> drops media (a tag carries color")
+                && hints[0].ends_with("highlight; set per-size text in the layer's media)"),
+            "{hints:?}"
         );
     }
 

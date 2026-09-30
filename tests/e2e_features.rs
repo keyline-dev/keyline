@@ -187,8 +187,7 @@ async fn text_can_be_filled_with_images_and_outlined() {
     assert!(reply.lines().next().unwrap().ends_with(" ok"), "{reply}");
 
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
-    for line in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = common::file_of(line).unwrap();
+    for (size, path) in common::files(&rendered) {
         check_golden(
             &format!("textfill-{size}.png"),
             &std::fs::read(path).unwrap(),
@@ -246,8 +245,7 @@ async fn stacks_lay_out_rows_and_columns_at_every_size() {
     assert!(d.contains("row frame 0,180 1600×240"), "{d}");
 
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
-    for line in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = common::file_of(line).unwrap();
+    for (size, path) in common::files(&rendered) {
         check_golden(&format!("stacks-{size}.png"), &std::fs::read(path).unwrap());
     }
     mcp.stop().await;
@@ -319,8 +317,7 @@ async fn styles_icons_shapes_masks_and_focus_work_end_to_end() {
     assert!(err.contains("no lucide icon envelope"), "{err}");
 
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
-    for line in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = common::file_of(line).unwrap();
+    for (size, path) in common::files(&rendered) {
         check_golden(&format!("kit-{size}.png"), &std::fs::read(path).unwrap());
     }
     mcp.stop().await;
@@ -372,7 +369,7 @@ async fn renders_jpeg_webp_and_pdf_and_fit_a_file_size_cap() {
     let paths = |reply: &str| -> Vec<(String, String)> {
         reply
             .lines()
-            .filter(|l| !l.starts_with(' '))
+            .filter(|l| !l.starts_with(' ') && !l.starts_with("fonts: "))
             .map(|l| {
                 let mut w = l.splitn(3, ' ');
                 let size = w.next().unwrap().to_owned();
@@ -417,6 +414,9 @@ async fn renders_jpeg_webp_and_pdf_and_fit_a_file_size_cap() {
     let pdf = mcp
         .ok("render", json!({"sceneId": id, "format": "pdf"}))
         .await;
+    // The page in points, and the photo's print resolution: 1600 px across
+    // a 1080 pt band cropped to cover it, 107 dpi.
+    assert!(pdf.contains(" (1080×1350 pt, images ≥ 107 dpi, "), "{pdf}");
     for (size, p) in paths(&pdf) {
         let bytes = file(&p);
         assert!(bytes.starts_with(b"%PDF"), "{size}");
@@ -650,6 +650,8 @@ fn render_draws_a_scene_file_and_fails_on_a_defect() {
     let (code, text, files) = run(&[]);
     assert_eq!(code, Some(0), "{text}");
     assert_eq!(files, ["400x200-v0.png", "small-v0.png"]);
+    // The facts an edit's reply carries.
+    assert!(text.contains("smallest text: 400x200 "), "{text}");
     // One row per variant; the long one is a defect, so a script fails.
     let (code, text, files) = run(&["--rows", rows.to_str().unwrap(), "--size", "400x200"]);
     assert_eq!(code, Some(1), "{text}");
@@ -658,7 +660,12 @@ fn render_draws_a_scene_file_and_fails_on_a_defect() {
         text.contains("r2 400x200 h text") && text.contains("!clipped"),
         "{text}"
     );
-    assert!(!text.contains("small"), "only the sizes drawn: {text}");
+    assert!(
+        !text
+            .lines()
+            .any(|l| l.starts_with("small ") || l.contains("r1 small") || l.contains("r2 small")),
+        "only the sizes drawn: {text}"
+    );
     // Render flags without render are a mistake.
     let o = std::process::Command::new(env!("CARGO_BIN_EXE_keyline-mcp"))
         .args(["--out", "x"])

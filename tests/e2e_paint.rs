@@ -58,8 +58,7 @@ async fn the_paint_kit_renders_at_every_size() {
     );
 
     let rendered = mcp.ok("render", json!({"sceneId": id})).await;
-    for line in rendered.lines().filter(|l| !l.starts_with(' ')) {
-        let (size, path) = common::file_of(line).unwrap();
+    for (size, path) in common::files(&rendered) {
         check_golden(&format!("paint-{size}.png"), &std::fs::read(path).unwrap());
     }
     mcp.stop().await;

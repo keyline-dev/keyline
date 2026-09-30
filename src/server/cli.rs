@@ -88,7 +88,14 @@ impl Server {
         std::fs::create_dir_all(&out).map_err(|e| format!("{}: {e}", out.display()))?;
         let renders = self.store.root().join("renders");
         let mut text = String::new();
+        let scene = self.store.load(&id).map_err(|e| e.to_string())?;
         // Problem lines start with their size: only the sizes drawn count.
+        // Facts and hints start otherwise and always count.
+        let problem = |line: &str| {
+            line.split_whitespace()
+                .next()
+                .is_some_and(|w| scene.sizes.iter().any(|s| s.id == w))
+        };
         let drawn = |line: &str| {
             r.sizes.is_empty()
                 || line
@@ -97,12 +104,14 @@ impl Server {
                     .is_some_and(|s| r.sizes.iter().any(|w| w == s))
         };
         if r.rows.is_none() {
-            for line in created.lines().skip(1).filter(|l| drawn(l)) {
+            for line in created.lines().skip(1).filter(|l| !problem(l) || drawn(l)) {
                 let _ = writeln!(text, "{line}");
             }
         } else {
+            for line in created.lines().skip(1).filter(|l| !problem(l)) {
+                let _ = writeln!(text, "{line}");
+            }
             // Each row is its own design: checked as it will be drawn.
-            let scene = self.store.load(&id).map_err(|e| e.to_string())?;
             let rows = serde_json::from_value::<Vec<_>>(rows_of(&args))
                 .map_err(|e| format!("rows: {e}"))?;
             for (label, variant) in super::handlers::variants(&scene, &rows)? {

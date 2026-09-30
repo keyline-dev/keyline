@@ -66,11 +66,7 @@ async fn reference_ad_renders_all_sizes_without_defects() {
         rendered.contains(" headline 64px: \"Proven RESULTS for\" / \"WILLOWMERE Families\""),
         "{rendered}"
     );
-    let paths: Vec<(&str, &str)> = rendered
-        .lines()
-        .filter(|l| !l.starts_with(' '))
-        .map(|l| common::file_of(l).expect("size path"))
-        .collect();
+    let paths: Vec<(&str, &str)> = common::files(&rendered).collect();
     assert_eq!(paths.len(), 3, "{rendered}");
     for (size, path) in &paths {
         check_golden(
