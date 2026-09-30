@@ -326,4 +326,6 @@ Contributions follow [CLAUDE.md](CLAUDE.md): Rust only, `cargo fmt` and `clippy 
 
 [PolyForm Shield 1.0.0](LICENSE): free to use, modify and redistribute, commercially too, for any purpose **except providing a product that competes with keyline-mcp or with any product the author provides using it**, which includes offering it as a hosted service. For a license to do that, contact the author.
 
+Contributions are welcome under the [contributor agreement](CONTRIBUTING.md#contributor-agreement): contributors assign the copyright in their changes to the author.
+
 Third-party parts keep their own licenses: Skia (BSD-3-Clause) through the skia-safe bindings (MIT), resvg (Apache-2.0 or MIT), rmcp (Apache-2.0), csscolorparser (MIT or Apache-2.0), Inter ([SIL OFL 1.1](fonts/OFL.txt)), Lucide icons ([ISC](icons/LICENSE-lucide.txt)) and Font Awesome Free icons by Fonticons, Inc. ([CC BY 4.0](icons/LICENSE-fontawesome.txt)).
