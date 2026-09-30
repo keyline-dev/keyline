@@ -18,12 +18,37 @@ pub enum Container {
     Webm,
 }
 
+/// How hard the encoder compresses.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Rate {
+    /// A quality, 1–100 (90 by default): the encoder's constant quality, or
+    /// for a hardware encoder a bitrate in proportion.
+    Quality(u32),
+    /// A video bitrate, kbit/s: what a `maxKB` budget allows.
+    Bitrate(u32),
+}
+
+/// An encoded video and how it was encoded.
+pub struct Video {
+    /// The file.
+    pub bytes: Vec<u8>,
+    /// The rate it was encoded at.
+    pub rate: Rate,
+    /// Still over `maxKB` at the lowest bitrate tried.
+    pub too_big: bool,
+}
+
 /// Encodes `size` of a moving scene at `fps` as a video file, with its clips'
-/// sound unless `sound` is false.
+/// sound unless `sound` is false, at `quality` (1–100). With `max_kb`, a
+/// file over it is encoded again at the bitrate that budget allows.
 ///
 /// # Errors
 /// No ffmpeg, a scene without `duration`, missing assets, or ffmpeg failing
 /// (its own message is passed on).
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one encode's settings, passed through"
+)]
 pub fn render_video(
     scene: &Scene,
     size: &Size,
@@ -31,6 +56,55 @@ pub fn render_video(
     assets_dir: &Path,
     container: Container,
     sound: bool,
+    quality: u32,
+    max_kb: Option<u32>,
+) -> Result<Video> {
+    let mut rate = Rate::Quality(quality.clamp(1, 100));
+    let mut bytes = encode_once(scene, size, fps, assets_dir, container, sound, rate)?;
+    let Some(kb) = max_kb else {
+        return Ok(Video {
+            bytes,
+            rate,
+            too_big: false,
+        });
+    };
+    let budget = f64::from(kb) * 1024.0;
+    let secs = f64::from(crate::anim::shots::length(scene).unwrap_or(1.0)).max(0.1);
+    let audio = if sound && !super::audio::sources(scene, assets_dir).is_empty() {
+        160.0
+    } else {
+        0.0
+    };
+    // At most two tries at a bitrate: the budget, then scaled by how far
+    // the first one missed.
+    let mut kbps = (budget * 8.0 * 0.95 / secs / 1000.0 - audio).max(50.0);
+    for _ in 0..2 {
+        if bytes.len() as f64 <= budget {
+            break;
+        }
+        if let Rate::Bitrate(_) = rate {
+            kbps = (kbps * budget / bytes.len() as f64 * 0.95).max(50.0);
+        }
+        rate = Rate::Bitrate(kbps.round() as u32);
+        bytes = encode_once(scene, size, fps, assets_dir, container, sound, rate)?;
+    }
+    let too_big = bytes.len() as f64 > budget;
+    Ok(Video {
+        bytes,
+        rate,
+        too_big,
+    })
+}
+
+/// One encode at `rate`.
+fn encode_once(
+    scene: &Scene,
+    size: &Size,
+    fps: f32,
+    assets_dir: &Path,
+    container: Container,
+    sound: bool,
+    rate: Rate,
 ) -> Result<Vec<u8>> {
     let ffmpeg = super::ffmpeg().map_err(|e| anyhow!(e))?;
     let (count, w, h) = crate::render::animation_dims(scene, size, fps, "video")?;
@@ -82,28 +156,43 @@ pub fn render_video(
                 "-movflags",
                 "+faststart",
             ]);
-            if enc == "libx264" {
-                cmd.args(["-preset", "medium", "-crf", "20"]);
-            } else {
-                // Hardware encoders take a bitrate: ~0.12 bits a pixel.
-                let bits = (w * h) as f32 * fps * 0.12;
-                cmd.args(["-b:v", &format!("{}k", (bits / 1000.0).round().max(500.0))]);
+            match rate {
+                // Quality 90 is crf 20; 1 is 51, the worst.
+                Rate::Quality(q) if enc == "libx264" => {
+                    let crf = (51.0 - 0.345 * q as f32).round().clamp(0.0, 51.0);
+                    cmd.args(["-preset", "medium", "-crf", &crf.to_string()]);
+                }
+                // Hardware encoders take a bitrate: ~0.12 bits a pixel at 90.
+                Rate::Quality(q) => {
+                    let per_px = 0.12 * (q as f32 / 90.0).powi(2);
+                    let bits = (w * h) as f32 * fps * per_px;
+                    cmd.args(["-b:v", &format!("{}k", (bits / 1000.0).round().max(100.0))]);
+                }
+                Rate::Bitrate(k) => {
+                    let k = format!("{k}k");
+                    cmd.args(["-b:v", &k, "-maxrate", &k, "-bufsize", &k]);
+                    if enc == "libx264" {
+                        cmd.args(["-preset", "medium"]);
+                    }
+                }
             }
         }
         Container::Webm => {
             // yuv420p plays everywhere; left to ffmpeg, RGBA frames pick a
             // format some libvpx builds won't open.
-            cmd.args([
-                "-c:v",
-                "libvpx-vp9",
-                "-pix_fmt",
-                "yuv420p",
-                "-b:v",
-                "0",
-                "-crf",
-                "32",
-            ])
-            .args(["-row-mt", "1", "-deadline", "good", "-cpu-used", "4"]);
+            cmd.args(["-c:v", "libvpx-vp9", "-pix_fmt", "yuv420p"]);
+            match rate {
+                // Quality 90 is crf 32; 1 is 63, the worst.
+                Rate::Quality(q) => {
+                    let crf = (63.0 - 0.345 * q as f32).round().clamp(0.0, 63.0);
+                    cmd.args(["-b:v", "0", "-crf", &crf.to_string()]);
+                }
+                Rate::Bitrate(k) => {
+                    let k = format!("{k}k");
+                    cmd.args(["-b:v", &k, "-maxrate", &k]);
+                }
+            }
+            cmd.args(["-row-mt", "1", "-deadline", "good", "-cpu-used", "4"]);
         }
     }
     let mut child = cmd

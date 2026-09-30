@@ -198,5 +198,19 @@ async fn rows_fill_a_sentence_and_swap_the_photo() {
     // "Meet Mia" and "Meet Rex" differ where the names are drawn.
     let names = |f: &str| (300..380).map(|x| pixel(f, x, 95)).collect::<Vec<_>>();
     assert_ne!(names(files[0]), names(files[1]), "each row's own name");
+    // The preview shows every row, not just the first: a row of sizes each.
+    let r = mcp
+        .call_raw(
+            "render",
+            json!({"sceneId": id, "preview": true, "rows": [{"name": "Mia"}, {"name": "Rex", "photo": "mark"}]}),
+        )
+        .await;
+    let image = r.content.iter().find_map(|c| c.as_image()).unwrap();
+    let png =
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &image.data).unwrap();
+    assert_eq!(
+        keyline_mcp::render::raster_size(&png),
+        Some((400.0 + 16.0, 2.0 * 200.0 + 3.0 * 8.0))
+    );
     mcp.stop().await;
 }

@@ -179,7 +179,11 @@ pub fn add_layers(
         };
         guesses::dollar::whole(&mut v, &next.tokens);
         crate::reuse::tokens::bind(&mut v, &next.tokens).map_err(at)?;
-        let mut layer = parse_layer(&v).map_err(|e| at(blame_token(&v, e)))?;
+        let mut layer = parse_layer(&v).map_err(|e| match culprit(&v) {
+            // A layer inside it is at fault: name it, with its own error.
+            Some((path, c, e)) => at(format!("{path}: {}", blame_token(c, e))),
+            None => at(blame_token(&v, e)),
+        })?;
         resolve_assets(&mut layer, &next.assets);
         reserve_ids(&layer, &mut taken);
         parsed.push((i, parent, layer));
@@ -201,6 +205,29 @@ pub fn add_layers(
     next.version += 1;
     *scene = next;
     Ok(added)
+}
+
+/// The innermost child of raw layer `v` that doesn't parse: its path
+/// (`children › chip`, by id, else type and index), the child, and its
+/// error. `None` when every child parses.
+fn culprit(v: &Value) -> Option<(String, &Value, String)> {
+    let children = v.get("children")?.as_array()?;
+    children.iter().enumerate().find_map(|(i, c)| {
+        let e = parse_layer(c).err()?;
+        let name = c.get("id").and_then(Value::as_str).map_or_else(
+            || {
+                format!(
+                    "{}{i}",
+                    c.get("type").and_then(Value::as_str).unwrap_or("layer")
+                )
+            },
+            str::to_owned,
+        );
+        Some(match culprit(c) {
+            Some((path, inner, e)) => (format!("{name} › {path}"), inner, e),
+            None => (name, c, e),
+        })
+    })
 }
 
 /// Applies `ops` in order. Returns ids of every layer changed or deleted.

@@ -38,13 +38,15 @@ render:
   --size <id>             A size to draw (repeatable; default: all)
   --rows <rows.json>      A JSON list of token values: one render per row
   --format <format>       png (default), jpeg, webp, pdf, apng, gif, mp4 or webm
-  --time <s>              A still of that moment of an animated scene
+  --time <s>              A still of that moment of an animated scene (the
+                          file is named <size>-v<n>.at<s>s.<ext>)
   --quality <1-100>       JPEG, WebP and video quality
   --max-kb <n>            Lower a lossy file's quality until it fits
-  --preview               Also write <scene>-preview.png: every size, or
-                          6 moments of each size of an animated scene
+  --preview               Also write <scene>-preview.png: every size, or with
+                          an animated --format, 6 moments of each size
   render reads images beside the scene file, prints what the render tool
-  replies, and exits 1 if the design has a ! defect.
+  replies, and exits 1 if the design has a ! defect. Files are named by
+  size id: give each scene its own --out.
 
 Each flag also takes its value as --flag=value.
 

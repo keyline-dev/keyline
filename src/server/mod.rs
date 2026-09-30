@@ -48,6 +48,9 @@ const PREVIEW_HEIGHT: f32 = 384.0;
 /// Moments a moving scene's preview shows per size.
 const PREVIEW_MOMENTS: usize = 6;
 
+/// Rows of tokens a preview of stills shows, one row of sizes each.
+const PREVIEW_ROWS: usize = 6;
+
 /// The MCP server: the six tools over a scene store.
 #[derive(Clone)]
 pub struct Server {

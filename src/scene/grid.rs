@@ -260,8 +260,8 @@ mod tests {
             [Track::Fr(1.0), Track::Fr(1.0)]
         );
         let l = FrameLayout {
-            stack: None,
             grid: Some(Grid { rows: None, ..g }),
+            ..FrameLayout::default()
         };
         let v = serde_json::to_value(&l).unwrap();
         assert_eq!(
@@ -272,8 +272,8 @@ mod tests {
         let g = grid(fit.clone()).unwrap();
         assert_eq!(g.columns, Some(Tracks::Fit { min: 160.0 }));
         let l = FrameLayout {
-            stack: None,
             grid: Some(g),
+            ..FrameLayout::default()
         };
         assert_eq!(serde_json::to_value(&l).unwrap(), fit);
         let e = grid(json!({"gridTemplateColumns": "1fr 2em"})).unwrap_err();

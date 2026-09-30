@@ -9,7 +9,8 @@ use rmcp::model::ContentBlock;
 use serde_json::Value;
 
 use super::{
-    AssetAddArgs, PREVIEW_HEIGHT, PREVIEW_MOMENTS, RenderArgs, SceneCreateArgs, Server, err,
+    AssetAddArgs, PREVIEW_HEIGHT, PREVIEW_MOMENTS, PREVIEW_ROWS, RenderArgs, SceneCreateArgs,
+    Server, err,
 };
 use crate::describe::text_report;
 use crate::fetch::{MAX_ASSET_BYTES, fetch};
@@ -18,8 +19,8 @@ use crate::fetch::{MAX_ASSET_BYTES, fetch};
 pub(super) const MAX_VIDEO_BYTES: usize = 500 * 1024 * 1024;
 use crate::fonts::{Outcome, ensure as ensure_font};
 use crate::render::{
-    Format, contact_sheet, encode, raster_size, render_apng, render_gif, render_image, render_pdf,
-    render_png_on, svg_size,
+    Cell, Format, contact_sheet, encode, raster_size, render_apng, render_gif, render_image,
+    render_pdf, render_png_on, svg_size,
 };
 use crate::scene::{Asset, Color, SCHEMA_VERSION, Scene, Size, SizeSpec};
 
@@ -48,6 +49,9 @@ impl Server {
                 }
                 None => out.push_str(" ok"),
             }
+        }
+        for hint in crate::describe::scale_hints(&scene) {
+            let _ = write!(out, "\n{hint}");
         }
         // Said up front, so the agent doesn't plan a video it can't make;
         // looked up now, since ffmpeg can be installed while the server runs.
@@ -157,10 +161,10 @@ impl Server {
         };
 
         let mut text = String::new();
-        let mut first = None;
+        let mut drawn = Vec::new();
         for (tag, scene) in variants {
             let scene = Arc::new(scene);
-            first.get_or_insert_with(|| Arc::clone(&scene));
+            drawn.push(Arc::clone(&scene));
             // Each size renders on the blocking pool, concurrently.
             let jobs: Vec<_> = sizes
                 .iter()
@@ -212,9 +216,24 @@ impl Server {
                                 } else {
                                     crate::video::encode::Container::Webm
                                 };
-                                crate::video::encode::render_video(
-                                    &scene, &size, scene.fps, &assets, container, sound,
-                                )?
+                                let v = crate::video::encode::render_video(
+                                    &scene, &size, scene.fps, &assets, container, sound, quality,
+                                    max_kb,
+                                )?;
+                                // The reply says how it was encoded, and when
+                                // even that didn't fit.
+                                note = match v.rate {
+                                    crate::video::encode::Rate::Quality(q) => {
+                                        format!(" quality {q}")
+                                    }
+                                    crate::video::encode::Rate::Bitrate(k) => {
+                                        format!(" bitrate {k}k")
+                                    }
+                                };
+                                if v.too_big {
+                                    note.push_str(" !too-big");
+                                }
+                                v.bytes
                             }
                             Format::Apng | Format::Gif => {
                                 // maxKB: halve the frame rate until it fits.
@@ -297,29 +316,61 @@ impl Server {
                 ));
             }
         }
-        // A moving scene's preview shows moments through it, a row per size.
-        let times = match (a.preview, a.time, first.as_deref()) {
-            (true, None, Some(scene)) => moments(scene),
-            (true, Some(t), _) => vec![t],
+        // The preview shows what was rendered: stills side by side, a row
+        // per row of tokens; a moving format, moments through it, a row per
+        // size (of the first row of tokens).
+        let moving = matches!(
+            a.format,
+            Format::Apng | Format::Gif | Format::Mp4 | Format::Webm
+        );
+        let times = match drawn.first() {
+            Some(scene) if a.preview && moving => moments(scene),
             _ => Vec::new(),
         };
-        if times.len() > 1 {
+        if !times.is_empty() {
             let at: Vec<String> = times
                 .iter()
                 .map(|t| format!("{}", (t * 10.0).round() / 10.0))
                 .collect();
-            let _ = write!(text, "\npreview at {}s", at.join(" "));
+            let rows = if drawn.len() > 1 { " (row 1)" } else { "" };
+            let _ = write!(text, "\npreview at {}s{rows}", at.join(" "));
         }
         let mut content = vec![ContentBlock::text(format!("{fetched}{}", text.trim_end()))];
-        if let (true, Some(scene)) = (a.preview, first) {
+        if a.preview && !drawn.is_empty() {
             let assets = self.store.assets_dir();
-            let height = if times.len() > 1 {
-                PREVIEW_HEIGHT / 2.0
-            } else {
-                PREVIEW_HEIGHT
-            };
+            let time = a.time;
             let sheet = tokio::task::spawn_blocking(move || {
-                contact_sheet(&scene, &sizes, height, &times, &assets)
+                let rows: Vec<Vec<Cell>> = if times.is_empty() {
+                    drawn
+                        .iter()
+                        .take(PREVIEW_ROWS)
+                        .map(|scene| {
+                            sizes
+                                .iter()
+                                .map(|size| Cell {
+                                    scene,
+                                    size,
+                                    at: time,
+                                })
+                                .collect()
+                        })
+                        .collect()
+                } else {
+                    sizes
+                        .iter()
+                        .map(|size| {
+                            times
+                                .iter()
+                                .map(|&t| Cell {
+                                    scene: &drawn[0],
+                                    size,
+                                    at: Some(t),
+                                })
+                                .collect()
+                        })
+                        .collect()
+                };
+                contact_sheet(&rows, PREVIEW_HEIGHT, &assets)
             })
             .await
             .map_err(|e| e.to_string())?
@@ -488,14 +539,23 @@ fn facts(
     out
 }
 
-/// Moments a moving scene's preview shows: [`PREVIEW_MOMENTS`] evenly
-/// through it, the last just before the end. None for a still scene.
+/// Moments a moving scene's preview shows: [`PREVIEW_MOMENTS`] of them,
+/// most near the start, where entrances play, and none at the very end (a
+/// loop's last frame is often its blank loop point). None for a still scene.
 fn moments(scene: &Scene) -> Vec<f32> {
     let Some(len) = crate::anim::shots::length(scene).filter(|l| *l > 0.0) else {
         return Vec::new();
     };
-    let last = (len - 0.5 / scene.fps.max(1.0)).max(0.0);
-    (1..=PREVIEW_MOMENTS)
-        .map(|i| (len * i as f32 / PREVIEW_MOMENTS as f32).min(last))
+    // Shares of the length; the first three sit at 0.2, 0.5 and 1 s when
+    // the scene is long enough (3 s or more).
+    let shares = if len >= 3.0 {
+        [0.2 / len, 0.5 / len, 1.0 / len, 0.45, 0.7, 0.9]
+    } else {
+        [0.1, 0.25, 0.4, 0.55, 0.7, 0.9]
+    };
+    shares
+        .iter()
+        .take(PREVIEW_MOMENTS)
+        .map(|s| s * len)
         .collect()
 }

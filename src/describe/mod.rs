@@ -36,7 +36,7 @@ use crate::scene::{Fit, Kind, Position, Scene};
 use contrast::contrast;
 use overlap::{ink, overlaps};
 
-pub use facts::{facts, text_report};
+pub use facts::{facts, scale_hints, text_report};
 
 /// `assets` enables the contrast check, which renders each size without its
 /// text and samples what lies behind every text. `None` skips it.
@@ -265,6 +265,10 @@ fn line(
                 // Cut at `maxLines`, the fix is more lines or a wider box.
                 if fit.truncated && max_lines.is_some_and(|m| fit.lines >= m) {
                     let _ = write!(out, " !truncated at maxLines {}", fit.lines);
+                    // With a height too, text shrinks to fit before it's cut.
+                    if l.height.is_none() {
+                        out.push_str(" (a height lets it shrink instead)");
+                    }
                 } else if fit.truncated || fit.overflow {
                     let _ = write!(
                         out,
@@ -274,6 +278,15 @@ fn line(
                         n(fit.one_line_width)
                     );
                 }
+            }
+            if let (Some((para, _)), Some(t)) = (&p.text, crate::text::Text::of(l, p.k))
+                && let Some(word) = t.broken_word(para)
+            {
+                let _ = write!(
+                    out,
+                    " !breaks \"{word}\" (needs {} wide)",
+                    n(para.min_intrinsic_width().ceil())
+                );
             }
             if checks.safe.is_some_and(|safe| !contains(safe, r)) {
                 out.push_str(" !unsafe");

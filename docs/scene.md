@@ -36,7 +36,7 @@ The tables below use these types.
 | Length | px, `"hug"` (as big as the content), `"fill"` (the free space), or `"40%"` of the parent ([Sizing](#sizing)) |
 | Color | Any CSS color: `#RGB`, `#RRGGBBAA`, `rgb()`, `rgba()`, `hsl()` or a name |
 | Paint | A Color, or a gradient, image, pattern or grain object ([Fills](#fills)) |
-| Sides | px for all four, `[vertical, horizontal]`, or `[top, right, bottom, left]` |
+| Sides | px for all four, `[vertical, horizontal]`, `[top, horizontal, bottom]` or `[top, right, bottom, left]`, as in CSS |
 | Point | `[x, y]`, each 0–1 of the box, from its top-left |
 | Seconds | A number of seconds |
 | Degrees | A number of degrees, clockwise |
@@ -95,7 +95,7 @@ A size is an object, a preset name, or `"WxH"` (its id is that string: `"300x600
 | `iab-leaderboard` | 728×90 | |
 | `iab-skyscraper` | 160×600 | |
 | `iab-half-page` | 300×600 | |
-| `a4-portrait` | 2480×3508 (300 dpi) | A PDF of it is an A4 page |
+| `a4-portrait` | 2480×3508 (300 dpi) | A PDF of it is an A4 page. Give it a `scale` for a screen-sized master (2.3 for a 1080 px wide one) |
 
 A preset's id is its name.
 
@@ -569,7 +569,7 @@ An image fill works on any shape: a photo in a circle is `{"type": "ellipse", "f
 
 ## Motion
 
-A scene with a `duration`, or made of [shots](#shots-and-transitions), moves. Only fields that don't change layout animate, so the layout is the same at every moment and every check holds throughout. A scene without motion fields is drawn at rest. Output formats are in [tools.md](tools.md#output-formats).
+A scene with a `duration`, or made of [shots](#shots-and-transitions), moves. Only fields that don't change layout animate, so the layout is the same at every moment and every check holds throughout. A scene without motion fields is drawn at rest. A still of a moving scene (PNG, JPEG, WebP, PDF, without `time`) is also at rest: each layer as written, before its tracks (a `"scale": 1.12` written for a pan's room shows at 1.12), except `draw` and `count`, which show where they end. Output formats are in [tools.md](tools.md#output-formats).
 
 ### Scene timing
 

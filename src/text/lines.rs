@@ -25,6 +25,26 @@ impl Text<'_> {
     }
 }
 
+impl Text<'_> {
+    /// The first word the lines break inside ("Winsto" / "n"): a word
+    /// wider than its box.
+    pub fn broken_word(&self, p: &Paragraph) -> Option<String> {
+        let d = &self.display;
+        p.get_line_metrics().windows(2).find_map(|w| {
+            let at = byte_index(d, w[0].end_index);
+            let before = d[..at].chars().next_back()?;
+            let after = d[at..].chars().next()?;
+            (before.is_alphanumeric() && after.is_alphanumeric()).then(|| {
+                let start = d[..at].rfind(char::is_whitespace).map_or(0, |i| i + 1);
+                let end = d[at..]
+                    .find(char::is_whitespace)
+                    .map_or(d.len(), |i| at + i);
+                d[start..end].to_owned()
+            })
+        })
+    }
+}
+
 /// Skia's line indices count UTF-16 units; this maps one to a byte offset.
 pub(super) fn byte_index(text: &str, utf16: usize) -> usize {
     let mut units = 0;

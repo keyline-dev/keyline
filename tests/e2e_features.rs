@@ -724,7 +724,7 @@ fn the_render_command_takes_a_time_a_quality_and_a_size_cap() {
         "{text}"
     );
     // The preview sheet of an animated scene: six moments.
-    let (text, files) = run(&["--preview"]);
+    let (text, files) = run(&["--preview", "--format", "gif"]);
     assert!(files.contains(&"ad-preview.png".to_owned()), "{files:?}");
     assert!(text.contains("preview at "), "{text}");
 }

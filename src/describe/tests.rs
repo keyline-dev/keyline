@@ -273,6 +273,56 @@ fn faint_text_is_judged_as_drawn() {
 }
 
 #[test]
+fn a_word_wider_than_its_box_is_a_defect() {
+    let s = scene(json!([
+        {"id": "name", "type": "text", "text": "Sir Winston", "fontSize": 60, "width": 150},
+        {"id": "fine", "type": "text", "x": 250, "text": "one two three", "fontSize": 20, "width": 60}]));
+    let w = warnings(&s, None).unwrap_or_default();
+    let line = w.lines().find(|l| l.starts_with("wide name")).unwrap_or("");
+    assert!(line.contains(r#"!breaks "Winston" (needs "#), "{w}");
+    assert!(
+        !w.lines()
+            .any(|l| l.contains("fine text") && l.contains("!breaks")),
+        "breaks between words only: {w}"
+    );
+}
+
+#[test]
+fn text_cut_at_max_lines_says_a_height_would_shrink_it() {
+    let text = |extra: serde_json::Value| {
+        let mut t = json!({"id": "name", "type": "text", "text": "Winston Churchill", "fontSize": 40,
+            "width": 200, "maxLines": 1});
+        for (k, v) in extra.as_object().unwrap() {
+            t[k] = v.clone();
+        }
+        warnings(&scene(json!([t])), None).unwrap_or_default()
+    };
+    let w = text(json!({}));
+    assert!(
+        w.contains("!truncated at maxLines 1 (a height lets it shrink instead)"),
+        "{w}"
+    );
+    // And it does: with a height, it shrinks onto one line.
+    let w = text(json!({"height": 50}));
+    assert!(!w.contains("wide name"), "{w}");
+}
+
+#[test]
+fn a_print_size_for_a_screen_master_hints_at_a_scale() {
+    let s: Scene = serde_json::from_value(json!({"width": 1080, "height": 1350,
+        "sizes": [{"id": "a4-portrait", "width": 2480, "height": 3508},
+            {"id": "a4-scaled", "width": 2480, "height": 3508, "scale": 2.3},
+            {"id": "post", "width": 1080, "height": 1350}], "layers": []}))
+    .unwrap();
+    assert_eq!(
+        super::scale_hints(&s),
+        [
+            r#"hint: a4-portrait is 2.3× the master's width; give it "scale": 2.3 to keep the layout's proportions"#
+        ]
+    );
+}
+
+#[test]
 fn text_report_shows_only_wrapped_shrunk_or_cut_text() {
     let s = scene(json!([
         {"id": "plain", "type": "text", "text": "Short", "fontSize": 20},

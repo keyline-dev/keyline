@@ -55,7 +55,8 @@ A **layer line** is `id type x,y w×h`, in px at that size, then:
 | Marker | Kind | Means |
 |---|---|---|
 | `!truncated needs W×H (one line: W wide)` | defect | Text doesn't fit its box, even at its smallest allowed size (cut with an ellipsis, or spilling out); it needs a box of W×H (px at that size), or W wide on one line |
-| `!truncated at maxLines N` | defect | Text was cut at its `maxLines`; allow more lines or widen the box |
+| `!truncated at maxLines N` | defect | Text was cut at its `maxLines`; allow more lines or widen the box. Without a height it adds `(a height lets it shrink instead)`: with one, text shrinks to fit before it's cut |
+| `!breaks "<word>" (needs W wide)` | defect | A word is wider than its text box, so a line breaks inside it ("Winsto" / "n"); the box needs W px |
 | `!overflow needs W×H` | defect | A stack's children don't fit it even at their smallest; the stack needs W×H. The children it pushes out aren't listed one by one |
 | `!clipped by <frame or canvas>: <side> <px>` | defect | Part of the layer falls outside what shows |
 | `!hidden` | defect | The layer is entirely outside what shows |
@@ -83,7 +84,13 @@ After the facts, one line per text that writes a token as `$name` rather than [`
 hint: did you mean {{price}}? (cta says $price)
 ```
 
-And one per style used as a markup tag whose fields a tag can't carry (a tag carries `color`, `fontWeight`, `fontStyle`, `fontSize`, `fontFamily`, `textDecoration` and `highlight`):
+`scene_create` adds one per size at least twice the master's width with no `scale` (a print preset for a screen-sized master):
+
+```text
+hint: a4-portrait is 2.3× the master's width; give it "scale": 2.3 to keep the layout's proportions
+```
+
+And an edit, one per style used as a markup tag whose fields a tag can't carry (a tag carries `color`, `fontWeight`, `fontStyle`, `fontSize`, `fontFamily`, `textDecoration` and `highlight`):
 
 ```text
 hint: <accent> drops letterSpacing (a tag carries color, fontWeight, fontStyle, fontSize, fontFamily, textDecoration, highlight)
@@ -235,8 +242,8 @@ instagram-portrait 1080×1350
 | `sceneId` | string, required | | The scene |
 | `sizes` | array of strings | all sizes | Size ids to render |
 | `format` | `png` \| `jpeg` \| `webp` \| `pdf` \| `apng` \| `gif` \| `mp4` \| `webm` | `png` | See [Output formats](#output-formats) |
-| `quality` | 0–100 | 90 | JPEG and WebP quality |
-| `maxKB` | number | | File-size cap: JPEG and WebP lower their quality, APNG and GIF their frame rate, until the file fits |
+| `quality` | 0–100 | 90 | JPEG, WebP, MP4 and WebM quality |
+| `maxKB` | number | | File-size cap: JPEG and WebP lower their quality, APNG and GIF their frame rate, MP4 and WebM their bitrate, until the file fits |
 | `preview` | boolean | false | Also returns one small image of all sizes side by side |
 | `time` | number | | Seconds into a moving scene: a still at that moment |
 | `muted` | boolean | false | `true` leaves all sound out of `mp4` and `webm`: the soundtrack and every clip's (a clip's own `muted` leaves out one) |
@@ -247,10 +254,10 @@ Reply: per size, the size id, the file's path ([Output files](#output-files)) an
 ```text
 wide /…/renders/s1a2b3c4d5/wide-v3.png (1200×628, 212 KB)
 wide /…/renders/s1a2b3c4d5/wide-v3.gif (1200×628, 2s, 60 frames at 30 fps, plays once, 1840 KB)
-wide /…/renders/s1a2b3c4d5/wide-v3.mp4 (1200×628, 2s, 60 frames at 30 fps, with sound, 610 KB)
+wide /…/renders/s1a2b3c4d5/wide-v3.mp4 (1200×628, 2s, 60 frames at 30 fps, with sound, 610 KB) quality 90
 ```
 
-A moving format gives its length, frame count and frame rate; GIF and APNG also say whether they loop (`loops`) or stop on their last frame (`plays once`), from the scene's `loop`; MP4 and WebM say `with sound` when they carry any; `last shot held 0.4s` means the scene's `duration` outlasts its shots and the last one holds. An agent opening an animated file sees only its first frame, so these facts are how it checks one. With `maxKB`, `quality N` follows when the quality was lowered (a lowered frame rate shows in the facts), or `!too-big` when even the lowest setting doesn't fit. With `rows`, each line starts with `r<row>`. With `preview`, the reply also carries the preview as an image: every size side by side, or, for a scene that moves, a row per size of 6 moments through it, named in a last line (`preview at 0.5 1 1.5 2 2.5 3s`).
+A moving format gives its length, frame count and frame rate; GIF and APNG also say whether they loop (`loops`) or stop on their last frame (`plays once`), from the scene's `loop`; MP4 and WebM say `with sound` when they carry any; `last shot held 0.4s` means the scene's `duration` outlasts its shots and the last one holds. An agent opening an animated file sees only its first frame, so these facts are how it checks one. With `maxKB`, `quality N` follows when the quality was lowered (a lowered frame rate shows in the facts), or `!too-big` when even the lowest setting doesn't fit. MP4 and WebM always say how they were encoded, with any encoder: `quality N` (1–100, default 90), or `bitrate Nk` when `maxKB` needed a lower one. With `rows`, each line starts with `r<row>`. With `preview`, the reply also carries the preview as an image of what was rendered, each row no wider than 2000 px: the sizes side by side, a row per row of tokens (up to 6); or, for a moving format (APNG, GIF, MP4, WebM), a row per size of 6 moments through it, most near the start (from the first row of tokens), named in a last line (`preview at 0.2 0.5 1 2.7 4.2 5.4s`).
 
 ## Templates and variants
 
@@ -308,14 +315,14 @@ keyline-mcp render campaign.json --out renders/ --size wide --rows rows.json --f
 
 | Flag | Default | Does |
 |---|---|---|
-| `--out <folder>` | the current folder | Where the files go |
+| `--out <folder>` | the current folder | Where the files go, named by size id (`<size>-v<n>.<ext>`): give each scene its own folder |
 | `--size <id>` | every size | A size to draw (repeatable) |
 | `--rows <rows.json>` | none | A JSON list of token values, `[{"headline": "Sale"}, …]`: one render per row, as the tool's `rows` |
 | `--format <format>` | `png` | As the tool's `format` |
-| `--time <s>` | none | A still of that moment of an animated scene, as the tool's `time` |
+| `--time <s>` | none | A still of that moment of an animated scene, as the tool's `time`; the file is named `<size>-v<n>.at<s>s.<ext>` |
 | `--quality <1-100>` | the format's | As the tool's `quality` |
 | `--max-kb <n>` | none | As the tool's `maxKB` (`--maxKB` works too) |
-| `--preview` | off | Also writes `<scene>-preview.png`, as the tool's `preview`: every size, or 6 moments of each size of an animated scene |
+| `--preview` | off | Also writes `<scene>-preview.png`, as the tool's `preview`: every size, or with an animated `--format`, 6 moments of each size |
 
 In GitHub Actions, the repo is an action that installs a release and runs this on every scene a glob matches, failing the job on a `!` defect:
 

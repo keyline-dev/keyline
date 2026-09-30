@@ -41,3 +41,6 @@ braces-3	0794693+dirty	claude-opus-5[1m]	0.316	8	87	7	6472	2	6738	3707	10780	757
 fixes-1	1dae295+dirty	claude-opus-5[1m]	0.500	8	119	7	13230	1	10870	4749	18501	84236	portrait 22, wide 19, sky 10	0
 fixes-2	1dae295+dirty	claude-opus-5[1m]	0.553	12	152	11	14671	2	11569	6540	18356	158137	portrait 26, wide 20, sky 12	0
 fixes-3	1dae295+dirty	claude-opus-5[1m]	0.671	16	193	15	19160	4	13130	6797	22690	228736	portrait 24, wide 20, sky 10	0
+retry-1	fc00080+dirty	claude-opus-5[1m]	0.672	11	157	10	23061	1	14549	4025	23319	146785	portrait 22, wide 19, sky 11	0
+retry-2	86d9d5d+dirty	claude-opus-5[1m]	0.376	7	91	6	14361	1	8326	2510	13154	69775	portrait 24, wide 20, sky 12	0
+retry-3	709720c+dirty	claude-opus-5[1m]	0.311	9	82	8	8629	2	6245	2659	11087	84718	portrait 22, wide 20, sky 11	0

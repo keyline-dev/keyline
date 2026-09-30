@@ -291,7 +291,10 @@ async fn a_moving_preview_shows_moments_and_a_held_last_shot_is_stated() {
     )
     .await;
     let r = mcp
-        .call_raw("render", json!({"sceneId": id, "preview": true}))
+        .call_raw(
+            "render",
+            json!({"sceneId": id, "format": "gif", "preview": true}),
+        )
         .await;
     let text: String = r
         .content
@@ -299,15 +302,16 @@ async fn a_moving_preview_shows_moments_and_a_held_last_shot_is_stated() {
         .filter_map(|c| c.as_text())
         .map(|t| t.text.clone())
         .collect();
-    assert!(text.contains("preview at 0.5 1 1.5 2 2.5 3s"), "{text}");
+    // Most moments early, where entrances play; none on the last frame.
+    assert!(text.contains("preview at 0.2 0.5 1 1.3 2.1 2.7s"), "{text}");
     let image = r.content.iter().find_map(|c| c.as_image()).unwrap();
     let png =
         base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &image.data).unwrap();
-    // Six moments a row, a row per size, 192 px tall, but no wider than
-    // 2000 px: the 400×200 row shrinks to 162 px tall to fit.
+    // Six moments a row, a row per size, full size up to 384 px tall, but
+    // no wider than 2000 px: the 400×200 row shrinks to 162 px tall to fit.
     assert_eq!(
         keyline_mcp::render::raster_size(&png),
-        Some((2000.0, 162.0 + 192.0 + 3.0 * 8.0))
+        Some((2000.0, 162.0 + 200.0 + 3.0 * 8.0))
     );
     // The first moment is the red shot, the last the navy one.
     let mut reader = png::Decoder::new(std::io::Cursor::new(&png))

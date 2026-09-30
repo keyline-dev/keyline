@@ -14,7 +14,14 @@ pub struct FrameLayout {
     pub stack: Option<Stack>,
     /// Rows and columns (CSS grid).
     pub grid: Option<Grid>,
+    /// Stack fields (`alignItems`, `gap`, …) written without a direction:
+    /// kept, since a `style` may bring the `flexDirection`; a frame that
+    /// still has them once styles apply is refused.
+    pub loose: Option<serde_json::Map<String, serde_json::Value>>,
 }
+
+/// Why a frame's [`FrameLayout::loose`] fields are refused.
+pub const LOOSE: &str = "padding, gap, justifyContent, alignItems and flexWrap need flexDirection (a row or column) or gridTemplateColumns (a grid)";
 
 /// CSS `flex-wrap`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -57,7 +64,7 @@ impl<'de> Deserialize<'de> for FrameLayout {
             || f.grid_template_areas.is_some();
         let flex_only =
             f.justify_content.is_some() || f.align_items.is_some() || f.flex_wrap.is_some();
-        match (f.flex_direction, grid) {
+        match (f.flex_direction.clone(), grid) {
             (Some(_), true) => Err(D::Error::custom(
                 "a frame is a stack (flexDirection) or a grid (gridTemplateColumns), not both",
             )),
@@ -71,6 +78,7 @@ impl<'de> Deserialize<'de> for FrameLayout {
                     wrap: f.flex_wrap == Some(FlexWrap::Wrap),
                 }),
                 grid: None,
+                loose: None,
             }),
             (None, true) if flex_only => Err(D::Error::custom(
                 "justifyContent, alignItems and flexWrap are for stacks; a grid's children take gridArea, gridRow and gridColumn",
@@ -84,11 +92,16 @@ impl<'de> Deserialize<'de> for FrameLayout {
                     padding: f.padding.unwrap_or_default(),
                     areas: f.grid_template_areas.unwrap_or_default(),
                 }),
+                loose: None,
             }),
             (None, false) if flex_only || f.gap.is_some() || f.padding.is_some() => {
-                Err(D::Error::custom(
-                    "padding, gap, justifyContent, alignItems and flexWrap need flexDirection (a row or column) or gridTemplateColumns (a grid)",
-                ))
+                match serde_json::to_value(&f).map_err(D::Error::custom)? {
+                    serde_json::Value::Object(o) => Ok(FrameLayout {
+                        loose: Some(o),
+                        ..FrameLayout::default()
+                    }),
+                    _ => Err(D::Error::custom(LOOSE)),
+                }
             }
             (None, false) => Ok(FrameLayout::default()),
         }
@@ -120,7 +133,10 @@ impl Serialize for FrameLayout {
                 padding: set(!g.padding.is_zero(), g.padding),
                 ..Flat::default()
             },
-            (None, None) => Flat::default(),
+            (None, None) => match &self.loose {
+                Some(o) => return o.serialize(s),
+                None => Flat::default(),
+            },
         };
         f.serialize(s)
     }
@@ -147,7 +163,14 @@ mod tests {
         assert!(g.grid.is_some() && g.stack.is_none());
         let free: FrameLayout = serde_json::from_value(json!({})).unwrap();
         assert_eq!(free, FrameLayout::default());
-        let e = serde_json::from_value::<FrameLayout>(json!({"padding": 24})).unwrap_err();
-        assert!(e.to_string().contains("need flexDirection"), "{e}");
+        // Stack fields without a direction wait for a style's (validation
+        // refuses them if none comes), and are written back as they were.
+        let loose: FrameLayout =
+            serde_json::from_value(json!({"padding": 24, "alignItems": "center"})).unwrap();
+        assert!(loose.stack.is_none() && loose.loose.is_some());
+        assert_eq!(
+            serde_json::to_value(&loose).unwrap(),
+            json!({"padding": 24.0, "alignItems": "center"})
+        );
     }
 }

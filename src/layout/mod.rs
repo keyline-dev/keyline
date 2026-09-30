@@ -303,7 +303,7 @@ fn finish<'a>(
     let (children, chosen) = match &layer.kind {
         Kind::Frame {
             children,
-            layout: crate::scene::FrameLayout { stack, grid },
+            layout: crate::scene::FrameLayout { stack, grid, .. },
             ..
         } if stack.is_some() || grid.is_some() => {
             let padding = stack.as_ref().map_or_else(

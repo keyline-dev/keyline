@@ -33,7 +33,7 @@ const ASSET_ADD_MOTION: &str =
     " Or a video (mp4, mov, webm) or sound (mp3, m4a, wav) by path or url.";
 
 /// What `render` adds to its description when motion is on.
-const RENDER_MOTION: &str = " apng, gif, mp4 or webm (mp4/webm need ffmpeg) renders the motion; time (s) a still of it; preview shows 6 moments; muted drops the sound.";
+const RENDER_MOTION: &str = " apng, gif, mp4 or webm (mp4/webm need ffmpeg) renders the motion, its preview 6 moments; time (s) a still; muted drops the sound.";
 
 /// Arguments that exist only for motion, by tool.
 const MOTION_ARGS: &[(&str, &[&str])] = &[

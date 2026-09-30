@@ -408,3 +408,64 @@ fn inside_a_component_a_prop_wins_over_a_token_of_the_same_name() {
     let e = add_layers(&mut s, with(json!({"n": 1}), json!({})), vec![]).unwrap_err();
     assert!(e.starts_with("{{n}} is the counting number"), "{e}");
 }
+
+#[test]
+fn a_styles_flex_direction_counts_for_the_frames_own_alignment() {
+    let mut s = scene();
+    let shared = Shared {
+        styles: json!({"chip": {"flexDirection": "row", "gap": 8}})
+            .as_object()
+            .cloned()
+            .unwrap(),
+        ..Shared::default()
+    };
+    add_layers(
+        &mut s,
+        shared,
+        vec![
+            json!({"id": "page", "type": "frame", "flexDirection": "column", "children": [
+            {"id": "chip", "type": "frame", "style": "chip", "alignItems": "center", "padding": 6,
+             "children": [{"type": "text", "text": "Hi"}]}]}),
+        ],
+    )
+    .unwrap();
+    let r = s.resolved();
+    let mut stack = None;
+    r.walk(&mut |l| {
+        if let (true, Kind::Frame { layout, .. }) = (l.id == "chip", &l.kind) {
+            stack = layout.stack.clone();
+        }
+    });
+    let stack = stack.expect("chip is a row");
+    assert_eq!(stack.align, crate::scene::StackAlign::Center);
+    // Without a direction from anywhere, the frame at fault is named.
+    let e = add_layers(
+        &mut s,
+        Shared::default(),
+        vec![
+            json!({"id": "outer", "type": "frame", "flexDirection": "column", "children": [
+            {"id": "lost", "type": "frame", "alignItems": "center"}]}),
+        ],
+    )
+    .unwrap_err();
+    assert!(
+        e.starts_with("lost: ") && e.contains("need flexDirection"),
+        "{e}"
+    );
+}
+
+#[test]
+fn an_error_inside_a_frame_names_the_layer_at_fault() {
+    let mut s = scene();
+    let e = add_layers(
+        &mut s,
+        Shared::default(),
+        vec![json!({"id": "page", "type": "frame", "flexDirection": "column", "children": [
+            {"id": "chip", "type": "frame", "flexDirection": "row", "children": [
+                {"type": "text", "text": "Hi"},
+                {"id": "t", "type": "text", "text": "Yo", "highlight": {"color": "#FF0", "padding": [4, 8]}}]}]})],
+    )
+    .unwrap_err();
+    assert!(e.starts_with("layers[0]: chip › t: "), "{e}");
+    assert!(e.contains("highlight"), "{e}");
+}

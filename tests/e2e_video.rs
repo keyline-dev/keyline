@@ -274,6 +274,67 @@ async fn a_soundtrack_plays_under_the_video_cut_to_its_length() {
     mcp.stop().await;
 }
 
+/// The size of the file a render reply's first line names, and the line.
+async fn render_mp4(mcp: &Mcp, id: &str, extra: Value) -> (u64, String) {
+    let mut args = json!({"sceneId": id, "format": "mp4"});
+    for (k, v) in extra.as_object().unwrap() {
+        args[k] = v.clone();
+    }
+    let reply = mcp.ok("render", args).await;
+    let line = reply.lines().next().unwrap().to_owned();
+    let (_, path) = common::file_of(&line).unwrap();
+    (std::fs::metadata(path).unwrap().len(), line)
+}
+
+#[tokio::test]
+async fn quality_and_max_kb_hold_for_video_on_every_encoder() {
+    if !have_ffmpeg() {
+        return;
+    }
+    for encoder in ["auto", "software"] {
+        let mcp = Mcp::start_args(&format!("video-rate-{encoder}"), &["--encoder", encoder]).await;
+        let id = mcp
+            .ok(
+                "scene_create",
+                json!({"sizes": ["640x360"], "duration": 2, "fps": 24}),
+            )
+            .await
+            .split(' ')
+            .next()
+            .unwrap()
+            .to_owned();
+        mcp.ok("layer_add", json!({"sceneId": id, "layers": [
+            {"type": "rect", "width": "fill", "height": "fill",
+             "fill": [{"type": "linear", "angle": 30, "stops": ["#D0202E", "#1B2A5C", "#F5C518"]}, {"noise": 0.4}],
+             "animate": {"scale": [1, 1.3], "rotate": [0, 8], "duration": 2}},
+            {"type": "text", "text": "Quality", "fontSize": 90, "color": "#FFFFFF", "place": "center",
+             "animate": {"translate": {"from": [-200, 0]}, "duration": 2}}]}))
+            .await;
+        let (default, line) = render_mp4(&mcp, &id, json!({})).await;
+        assert!(
+            line.contains(" quality 90"),
+            "{encoder}: says the quality: {line}"
+        );
+        let (low, line) = render_mp4(&mcp, &id, json!({"quality": 20})).await;
+        assert!(line.contains(" quality 20"), "{encoder}: {line}");
+        assert!(
+            low < default,
+            "{encoder}: quality 20 {low} bytes vs 90 {default}"
+        );
+        let budget = default / 1024 / 3;
+        let (capped, line) = render_mp4(&mcp, &id, json!({"maxKB": budget})).await;
+        assert!(
+            line.contains(" bitrate "),
+            "{encoder}: says the bitrate: {line}"
+        );
+        assert!(
+            capped <= budget * 1024 || line.contains("!too-big"),
+            "{encoder}: {capped} bytes for a {budget} KB budget: {line}"
+        );
+        mcp.stop().await;
+    }
+}
+
 #[tokio::test]
 async fn without_ffmpeg_video_is_refused_and_apng_still_works() {
     let mcp = Mcp::start_args("no-ffmpeg", &["--ffmpeg", "/no/such/ffmpeg"]).await;

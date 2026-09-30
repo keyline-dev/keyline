@@ -575,3 +575,24 @@ fn a_pdf_draws_masked_images_as_the_raster_does() {
         "red left, blue right, as the photo"
     );
 }
+
+#[test]
+fn split_letters_at_rest_draw_as_the_whole_word() {
+    // Kerned letters touch across their boxes; at rest no seam between them.
+    let word = |split: bool| {
+        let mut t = json!({"id": "t", "type": "text", "x": 5, "y": 20, "text": "TAVA", "fontSize": 40,
+            "fontWeight": 900, "color": "#000000"});
+        if split {
+            t["split"] = json!("chars");
+            t["enter"] = json!({"effect": "fade", "duration": 0.2});
+        }
+        pixels_at(json!([t]), 1.5)
+    };
+    let (split, whole) = (word(true), word(false));
+    let worst = (0..100)
+        .flat_map(|x| (0..100).map(move |y| (x, y)))
+        .map(|(x, y)| split(x, y).0.abs_diff(whole(x, y).0))
+        .max()
+        .unwrap();
+    assert!(worst <= 8, "a seam {worst} levels deep");
+}

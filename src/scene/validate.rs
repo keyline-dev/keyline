@@ -223,11 +223,14 @@ impl Scene {
             }
         }
         if let Kind::Frame {
-            layout: crate::scene::FrameLayout { stack, grid },
+            layout: crate::scene::FrameLayout { stack, grid, loose },
             children,
             ..
         } = &l.kind
         {
+            if loose.is_some() {
+                return Err(crate::scene::frame_layout::LOOSE.into());
+            }
             if stack.is_some() && grid.is_some() {
                 return Err("a frame takes stack or grid, not both".into());
             }

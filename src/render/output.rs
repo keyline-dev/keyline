@@ -9,42 +9,39 @@ use skia_safe::{EncodedImageFormat, Image, surfaces};
 use super::{draw_scene, render_image};
 use crate::scene::{Scene, Size};
 
-/// One preview PNG, to save image tokens: every size side by side, each
-/// scaled to `height` px; with `times`, one row per size of the scene at
-/// each of those moments, no wider than [`SHEET_MAX_WIDTH`].
+/// One cell of a preview sheet: a size of a scene, at rest or at a moment.
+pub struct Cell<'a> {
+    /// The scene (a row's variant).
+    pub scene: &'a Scene,
+    /// The size drawn.
+    pub size: &'a Size,
+    /// The moment, seconds; at rest when `None`.
+    pub at: Option<f32>,
+}
+
+/// One preview PNG, to save image tokens: rows of cells, each scaled to
+/// `height` px tall, a row shrunk further to stay within
+/// [`SHEET_MAX_WIDTH`].
 ///
 /// # Errors
 /// Missing assets, or a clip's frames can't be decoded.
-pub fn contact_sheet(
-    scene: &Scene,
-    sizes: &[Size],
-    height: f32,
-    times: &[f32],
-    assets_dir: &Path,
-) -> Result<Vec<u8>> {
+pub fn contact_sheet(rows: &[Vec<Cell>], height: f32, assets_dir: &Path) -> Result<Vec<u8>> {
     const GAP: f32 = 8.0;
-    let rows: Vec<Vec<Image>> = if times.is_empty() {
-        vec![
-            sizes
-                .iter()
-                .map(|s| frame(scene, s, None, (height / s.height).min(1.0), assets_dir))
-                .collect::<Result<_>>()?,
-        ]
-    } else {
-        let resolved = scene.resolved();
-        let n = times.len() as f32;
-        sizes
-            .iter()
-            .map(|s| {
-                let fit = (SHEET_MAX_WIDTH - GAP * (n + 1.0)) / (n * s.width);
-                let px = (height / s.height).min(fit).min(1.0);
-                times
-                    .iter()
-                    .map(|&t| frame(&resolved, s, Some(t), px, assets_dir))
-                    .collect::<Result<_>>()
-            })
-            .collect::<Result<_>>()?
-    };
+    let rows: Vec<Vec<Image>> = rows
+        .iter()
+        .map(|row| {
+            let tall = |c: &Cell| (height / c.size.height).min(1.0);
+            let wide: f32 = row.iter().map(|c| c.size.width * tall(c)).sum();
+            let room = SHEET_MAX_WIDTH - GAP * (row.len() as f32 + 1.0);
+            let fit = (room / wide).min(1.0);
+            row.iter()
+                .map(|c| {
+                    let scene = c.scene.resolved();
+                    frame(&scene, c.size, c.at, tall(c) * fit, assets_dir)
+                })
+                .collect::<Result<Vec<_>>>()
+        })
+        .collect::<Result<_>>()?;
     let gap = GAP as i32;
     let w = rows
         .iter()

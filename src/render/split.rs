@@ -141,7 +141,11 @@ impl Ctx<'_> {
             canvas.translate((-c.x, -c.y));
             // ponytail: clipped to the glyphs' advance box; a glyph that
             // overhangs its advance (italic, swashes) loses the overhang.
-            canvas.clip_rect(bx, None, true);
+            // Anti-aliased only while turned or scaled: two soft edges
+            // meeting on one pixel leave a faint seam between letters
+            // that touch (kerned T and A).
+            let turned = rotation != 0.0 || away.scale != 1.0 || skew != [0.0, 0.0];
+            canvas.clip_rect(bx, None, turned);
             self.draw_text_with(canvas, p, r, false)?;
             canvas.restore();
         }
@@ -185,7 +189,7 @@ impl Ctx<'_> {
             canvas.save_layer(&SaveLayerRec::default().paint(&paint));
             canvas.translate((away.offset[0] * p.k, away.offset[1] * p.k));
             let band = skia_safe::Rect::new(-1e6, oy + top, 1e6, oy + bottom);
-            canvas.clip_rect(band, None, true);
+            canvas.clip_rect(band, None, false);
             super::text_extras::highlights(canvas, &text, para, (ox, oy), p.k, p.layer);
             canvas.restore();
         }

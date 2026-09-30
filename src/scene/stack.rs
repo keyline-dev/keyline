@@ -183,6 +183,10 @@ impl<'de> Deserialize<'de> for Padding {
             .map(Padding::All)
             .or_else(|| super::de::floats(&v).map(Padding::Axes))
             .or_else(|| super::de::floats(&v).map(Padding::Sides))
+            // CSS's three values: top, the sides, bottom.
+            .or_else(|| {
+                super::de::floats(&v).map(|[t, x, b]: [f32; 3]| Padding::Sides([t, x, b, x]))
+            })
             .ok_or_else(|| {
                 super::de::expected(
                     "padding px, [vertical, horizontal] or [top, right, bottom, left]",
@@ -278,6 +282,9 @@ mod tests {
             [1.0, 2.0, 3.0, 4.0]
         );
         assert_eq!(Gap::Both(5.0).main_cross(Dir::ColumnReverse), (5.0, 5.0));
+        // CSS's three values: top, the sides, bottom.
+        let p: Padding = serde_json::from_value(json!([56, 40, 24])).unwrap();
+        assert_eq!(p.sides(), [56.0, 40.0, 24.0, 40.0]);
     }
 
     #[test]

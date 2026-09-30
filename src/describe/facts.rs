@@ -64,6 +64,24 @@ fn px_label(px: f32) -> String {
     }
 }
 
+/// A hint per size at least twice the master's width with no `scale`
+/// (a print preset for a screen-sized master): laid out in master px, the
+/// design would sit small in its corner.
+pub fn scale_hints(scene: &Scene) -> Vec<String> {
+    scene
+        .sizes
+        .iter()
+        .filter(|s| (s.scale - 1.0).abs() < 1e-6 && s.width >= 2.0 * scene.width)
+        .map(|s| {
+            let k = (s.width / scene.width * 100.0).round() / 100.0;
+            format!(
+                "hint: {} is {k}× the master's width; give it \"scale\": {k} to keep the layout's proportions",
+                s.id
+            )
+        })
+        .collect()
+}
+
 /// For `render`: every text that wrapped, shrank or was cut, as actually
 /// drawn, so the agent can check wording and breaks without an image.
 /// Texts drawn on one line at their requested size are left out.
