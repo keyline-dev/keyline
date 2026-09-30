@@ -10,12 +10,41 @@ Server-side image composition engine driven by an AI agent over MCP.
 ## Commands
 
 - Build / run the MCP server (stdio): `cargo run --release`. Data lives in `--data <folder>` (default `~/.keyline-mcp`); every setting is a flag (`keyline-mcp --help`).
-- Tests: `cargo test`. Golden PNGs are per OS in `tests/golden/<os>/`; regenerate deliberately with `UPDATE_GOLDEN=1 cargo test --test e2e`.
+- Tests: `cargo test`. Golden PNGs are per OS in `tests/golden/<os>/` (macOS and Windows; CI compares both). Regenerate deliberately: macOS locally with `UPDATE_GOLDEN=1 cargo test --tests`; Windows only in CI: on a branch, set `UPDATE_GOLDEN: "1"` on the Windows end-to-end step in `.github/workflows/ci.yml` and upload `tests/golden/windows/` as an artifact, download it with `gh run download`, review it by eye, commit it, and drop the CI change before squashing into `main`.
 - Web-font tests (need the network): `cargo test -- --ignored web_fonts google_fonts`.
 - Rendering: GPU by default (Metal on macOS, Vulkan on Linux and Windows), CPU when no GPU opens or with `--renderer cpu`. Tests and reference images always use the CPU, which is deterministic on one OS version; glyph edges still differ slightly between OS versions (macOS 26 vs 27), so goldens are compared with a small tolerance.
 - Real-LLM test (runs Claude Code headless on the Claude subscription, no API key): `cargo test --test llm_e2e -- --ignored --nocapture`. Set `CLAUDE_BIN` if `claude` isn't on PATH.
 - Benchmarks: set `KEYLINE_MCP_BENCH=<label>` on `llm_e2e` (kept in `bench/reference-ad/`, committed) or `recreate_e2e` (rebuilds a design from its image; designs and runs stay in the gitignored `bench/recreate/local/`). Runs vary up to 2× in cost, so judge a change on at least 3 runs, and compare prompt versions only with each other (see `bench/reference-ad/README.md`).
-- Release: bump the version in `Cargo.toml`, `plugin/.claude-plugin/plugin.json`, `mcpb/manifest.json` and `action.yml`'s `version` default, commit, and push a matching `vX.Y.Z` tag (the workflow refuses a mismatch; only full versions trigger it). After the release it publishes the Docker image, runs the plugin, bundle and action checks, lists the server in the MCP registry, and moves the action's `v0` tag. `.github/workflows/release.yml` builds the Linux `.deb` (via `cargo deb`, a build tool, not a dependency) and tarballs for Linux amd64, arm64 and macOS arm64, and attaches them to a GitHub release with `SHA256SUMS` and build provenance attestations.
+- Release: bump the version in `Cargo.toml`, `plugin/.claude-plugin/plugin.json`, `mcpb/manifest.json` and `action.yml`'s `version` default, commit, and push a matching `vX.Y.Z` tag together with the commit (`git push --atomic origin main vX.Y.Z`; the plugin on `main` downloads that version, and the workflow refuses a mismatch; only full versions trigger it). `.github/workflows/release.yml` builds the Linux `.deb` (via `cargo deb`, a build tool, not a dependency) and tarballs (Linux amd64 and arm64, macOS arm64), a Windows x64 `.zip`, and the Claude Desktop `.mcpb` (macOS and Windows binaries), and attaches them to a GitHub release with `SHA256SUMS` and build provenance attestations. Then it runs the plugin, bundle and action checks, publishes the Docker image (`ghcr.io/keyline-dev/keyline-mcp`, with and without ffmpeg), bumps the Homebrew tap (`keyline-dev/homebrew-tap`, with the `HOMEBREW_TAP_TOKEN` secret), lists the server in the MCP registry, and moves the action's `v0` tag. The workflow's notes are near empty (nothing goes through pull requests), so write release notes and add them with `gh release edit vX.Y.Z --notes-file …`, with anything breaking under its own heading.
+- Try a branch before releasing: the manual Preview workflow (`gh workflow run preview.yml --ref <branch>`) builds its Windows `.zip` and `.mcpb` as run artifacts, for testing on a machine or VM.
+
+## Working agreements
+
+- No worktrees: finish the current work, then run anything else (benchmarks included) in the main tree.
+- No pull requests: commit straight to `main`; when work happens on a branch, squash it into one commit on `main`.
+- Run the reference-ad benchmark (3 runs, see Commands) before committing anything that changes what the agent sees: tool text, instructions, replies, field names. Report the numbers and wait for the owner's approval.
+- Docs describe what exists: no roadmap, no v2/MVP/phase labels in docs, comments or test names.
+
+## When you change…
+
+The agent-facing text lives in `src/server/mod.rs` (instructions and tool descriptions) and `src/server/schema.rs`; `tool_surface_stays_small` in `tests/e2e.rs` caps it at `TOOLS_LIST_MAX_CHARS` (10,000 characters). Each change below touches every listed place in the same commit:
+
+| Change | Also update |
+|---|---|
+| A scene field or feature | `docs/scene.md`; the tool text if the agent should know it; a guess in `src/ops/guesses/` if models will write a common alternative; unit and end-to-end tests |
+| A server flag | `src/options.rs` (its `HELP` and tests); the flags table in `docs/tools.md`; the README's Options line; `mcpb/manifest.json` if Claude Desktop users should set it |
+| A tool's reply | `docs/tools.md`; the reply readers in `tests/common/mod.rs` (`file_of`) and `src/server/cli.rs`; the reply snippets on the site |
+| A client or install channel | The README's Quick start; the site's Install tabs |
+| The one-line description | The GitHub repo description, `Cargo.toml`, `plugin/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `mcpb/manifest.json`, `server.json`, the `Dockerfile` label, `--help` in `src/options.rs`, the Homebrew formula in `keyline-dev/homebrew-tap`, the Glama listing and the site |
+| Anything that changes pixels | The macOS and Windows goldens (see Commands), reviewed by eye |
+| A distribution file (`plugin/`, `mcpb/`, `server.json`, `action.yml`, `Dockerfile`, the workflows) | The release checks that exercise it in `release.yml`; `claude plugin validate --strict` and `mcpb validate` pass |
+
+Other repos in the `keyline-dev` org:
+
+- `keyline-dev/keyline.dev`: the site. One static page; its images are keyline scenes in `scenes/`, rendered into `assets/` by `render.sh`; the logo is in `logo/`. Hosted on Cloudflare Pages from `main`.
+- `keyline-dev/homebrew-tap`: the Homebrew formula, bumped by the release workflow; edit it by hand only to change more than the version and checksum.
+
+Listings: the official MCP registry (from `server.json`, each release), Glama (claimed through `glama.json`), and awesome-mcp-servers. Contributions come under the agreement in `CONTRIBUTING.md`.
 
 ## Language
 
