@@ -1,0 +1,10 @@
+{
+  "name": "keyline-versus-browser-tooling",
+  "private": true,
+  "description": "Bench tooling for bench/versus-browser: the browser arms' Playwright CLI and Playwright MCP. Never a keyline dependency.",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@playwright/mcp": "0.0.83",
+    "playwright": "1.63.0"
+  }
+}
