@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vote by Mail — wide</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  :root {
+    --u: 0.85;                 /* content scale relative to the 1080x1350 master */
+    --navy: #1B2A5C;
+    --red: #D0202E;
+    --ink-soft: #5A6480;
+    --pad: calc(var(--u) * 72px);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #ffffff;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  .flyer {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  /* ---- flexible spacers: absorb leftover height, keep a designed minimum ---- */
+  .sp    { flex: 1 0 calc(var(--u) * 40px); min-height: calc(var(--u) * 18px); }
+  .sp-sm { flex: 1 0 calc(var(--u) * 30px); min-height: calc(var(--u) * 14px); }
+  .sp-xs { flex: 1 0 calc(var(--u) * 22px); min-height: calc(var(--u) * 10px); }
+
+  .pad { padding-left: var(--pad); padding-right: var(--pad); flex: 0 0 auto; }
+
+  /* ---------------- 1. headline ---------------- */
+  .head {
+    padding-top: calc(var(--u) * 56px);
+  }
+  h1 {
+    color: var(--navy);
+    font-size: calc(var(--u) * 74px);
+    line-height: 1.08;
+    font-weight: 800;
+    letter-spacing: calc(var(--u) * -1.4px);
+    text-wrap: balance;
+  }
+  h1 .hl { color: var(--red); }
+
+  /* ---------------- 2. photo band (full width, crops) ---------------- */
+  .photo {
+    flex: 9 1 calc(var(--u) * 430px);
+    min-height: calc(var(--u) * 240px);
+    max-height: 42vh;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    background: var(--navy);
+  }
+  .photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;          /* crop, never distort */
+    object-position: 50% 68%;   /* keep the horizon in frame in short bands */
+    display: block;
+  }
+
+  /* ---------------- 3. candidate columns ---------------- */
+  .cands {
+    display: flex;
+    align-items: stretch;
+    gap: calc(var(--u) * 26px);
+  }
+  .cand {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .cand .rule {
+    width: calc(var(--u) * 54px);
+    height: calc(var(--u) * 6px);
+    background: var(--red);
+    border-radius: 999px;
+    margin-bottom: calc(var(--u) * 16px);
+  }
+  .cand .nm {
+    color: var(--navy);
+    font-size: calc(var(--u) * 36px);
+    line-height: 1.14;
+    font-weight: 700;
+    letter-spacing: calc(var(--u) * -0.5px);
+    white-space: nowrap;
+  }
+  .cand .rl {
+    margin-top: calc(var(--u) * 8px);
+    color: var(--ink-soft);
+    font-size: calc(var(--u) * 24px);
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: calc(var(--u) * 1.6px);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ---------------- 4. red call-to-action bar (full width) ---------------- */
+  .cta {
+    flex: 0 0 auto;
+    width: 100%;
+    background: var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--u) * 24px);
+    padding: calc(var(--u) * 30px) var(--pad);
+  }
+  .cta img {
+    width: calc(var(--u) * 56px);
+    height: calc(var(--u) * 44px);
+    display: block;
+    flex: 0 0 auto;
+  }
+  .cta span {
+    color: #fff;
+    font-size: calc(var(--u) * 50px);
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: calc(var(--u) * 2.2px);
+    white-space: nowrap;
+  }
+
+  /* ---------------- 5. steps ---------------- */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--u) * 20px);
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 18px);
+  }
+  .step img {
+    width: calc(var(--u) * 40px);
+    height: calc(var(--u) * 40px);
+    flex: 0 0 auto;
+    display: block;
+  }
+  .step span {
+    color: var(--navy);
+    font-size: calc(var(--u) * 31px);
+    line-height: 1.22;
+    font-weight: 600;
+    letter-spacing: calc(var(--u) * -0.2px);
+  }
+
+  /* ---------------- 6. footer ---------------- */
+  .foot {
+    padding-bottom: calc(var(--u) * 48px);
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: calc(var(--u) * 22px);
+    line-height: 1.3;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+  <div class="flyer">
+
+    <div class="pad head">
+      <h1>Proven <span class="hl">RESULTS</span> for <span class="hl">WILLOWMERE</span> Families</h1>
+    </div>
+
+    <div class="sp"></div>
+
+    <div class="photo"><img src="photo.png" alt=""></div>
+
+    <div class="sp"></div>
+
+    <div class="pad">
+      <div class="cands">
+        <div class="cand"><div class="rule"></div><div class="nm">Dana Levi</div><div class="rl">Mayor</div></div>
+        <div class="cand"><div class="rule"></div><div class="nm">Omar Haddad</div><div class="rl">Council</div></div>
+        <div class="cand"><div class="rule"></div><div class="nm">Ruth Cohen</div><div class="rl">Council</div></div>
+      </div>
+    </div>
+
+    <div class="sp"></div>
+
+    <div class="cta">
+      <img src="mail.svg" alt="">
+      <span>VOTE BY MAIL</span>
+    </div>
+
+    <div class="sp"></div>
+
+    <div class="pad">
+      <div class="steps">
+        <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October&nbsp;20</span></div>
+        <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+        <div class="step"><img src="check.svg" alt=""><span>Mail it back by November&nbsp;3</span></div>
+      </div>
+    </div>
+
+    <div class="sp-sm"></div>
+
+    <div class="pad foot">Paid for by Willowmere Forward &middot; willowmereforward.org</div>
+
+  </div>
+</body>
+</html>

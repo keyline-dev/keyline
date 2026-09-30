@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker Card</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  :root {
+    --bg: #0F1226;
+    --accent: #7C5CFF;
+    --text: #FFFFFF;
+    --muted: rgba(255,255,255,0.68);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  .card {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background:
+      radial-gradient(1100px 760px at 88% 8%, rgba(124,92,255,0.28), transparent 62%),
+      radial-gradient(900px 700px at 4% 96%, rgba(124,92,255,0.16), transparent 60%),
+      var(--bg);
+    display: grid;
+  }
+
+  /* hairline accent bar along the top */
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--accent) 0%, #B49CFF 45%, rgba(124,92,255,0) 100%);
+  }
+
+  /* ---------- shared element styling ---------- */
+  .brand {
+    grid-area: brand;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    min-width: 0;
+  }
+  .brand img { display: block; height: 48px; width: auto; flex: none; }
+  .brand .rule {
+    width: 1px;
+    background: rgba(255,255,255,0.22);
+    align-self: stretch;
+    flex: none;
+  }
+  .brand span {
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    font-size: 21px;
+    line-height: 1.1;
+    white-space: nowrap;
+    color: rgba(255,255,255,0.92);
+  }
+
+  /* by default the rail is transparent so portrait + speaker are direct
+     grid items; landscape re-enables it as a real flex column. */
+  .rail { display: contents; }
+
+  .portrait {
+    grid-area: portrait;
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    overflow: hidden;
+    flex: none;
+    background: #1b1f3a;
+    box-shadow:
+      0 0 0 4px rgba(124,92,255,0.95),
+      0 0 0 14px rgba(124,92,255,0.16),
+      0 30px 70px rgba(0,0,0,0.45);
+  }
+  .portrait img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .speaker { grid-area: speaker; min-width: 0; }
+  .speaker .kicker {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .speaker h2 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.12;
+    font-size: 44px;
+  }
+  .speaker p {
+    margin-top: 10px;
+    font-weight: 500;
+    font-size: 23px;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+
+  .title {
+    grid-area: title;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.12;
+    font-size: 58px;
+    text-wrap: balance;
+    hyphens: none;
+    overflow-wrap: break-word;
+  }
+  .title em {
+    font-style: normal;
+    color: #C6B6FF;
+  }
+
+  .meta {
+    grid-area: meta;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 23px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--muted);
+  }
+  .meta .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+  }
+
+  .cta { grid-area: cta; display: flex; align-items: center; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    padding: 24px 46px;
+    border-radius: 999px;
+    white-space: nowrap;
+    box-shadow: 0 18px 44px rgba(124,92,255,0.38);
+  }
+  .btn svg { width: 20px; height: 20px; flex: none; }
+
+  /* ================= SQUARE 1080 x 1080 ================= */
+  @media (min-aspect-ratio: 9/10) and (max-aspect-ratio: 11/10) {
+    .card {
+      padding: 76px 78px 74px;
+      grid-template-columns: 216px 1fr;
+      grid-template-rows: auto auto auto auto auto;
+      grid-template-areas:
+        "brand    brand"
+        "portrait speaker"
+        "title    title"
+        "meta     meta"
+        "cta      cta";
+      column-gap: 40px;
+      align-content: space-between;
+      justify-items: start;
+      align-items: center;
+    }
+    .portrait { width: 216px; }
+    .title { font-size: 62px; }
+  }
+
+  /* ================= LANDSCAPE 1920 x 1080 ================= */
+  @media (min-aspect-ratio: 11/10) {
+    .card {
+      padding: 92px 100px 90px;
+      grid-template-columns: minmax(0, 1fr) 486px;
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      grid-template-areas:
+        "brand   portrait"
+        "title   portrait"
+        "meta    portrait"
+        "cta     portrait";
+      column-gap: 110px;
+      align-items: start;
+      justify-items: start;
+    }
+    .brand { margin-bottom: 8px; }
+    .brand img { height: 54px; }
+    .brand span { font-size: 24px; }
+
+    .title {
+      font-size: 74px;
+      align-self: center;
+      padding: 44px 0 46px;
+    }
+    .meta { font-size: 26px; margin-bottom: 40px; }
+    .btn { font-size: 26px; padding: 27px 52px; }
+
+    /* right rail: portrait + speaker identity stacked and centred */
+    .portrait { width: 408px; }
+    .rail {
+      grid-area: portrait;
+      grid-row: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+      width: 486px;
+      height: 100%;
+      justify-self: center;
+    }
+    .rail .speaker { text-align: center; width: 100%; }
+    .speaker h2 { font-size: 38px; white-space: nowrap; }
+    .speaker p { font-size: 22px; margin-top: 12px; }
+  }
+
+  /* ================= STORY 1080 x 1920 ================= */
+  @media (max-aspect-ratio: 9/10) {
+    .card {
+      padding: 130px 86px 124px;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto auto auto auto auto;
+      grid-template-areas:
+        "brand"
+        "portrait"
+        "speaker"
+        "title"
+        "meta"
+        "cta";
+      align-content: space-between;
+      justify-items: center;
+      row-gap: 0;
+      text-align: center;
+    }
+    .brand img { height: 56px; }
+    .brand span { font-size: 25px; }
+
+    .portrait { width: 360px; }
+    .speaker { max-width: 100%; }
+    .speaker h2 { font-size: 50px; }
+    .speaker p { font-size: 26px; margin-top: 14px; }
+
+    .title { font-size: 66px; max-width: 100%; }
+    .meta { font-size: 27px; }
+    .btn { font-size: 28px; padding: 30px 60px; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">
+      <img src="logo.svg" alt="Fieldnotes Conf logo">
+      <div class="rule"></div>
+      <span>FIELDNOTES CONF 2026</span>
+    </div>
+
+    <div class="rail">
+      <div class="portrait">
+        <img src="portrait.png" alt="Maya Okonkwo-Lindqvist">
+      </div>
+      <div class="speaker">
+        <span class="kicker">SPEAKER</span>
+        <h2>Maya Okonkwo-Lindqvist</h2>
+        <p>Principal Engineer, Northwind Labs</p>
+      </div>
+    </div>
+
+    <h1 class="title">Shipping at the speed of trust: <em>what ten years of on-call taught us about resilient systems</em></h1>
+
+    <div class="meta">
+      <span class="dot"></span>
+      <span>November 14, 2026 · Harbor Hall, Lisbon</span>
+    </div>
+
+    <div class="cta">
+      <a class="btn" href="#">
+        Get tickets
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

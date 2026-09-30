@@ -1,7 +1,36 @@
 task	arm	label	commit	claude_version	model	correct	total_tokens	input	cache_write	cache_read	output	thinking	fixed_overhead	peak_context	cost	turns	calls	images_seen	js_measure	secs	likeness_k	likeness_c	defects_judge	cold_cost	outcome	prompt
+reference-ad	browser-cli	1	d098e31	2.1.251	claude-opus-5[1m]	1	413635	1419	30172	366354	15690	8870	3659	32702	0.878	19	18	8	true	285	17.3	17.2	0	2.366	success	vs1
+reference-ad	browser-cli	2	d098e31	2.1.251	claude-opus-5[1m]	1	334328	1411	34788	283527	14602	5942	3651	37318	0.856	23	22	10	true	192	13.3	13.0	2	1.950	success	vs1
+reference-ad	browser-cli	3	46fda5b	2.1.251	claude-opus-5[1m]	1	336343	1411	29601	288250	17081	6953	3653	32131	0.868	21	20	7	true	233	11.0	10.7	2	2.010	success	vs1
+reference-ad	browser-cli	4	46fda5b	2.1.251	claude-opus-5[1m]	1	682386	1435	42385	618204	20362	9086	3659	44915	1.243	31	30	9	true	274	12.1	11.6	3	3.801	success	vs1
+reference-ad	browser-cli	5	46fda5b	2.1.251	claude-opus-5[1m]	1	748498	1439	39806	687701	19552	8473	3659	42336	1.232	37	36	12	true	353	11.7	11.3	2	4.114	success	vs1
 reference-ad	browser-cli	pilot1	8c8be36+dirty	2.1.251	claude-opus-5[1m]	1	507855	1420	39482	449571	17382	7214	3649	39484	1.055	27	26	7	true	261	13.7	13.3	2	2.871	success	vs1
+reference-ad	browser-mcp	1	d098e31	2.1.251	claude-opus-5[1m]	1	1396942	1474	36356	1343958	15154	5546	9291	44524	1.416	48	47	9	true	250	16.8	16.5	2	7.258	success	vs1
+reference-ad	browser-mcp	2	d098e31	2.1.251	claude-opus-5[1m]	1	1930240	1498	42213	1867603	18926	8413	9293	50381	1.831	60	59	10	true	307	13.8	13.5	2	9.998	success	vs1
+reference-ad	browser-mcp	3	46fda5b	2.1.251	claude-opus-5[1m]	1	2402654	1496	55916	2317823	27419	8467	9287	64084	2.405	76	75	9	true	398	14.6	14.2	3	12.531	success	vs1
+reference-ad	browser-mcp	4	46fda5b	2.1.251	claude-opus-5[1m]	1	1430328	1464	40928	1369348	18588	8599	9283	49096	1.560	45	44	9	true	287	17.8	17.5	0	7.495	success	vs1
+reference-ad	browser-mcp	5	46fda5b	2.1.251	claude-opus-5[1m]	1	882689	1451	27953	840416	12869	5660	9293	36121	1.023	36	35	7	true	196	14.7	14.4	2	4.644	success	vs1
 reference-ad	browser-mcp	pilot1	fc00080+dirty	2.1.251	claude-opus-5[1m]	1	693906	1434	35996	642379	14097	6287	9297	35998	1.035	33	32	5	true	224	19.9	19.6	4	3.730	success	vs1
+reference-ad	keyline	1	d098e31	2.1.251	claude-opus-5[1m]	0	159502	1308	16158	131497	10539	4241	5209	19922	0.492	11	10	2	false	139	12.6	12.4	2	0.997	success	vs1
+reference-ad	keyline	2	46fda5b	2.1.251	claude-opus-5[1m]	0	217105	1313	17919	187150	10723	6754	5209	21701	0.542	14	13	2	false	158	9.9	9.7	2	1.287	success	vs1
+reference-ad	keyline	3	46fda5b	2.1.251	claude-opus-5[1m]	1	124546	1305	13931	101003	8307	5096	5212	17713	0.399	10	9	2	false	113	14.1	14.0	0	0.778	success	vs1
+reference-ad	keyline	4	46fda5b	2.1.251	claude-opus-5[1m]	0	113168	1303	12570	91339	7956	4633	5207	16352	0.371	9	8	1	false	109	13.4	13.4	2	0.714	success	vs1
+reference-ad	keyline	5	46fda5b	2.1.251	claude-opus-5[1m]	1	110295	1308	12290	88702	7995	4200	5213	16072	0.368	10	9	2	false	110	13.5	13.1	0	0.701	success	vs1
 reference-ad	keyline	pilot1	fc00080+dirty	2.1.251	claude-opus-5[1m]	1	137441	1306	18050	109043	9042	5295	5212	18052	0.462	10	9	1	false	119	13.2	13.1	0	0.858	success	vs1
+speaker-card	browser-cli	1	d098e31	2.1.251	claude-opus-5[1m]	1	567524	1359	37578	510307	18280	6097	3568	40108	1.089	26	25	7	true	242			0	3.187	success	vs1
+speaker-card	browser-cli	2	46fda5b	2.1.251	claude-opus-5[1m]	1	450241	1354	35063	399052	14772	3487	3574	37593	0.921	27	26	7	true	190			0	2.531	success	vs1
+speaker-card	browser-cli	3	46fda5b	2.1.251	claude-opus-5[1m]	1	735439	1363	47480	664024	22572	8912	3568	50010	1.372	25	24	9	true	315			0	4.112	success	vs1
+speaker-card	browser-cli	4	46fda5b	2.1.251	claude-opus-5[1m]	1	394821	1351	35531	342429	15510	4244	3572	38061	0.916	23	22	8	true	207			0	2.271	success	vs1
+speaker-card	browser-cli	5	46fda5b	2.1.251	claude-opus-5[1m]	1	658540	1366	41731	599870	15573	3836	3570	44261	1.108	30	29	10	true	207			0	3.586	success	vs1
 speaker-card	browser-cli	pilot1	fc00080+dirty	2.1.251	claude-opus-5[1m]	1	666310	1362	44427	602162	18359	4818	3572	46957	1.205	34	33	10	true	235			0	3.681	success	vs1
+speaker-card	browser-mcp	1	d098e31	2.1.251	claude-opus-5[1m]	1	1388658	1401	46085	1321367	19805	4682	9206	54253	1.618	45	44	7	true	270			0	7.315	success	vs1
+speaker-card	browser-mcp	2	46fda5b	2.1.251	claude-opus-5[1m]	1	1377557	1402	43537	1317410	15208	4569	9206	51705	1.476	47	46	9	true	205			0	7.165	success	vs1
+speaker-card	browser-mcp	3	46fda5b	2.1.251	claude-opus-5[1m]	1	1131502	1395	35636	1080486	13985	2918	9208	43804	1.248	42	41	7	true	198			0	5.911	success	vs1
+speaker-card	browser-mcp	4	46fda5b	2.1.251	claude-opus-5[1m]	1	1865984	1425	46914	1801517	16128	3991	9210	55082	1.775	56	55	10	true	307			0	9.622	success	vs1
+speaker-card	browser-mcp	5	46fda5b	2.1.251	claude-opus-5[1m]	1	1402996	1401	42724	1344907	13964	3411	9200	50892	1.450	46	45	10	true	189			0	7.267	success	vs1
 speaker-card	browser-mcp	pilot1	fc00080+dirty	2.1.251	claude-opus-5[1m]	1	2129751	1433	50498	2055733	22087	5281	9206	58666	2.087	61	61	6	true	306			0	11.061	error_max_turns	vs1
+speaker-card	keyline	1	d098e31	2.1.251	claude-opus-5[1m]	1	254978	1256	19215	222362	12145	4481	5136	22899	0.608	16	14	3	false	151			0	1.505	success	vs1
+speaker-card	keyline	2	d098e31	2.1.251	claude-opus-5[1m]	1	263506	1256	17823	234120	10307	3940	5135	21605	0.554	17	16	4	false	160			0	1.509	success	vs1
+speaker-card	keyline	3	46fda5b	2.1.251	claude-opus-5[1m]	1	187242	1248	18700	153198	14096	3235	5138	22482	0.617	11	10	2	false	148			0	1.208	success	vs1
+speaker-card	keyline	4	46fda5b	2.1.251	claude-opus-5[1m]	1	166316	1246	17144	135036	12890	2832	5136	20926	0.562	11	10	2	false	144			0	1.079	success	vs1
 speaker-card	keyline	pilot1	fc00080+dirty	2.1.251	claude-opus-5[1m]	1	168875	1246	14843	143782	9004	3310	5138	18628	0.446	12	11	3	false	127			0	1.013	success	vs1

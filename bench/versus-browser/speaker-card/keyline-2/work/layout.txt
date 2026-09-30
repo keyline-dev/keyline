@@ -1,0 +1,60 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  header frame 72,72 936×48
+   logoImg image 72,72 160×48 contain
+   eventName text 250,84 303×24 20px
+  main frame 72,168 936×840
+   identity frame 72,168 936×176
+    portraitImg image 72,168 176×176 cover
+    idText frame 274,216 475×81
+     speakerName text 274,216 475×44 38px
+     speakerRole text 274,268 475×29 22px
+   content frame 72,390 936×618
+    talkTitle text 72,390 936×189 56px 3L
+    spacer1 spacer 72,613 936×191
+    divider rect 72,838 936×1
+    dateVenue text 72,873 936×32 24px
+    cta frame 72,939 206×69
+     ctaText text 112,959 126×29 24px
+  glow ellipse 594,-194 700×700
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  header frame 80,80 1760×54
+   logoImg image 80,80 180×54 contain
+   eventName text 278,94 327×27 22px
+  main frame 80,178 1760×822
+   identity frame 80,178 520×822
+    portraitImg image 80,374 320×320 cover
+    idText frame 80,722 520×83
+     speakerName text 80,722 520×46 40px
+     speakerRole text 80,776 520×29 22px
+   content frame 664,178 1176×822
+    talkTitle text 664,178 1176×234 70px 3L
+    spacer1 spacer 664,448 1176×339
+    divider rect 664,823 1176×1
+    dateVenue text 664,860 1176×35 26px
+    cta frame 664,931 206×69
+     ctaText text 704,951 126×29 24px
+  glow ellipse 1056,-194 700×700
+story 1080×1920
+ root frame 0,0 1080×1920
+  header frame 88,88 904×54
+   logoImg image 88,88 180×54 contain
+   eventName text 286,102 327×27 22px
+  main frame 88,214 904×1618
+   identity frame 88,214 904×472
+    portraitImg image 88,214 340×340 cover
+    idText frame 88,584 625×102
+     speakerName text 88,584 625×58 50px
+     speakerRole text 88,650 625×36 28px
+   content frame 88,746 904×1086
+    talkTitle text 88,746 904×480 86px 5L
+    spacer1 spacer 88,1270 904×300
+    divider rect 88,1614 904×1
+    dateVenue text 88,1659 904×41 30px
+    cta frame 88,1744 262×88
+     ctaText text 140,1770 158×36 30px
+  glow ellipse 594,-346 700×700

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Willowmere Forward — Vote by Mail (wide)</title>
+<style>
+@font-face {
+  font-family: "Inter";
+  src: url("Inter.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+/* ---- master design is authored at 1080x1350; --s scales all content ---- */
+:root {
+  --s: 0.85;
+  --navy: #1B2A5C;
+  --red: #D0202E;
+  --ink: #26324f;
+  --pad: calc(64px * var(--s));   /* horizontal content inset */
+  --photo-max: calc(560px * var(--s));
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  font-variant-ligatures: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.flyer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;  /* spare height becomes even breathing room */
+  overflow: hidden;
+  background: #fff;
+}
+
+/* ============ 1. headline ============ */
+.headline {
+  padding: calc(56px * var(--s)) var(--pad) calc(44px * var(--s));
+  font-size: calc(68px * var(--s));
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: calc(-0.015em);
+  color: var(--navy);
+  text-wrap: balance;
+  flex: 0 0 auto;
+}
+.headline .hl { color: var(--red); }
+
+/* ============ 2. photo band (full bleed) ============ */
+.photoband {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: calc(340px * var(--s));
+  /* never let the band get taller than it is wide-ish, so the crop stays sane */
+  max-height: min(var(--photo-max), 90vw);
+  overflow: hidden;
+  background: #8ab8e8;
+}
+.photoband img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;          /* crop, never distort */
+  object-position: 50% 52%;
+}
+
+/* ============ 3. candidate columns ============ */
+.candidates {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  padding: calc(40px * var(--s)) var(--pad);
+  gap: calc(24px * var(--s));
+}
+.cand {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+}
+.cand .name {
+  font-size: calc(36px * var(--s));
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--navy);
+  letter-spacing: calc(-0.01em);
+  white-space: nowrap;
+}
+.cand .role {
+  margin-top: calc(8px * var(--s));
+  font-size: calc(24px * var(--s));
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: calc(0.08em);
+  white-space: nowrap;
+}
+.cand .rule {
+  width: calc(56px * var(--s));
+  height: calc(4px * var(--s));
+  margin: calc(14px * var(--s)) auto 0;
+  background: var(--navy);
+  opacity: .22;
+  border-radius: 999px;
+}
+
+/* ============ 4. call-to-action bar (full bleed) ============ */
+.cta {
+  flex: 0 0 auto;
+  width: 100%;
+  background: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(24px * var(--s));
+  padding: calc(28px * var(--s)) var(--pad);
+}
+.cta img {
+  display: block;
+  width: calc(56px * var(--s));
+  height: calc(44px * var(--s));
+  flex: 0 0 auto;
+}
+.cta .label {
+  font-size: calc(48px * var(--s));
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  letter-spacing: calc(0.06em);
+  white-space: nowrap;
+}
+
+/* ============ 5. steps ============ */
+.steps {
+  flex: 0 0 auto;
+  padding: calc(40px * var(--s)) var(--pad) calc(30px * var(--s));
+  display: flex;
+  flex-direction: column;
+  gap: calc(24px * var(--s));
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: calc(20px * var(--s));
+}
+.step img {
+  display: block;
+  width: calc(40px * var(--s));
+  height: calc(40px * var(--s));
+  flex: 0 0 auto;
+}
+.step .txt {
+  font-size: calc(30px * var(--s));
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+  min-width: 0;
+}
+
+/* ============ 6. footer ============ */
+.footer {
+  flex: 0 0 auto;
+  padding: calc(18px * var(--s)) var(--pad) calc(34px * var(--s));
+  text-align: center;
+  font-size: calc(22px * var(--s));
+  font-weight: 500;
+  line-height: 1.3;
+  color: #6b7490;
+  border-top: calc(2px * var(--s)) solid #e6e9f2;
+  margin: 0 var(--pad);
+  text-wrap: balance;
+}
+
+
+/* short, very wide band: drop the crop window so the horizon reads */
+.photoband img { object-position: 50% 74%; }
+
+</style>
+</head>
+<body>
+<div class="flyer">
+
+  <h1 class="headline">Proven <span class="hl">RESULTS</span> for <span class="hl">WILLOWMERE</span> Families</h1>
+
+  <div class="photoband"><img src="photo.png" alt="Willowmere"></div>
+
+  <div class="candidates">
+    <div class="cand"><div class="name">Dana&nbsp;Levi</div><div class="role">Mayor</div><div class="rule"></div></div>
+    <div class="cand"><div class="name">Omar&nbsp;Haddad</div><div class="role">Council</div><div class="rule"></div></div>
+    <div class="cand"><div class="name">Ruth&nbsp;Cohen</div><div class="role">Council</div><div class="rule"></div></div>
+  </div>
+
+  <div class="cta">
+    <img src="mail.svg" alt="">
+    <div class="label">VOTE BY MAIL</div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><img src="check.svg" alt=""><div class="txt">Request your ballot by October&nbsp;20</div></div>
+    <div class="step"><img src="check.svg" alt=""><div class="txt">Fill it out at home</div></div>
+    <div class="step"><img src="check.svg" alt=""><div class="txt">Mail it back by November&nbsp;3</div></div>
+  </div>
+
+  <div class="footer">Paid for by Willowmere Forward&nbsp;· willowmereforward.org</div>
+
+</div>
+</body>
+</html>

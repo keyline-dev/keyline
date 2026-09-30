@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker Card</title>
+<style>
+  @font-face{
+    font-family:"Inter";
+    src:url("Inter.ttf");
+    font-weight:100 900;
+    font-style:normal;
+    font-display:block;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  :root{
+    --bg:#0F1226;
+    --accent:#7C5CFF;
+    --pad:72px;
+  }
+
+  html,body{width:100%;height:100%;}
+
+  body{
+    background:var(--bg);
+    color:#fff;
+    font-family:"Inter",sans-serif;
+    font-synthesis:none;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+
+  /* ---------- canvas ---------- */
+  .card{
+    position:relative;
+    width:100%;
+    height:100%;
+    padding:var(--pad);
+    overflow:hidden;
+    isolation:isolate;
+  }
+
+  /* ambient accent glows */
+  .card::before,
+  .card::after{
+    content:"";
+    position:absolute;
+    border-radius:50%;
+    z-index:-2;
+    pointer-events:none;
+  }
+  .card::before{
+    width:120%;aspect-ratio:1;
+    right:-55%;top:-55%;
+    background:radial-gradient(circle,rgba(124,92,255,.38) 0%,rgba(124,92,255,.10) 42%,rgba(124,92,255,0) 68%);
+  }
+  .card::after{
+    width:95%;aspect-ratio:1;
+    left:-48%;bottom:-52%;
+    background:radial-gradient(circle,rgba(124,92,255,.22) 0%,rgba(124,92,255,.05) 45%,rgba(124,92,255,0) 70%);
+  }
+
+  .stage{
+    position:relative;
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---------- header ---------- */
+  .header{
+    display:flex;
+    align-items:center;
+    gap:20px;
+    flex:0 0 auto;
+  }
+  .header img{display:block;width:160px;height:48px;}
+  .rule{
+    width:1px;height:34px;
+    background:rgba(255,255,255,.22);
+    flex:0 0 auto;
+  }
+  .event{
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:.14em;
+    white-space:nowrap;
+    color:rgba(255,255,255,.92);
+  }
+
+  /* ---------- speaker block ---------- */
+  .speaker{
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    gap:34px;
+    flex:0 0 auto;
+    min-width:0;
+  }
+  .avatar{
+    flex:0 0 auto;
+    width:196px;
+    height:196px;
+    border-radius:50%;
+    overflow:hidden;
+    background:#1b1f3d;
+    box-shadow:0 0 0 4px rgba(124,92,255,.95),
+               0 0 0 11px rgba(124,92,255,.16),
+               0 18px 48px rgba(0,0,0,.45);
+  }
+  .avatar img{
+    width:100%;height:100%;
+    object-fit:cover;
+    display:block;
+    border-radius:50%;
+  }
+  .who{min-width:0;}
+  .name{
+    font-size:46px;
+    font-weight:700;
+    letter-spacing:-.018em;
+    line-height:1.1;
+  }
+  .role{
+    margin-top:10px;
+    font-size:24px;
+    font-weight:500;
+    line-height:1.3;
+    color:var(--accent);
+  }
+
+  /* ---------- title ---------- */
+  .title{
+    font-size:68px;
+    font-weight:700;
+    line-height:1.13;
+    letter-spacing:-.022em;
+    text-wrap:balance;
+    flex:0 0 auto;
+  }
+
+  /* ---------- footer ---------- */
+  .footer{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:36px;
+    flex:0 0 auto;
+  }
+  .when{
+    font-size:24px;
+    font-weight:500;
+    line-height:1.35;
+    color:rgba(255,255,255,.78);
+  }
+  .cta{
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--accent);
+    color:#fff;
+    font-size:24px;
+    font-weight:600;
+    line-height:1;
+    padding:24px 44px;
+    border-radius:999px;
+    white-space:nowrap;
+    box-shadow:0 14px 34px rgba(124,92,255,.38);
+  }
+
+  /* rhythm spacers — fixed minimum, then absorb leftover space proportionally */
+  .s1{height:56px;flex:1 0 auto;}
+  .s2{height:50px;flex:1 0 auto;}
+  .s3{height:44px;flex:0 0 auto;}
+  .spacer{height:20px;flex:1.35 0 auto;}
+
+  /* =========================================================
+     LANDSCAPE — 1920 x 1080
+     ========================================================= */
+  @media (min-aspect-ratio:13/10){
+    :root{--pad:88px;}
+
+    .stage{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 560px;
+      grid-template-rows:auto minmax(0,1fr) auto;
+      column-gap:80px;
+      row-gap:0;
+    }
+    .header{grid-column:1;grid-row:1;align-self:start;}
+    .title{
+      grid-column:1;grid-row:2;
+      align-self:center;
+      font-size:80px;
+      line-height:1.1;
+      padding:36px 0;
+    }
+    .footer{
+      grid-column:1 / 3;grid-row:3;
+      align-self:end;
+      padding-top:40px;
+    }
+
+    .speaker{
+      grid-column:2;grid-row:1 / 3;
+      align-self:center;
+      justify-content:center;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      gap:36px;
+      padding-bottom:16px;
+    }
+    .who{width:100%;}
+    .avatar{width:400px;height:400px;}
+    .name{font-size:42px;}
+    .role{font-size:22px;}
+
+    .when{font-size:26px;}
+    .cta{font-size:25px;padding:25px 48px;}
+
+    .s1,.s2,.s3,.spacer{display:none;}
+  }
+
+  /* =========================================================
+     STORY — 1080 x 1920
+     ========================================================= */
+  @media (max-aspect-ratio:8/10){
+    :root{--pad:88px;}
+
+    /* keep the accent glows inside the tall frame */
+    .card::before{width:150%;right:-50%;top:-14%;}
+    .card::after{width:130%;left:-55%;bottom:-12%;}
+
+    .header{gap:24px;}
+    .header img{width:186px;height:56px;}
+    .event{font-size:25px;}
+    .rule{height:40px;}
+
+    .speaker{
+      flex-direction:column;
+      align-items:flex-start;
+      gap:40px;
+    }
+    .avatar{width:360px;height:360px;}
+    .name{font-size:60px;}
+    .role{font-size:30px;margin-top:14px;}
+
+    .title{font-size:82px;line-height:1.14;}
+
+    .footer{
+      flex-direction:column;
+      align-items:flex-start;
+      gap:44px;
+    }
+    .when{font-size:30px;}
+    .cta{font-size:29px;padding:30px 58px;}
+
+    .s1{height:104px;}
+    .s2{height:76px;}
+    .s3{height:76px;}
+    .spacer{min-height:0;}
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="stage">
+
+      <header class="header">
+        <img src="logo.svg" alt="Fieldnotes Conf logo">
+        <span class="rule"></span>
+        <span class="event">FIELDNOTES CONF 2026</span>
+      </header>
+
+      <div class="s1"></div>
+
+      <section class="speaker">
+        <div class="avatar"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+        <div class="who">
+          <div class="name">Maya Okonkwo-Lindqvist</div>
+          <div class="role">Principal Engineer, Northwind Labs</div>
+        </div>
+      </section>
+
+      <div class="s2"></div>
+
+      <h1 class="title">Shipping at the speed of trust: what ten years of on-call taught us about resilient systems</h1>
+
+      <div class="spacer"></div>
+      <div class="s3"></div>
+
+      <footer class="footer">
+        <div class="when">November 14, 2026 · Harbor Hall, Lisbon</div>
+        <div class="cta">Get tickets</div>
+      </footer>
+
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker card</title>
+<style>
+@font-face{
+  font-family:'Inter';
+  src:url('Inter.ttf') format('truetype');
+  font-weight:100 900;
+  font-style:normal;
+  font-display:block;
+}
+:root{
+  --bg:#0F1226;
+  --accent:#7C5CFF;
+  --ink:#FFFFFF;
+  --muted:rgba(255,255,255,.66);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{background:#000;}
+body{
+  font-family:'Inter',sans-serif;
+  font-variant-ligatures:none;
+  -webkit-font-smoothing:antialiased;
+}
+.card{
+  position:relative;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--ink);
+  display:grid;
+}
+.card::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(60% 55% at 78% 8%, rgba(124,92,255,.34) 0%, rgba(124,92,255,0) 62%),
+    radial-gradient(52% 48% at 4% 96%, rgba(124,92,255,.20) 0%, rgba(124,92,255,0) 60%);
+  pointer-events:none;
+}
+.card > *{position:relative;z-index:1;}
+
+/* ---------- brand ---------- */
+.brand{grid-area:brand;display:flex;align-items:center;gap:var(--brand-gap);}
+.brand img{display:block;height:var(--logo-h);width:auto;}
+.brand .rule{width:2px;height:var(--rule-h);background:rgba(255,255,255,.22);border-radius:2px;}
+.event{
+  font-weight:700;
+  font-size:var(--event-fs);
+  letter-spacing:.17em;
+  line-height:1;
+  white-space:nowrap;
+  text-transform:uppercase;
+}
+
+/* ---------- speaker ---------- */
+.speaker{grid-area:speaker;display:flex;align-items:center;gap:var(--sp-gap);}
+.avatar{
+  flex:none;
+  width:var(--av);
+  height:var(--av);
+  border-radius:50%;
+  overflow:hidden;
+  background:#1b1f3a;
+  box-shadow:0 0 0 var(--ring) rgba(124,92,255,.95), 0 0 0 calc(var(--ring) + 6px) rgba(124,92,255,.18);
+}
+.avatar img{width:100%;height:100%;object-fit:cover;object-position:50% 42%;display:block;}
+.who{min-width:0;}
+.name{
+  font-weight:700;
+  font-size:var(--name-fs);
+  line-height:1.1;
+  letter-spacing:-.015em;
+}
+.role{
+  margin-top:var(--role-mt);
+  font-weight:500;
+  font-size:var(--role-fs);
+  line-height:1.25;
+  color:var(--accent);
+}
+
+/* ---------- title ---------- */
+.title{
+  grid-area:title;
+  font-weight:800;
+  font-size:var(--title-fs);
+  line-height:1.1;
+  letter-spacing:-.022em;
+  text-wrap:balance;
+  align-self:center;
+}
+.title .hl{color:var(--accent);}
+
+/* ---------- footer ---------- */
+.foot{
+  grid-area:footer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:var(--foot-gap);
+}
+.meta{
+  font-weight:500;
+  font-size:var(--meta-fs);
+  line-height:1.3;
+  color:var(--muted);
+}
+.cta{
+  flex:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--accent);
+  color:#fff;
+  font-weight:700;
+  font-size:var(--cta-fs);
+  line-height:1;
+  letter-spacing:.005em;
+  padding:var(--cta-py) var(--cta-px);
+  border-radius:999px;
+  white-space:nowrap;
+  box-shadow:0 10px 34px rgba(124,92,255,.38);
+}
+
+/* ================= SQUARE 1080x1080 ================= */
+body.square .card{
+  width:1080px;height:1080px;
+  padding:78px 80px 76px;
+  grid-template-columns:1fr;
+  grid-template-rows:auto auto 1fr auto;
+  grid-template-areas:"brand" "speaker" "title" "footer";
+  row-gap:0;
+  --brand-gap:22px; --logo-h:46px; --rule-h:34px; --event-fs:22px;
+  --sp-gap:32px; --av:164px; --ring:4px;
+  --name-fs:42px; --role-fs:23px; --role-mt:9px;
+  --title-fs:66px;
+  --foot-gap:36px; --meta-fs:22px;
+  --cta-fs:23px; --cta-py:23px; --cta-px:44px;
+}
+body.square .speaker{margin-top:54px;}
+body.square .title{margin:60px 0 60px;}
+
+/* ================= LANDSCAPE 1920x1080 ================= */
+body.landscape .card{
+  width:1920px;height:1080px;
+  padding:80px 96px;
+  grid-template-columns:1046px 1fr;
+  grid-template-rows:auto 1fr auto;
+  grid-template-areas:
+    "brand  speaker"
+    "title  speaker"
+    "footer speaker";
+  column-gap:74px;
+  --brand-gap:24px; --logo-h:48px; --rule-h:36px; --event-fs:23px;
+  --sp-gap:0px; --av:308px; --ring:5px;
+  --name-fs:42px; --role-fs:23px; --role-mt:10px;
+  --title-fs:70px;
+  --foot-gap:52px; --meta-fs:23px;
+  --cta-fs:24px; --cta-py:24px; --cta-px:46px;
+}
+body.landscape .speaker{
+  flex-direction:column;
+  justify-content:center;
+  text-align:center;
+  align-self:center;
+}
+body.landscape .who{margin-top:40px;max-width:100%;}
+body.landscape .title{margin:60px 0;}
+body.landscape .foot{justify-content:flex-start;}
+
+/* ================= STORY 1080x1920 ================= */
+body.story .card{
+  width:1080px;height:1920px;
+  padding:110px 84px 120px;
+  grid-template-columns:1fr;
+  grid-template-rows:auto auto auto auto;
+  grid-template-areas:"brand" "speaker" "title" "footer";
+  align-content:space-between;
+  justify-items:center;
+  text-align:center;
+  --brand-gap:24px; --logo-h:50px; --rule-h:38px; --event-fs:24px;
+  --sp-gap:0px; --av:384px; --ring:6px;
+  --name-fs:56px; --role-fs:29px; --role-mt:14px;
+  --title-fs:74px;
+  --foot-gap:36px; --meta-fs:28px;
+  --cta-fs:31px; --cta-py:32px; --cta-px:64px;
+}
+body.story .speaker{flex-direction:column;margin-top:0;}
+body.story .who{margin-top:48px;}
+body.story .title{margin:0;max-width:912px;}
+body.story .foot{
+  flex-direction:column;
+  justify-content:center;
+  width:100%;
+}
+body.story .meta{order:2;}
+body.story .cta{order:1;}
+</style>
+</head>
+<body>
+<div class="card">
+  <header class="brand">
+    <img src="logo.svg" alt="Fieldnotes logo">
+    <span class="rule"></span>
+    <span class="event">Fieldnotes Conf 2026</span>
+  </header>
+
+  <div class="speaker">
+    <div class="avatar"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+    <div class="who">
+      <h2 class="name">Maya Okonkwo-Lindqvist</h2>
+      <p class="role">Principal Engineer, Northwind Labs</p>
+    </div>
+  </div>
+
+  <h1 class="title">Shipping at the speed of <span class="hl">trust</span>: what ten years of on-call taught us about resilient systems</h1>
+
+  <footer class="foot">
+    <div class="meta">November 14, 2026 · Harbor Hall, Lisbon</div>
+    <span class="cta">Get tickets</span>
+  </footer>
+</div>
+<script>
+  const size = new URLSearchParams(location.search).get('size') || 'square';
+  document.body.className = size;
+  document.documentElement.dataset.ready = '0';
+  document.fonts.ready.then(()=>{ document.documentElement.dataset.ready='1'; });
+</script>
+</body>
+</html>

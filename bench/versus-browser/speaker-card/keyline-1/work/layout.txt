@@ -1,0 +1,69 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  glow ellipse 626,-238 900×900
+  page frame 0,0 1080×1080
+   header frame 72,72 936×48
+    logomark image 72,72 160×48 contain
+    eventname text 252,84 291×24 20px
+   body frame 72,164 936×844
+    left frame 72,164 704×176
+     avatar image 72,164 176×176 cover
+     who frame 276,210 500×85
+      speaker text 276,210 500×46 40px
+      speakerrole text 276,264 500×31 24px
+    right frame 72,384 936×624
+     gap0 spacer 72,384 0×113
+     rule frame 72,529 88×5
+     talk text 72,566 936×201 60px 3L
+     gap1 spacer 72,799 0×113
+     footer frame 72,943 936×65
+      datevenue text 72,961 464×29 24px
+      cta frame 802,943 206×65
+       ctatext text 842,961 126×29 24px
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  glow ellipse 1190,-410 900×900
+  page frame 0,0 1920×1080
+   header frame 80,80 1760×48
+    logomark image 80,80 160×48 contain
+    eventname text 260,92 291×24 20px
+   body frame 80,168 1760×832
+    left frame 80,168 550×832
+     avatar image 80,168 260×260 cover
+     who frame 80,460 550×90
+      speaker text 80,460 550×51 44px
+      speakerrole text 80,519 550×31 24px
+    right frame 702,168 1138×832
+     gap0 spacer 702,168 0×206
+     rule frame 702,406 88×5
+     talk text 702,443 1138×222 66px 3L
+     gap1 spacer 702,697 0×206
+     footer frame 702,935 1138×65
+      datevenue text 702,953 464×29 24px
+      cta frame 1634,935 206×65
+       ctatext text 1674,953 126×29 24px
+story 1080×1920
+ root frame 0,0 1080×1920
+  glow ellipse 626,-230 900×900
+  page frame 0,0 1080×1920
+   header frame 88,88 904×57
+    logomark image 88,88 190×57 contain
+    eventname text 298,102 351×29 24px
+   body frame 88,209 904×1623
+    left frame 88,209 868×240
+     avatar image 88,209 240×240 cover
+     who frame 356,280 600×99
+      speaker text 356,280 600×55 48px
+      speakerrole text 356,343 600×36 28px
+    right frame 88,513 904×1319
+     gap0 spacer 88,513 0×339
+     rule frame 88,892 88×5
+     talk text 88,937 904×340 76px 4L
+     gap1 spacer 88,1317 0×339
+     footer frame 88,1696 904×136
+      datevenue text 88,1696 541×34 28px
+      cta frame 88,1762 227×70
+       ctatext text 128,1780 147×34 28px

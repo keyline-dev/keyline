@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Willowmere Forward — Vote by Mail</title>
+<style>
+@font-face{
+  font-family:'Inter';
+  src:url('Inter.ttf') format('truetype-variations');
+  font-weight:100 900;
+  font-style:normal;
+  font-display:block;
+}
+:root{
+  --s: __SCALE__;
+  --navy:#1B2A5C;
+  --red:#D0202E;
+  --pad: calc(56px * var(--s));
+  --photopos: __PHOTOPOS__;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;}
+body{
+  font-family:'Inter',sans-serif;
+  background:#fff;
+  color:var(--navy);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:geometricPrecision;
+}
+.flyer{
+  width:100%;height:100%;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* ---------- 1. headline ---------- */
+.header{
+  padding: calc(46px*var(--s)) var(--pad) calc(30px*var(--s));
+  flex:1 0 auto;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.eyebrow{
+  font-size:calc(19px*var(--s));
+  font-weight:700;
+  letter-spacing:calc(0.16em);
+  text-transform:uppercase;
+  color:var(--red);
+  margin-bottom:calc(14px*var(--s));
+}
+h1{
+  font-size:calc(62px*var(--s));
+  line-height:1.06;
+  font-weight:800;
+  letter-spacing:-0.022em;
+  color:var(--navy);
+}
+h1 .hl{color:var(--red);}
+
+/* ---------- 2. photo band ---------- */
+.photoband{
+  width:100%;
+  flex:3 3 calc(320px*var(--s));
+  min-height:calc(130px*var(--s));
+  max-height:62vh;
+  overflow:hidden;
+  position:relative;
+  background:#7EB3E8;
+}
+.photoband img{
+  width:100%;height:100%;
+  object-fit:cover;
+  object-position:center var(--photopos);
+  display:block;
+}
+
+/* ---------- 3. candidates ---------- */
+.candidates{
+  flex:1.2 0 auto;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding: calc(34px*var(--s)) var(--pad);
+}
+.candrow{
+  display:flex;
+  align-items:flex-start;
+  gap: calc(26px*var(--s));
+}
+.cand{
+  flex:1 1 0;
+  min-width:0;
+  text-align:center;
+}
+.cand .rule{
+  width:100%;
+  height:calc(6px*var(--s));
+  background:var(--red);
+  border-radius:calc(3px*var(--s));
+  margin-bottom:calc(16px*var(--s));
+}
+.cand .name{
+  font-size:calc(30px*var(--s));
+  font-weight:800;
+  letter-spacing:-0.015em;
+  line-height:1.12;
+  color:var(--navy);
+  white-space:nowrap;
+}
+.cand .role{
+  margin-top:calc(7px*var(--s));
+  font-size:calc(18px*var(--s));
+  font-weight:600;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:#6A7392;
+  white-space:nowrap;
+}
+
+/* ---------- 4. CTA bar ---------- */
+.cta{
+  flex:0.55 0 auto;
+  width:100%;
+  background:var(--red);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:calc(22px*var(--s));
+  padding:calc(24px*var(--s)) var(--pad);
+}
+.cta img{
+  width:calc(56px*var(--s));
+  height:calc(44px*var(--s));
+  display:block;
+  flex:0 0 auto;
+}
+.cta .txt{
+  font-size:calc(44px*var(--s));
+  font-weight:800;
+  letter-spacing:0.05em;
+  color:#fff;
+  line-height:1;
+  white-space:nowrap;
+}
+
+/* ---------- 5. steps ---------- */
+.steps{
+  flex:1.25 0 auto;
+  padding:calc(32px*var(--s)) var(--pad);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:calc(20px*var(--s));
+}
+.step{
+  display:flex;
+  align-items:center;
+  gap:calc(18px*var(--s));
+}
+.step img{
+  width:calc(40px*var(--s));
+  height:calc(40px*var(--s));
+  display:block;
+  flex:0 0 auto;
+}
+.step span{
+  font-size:calc(25px*var(--s));
+  font-weight:600;
+  line-height:1.2;
+  color:var(--navy);
+  letter-spacing:-0.005em;
+  min-width:0;
+}
+
+/* ---------- 6. footer ---------- */
+.footer{
+  flex:0.4 0 auto;
+  display:flex;align-items:center;justify-content:center;
+  width:100%;
+  background:var(--navy);
+  color:#fff;
+  text-align:center;
+  padding:calc(22px*var(--s)) var(--pad);
+  font-size:calc(18px*var(--s));
+  font-weight:500;
+  letter-spacing:0.02em;
+  line-height:1.3;
+}
+</style>
+</head>
+<body>
+<div class="flyer">
+
+  <header class="header">
+    <div class="eyebrow">Willowmere Forward &middot; 2026</div>
+    <h1>Proven <span class="hl">RESULTS</span> for <span class="hl">WILLOWMERE</span> Families</h1>
+  </header>
+
+  <div class="photoband"><img src="photo.png" alt="Willowmere"></div>
+
+  <section class="candidates">
+    <div class="candrow">
+      <div class="cand"><div class="rule"></div><div class="name">Dana Levi</div><div class="role">Mayor</div></div>
+      <div class="cand"><div class="rule"></div><div class="name">Omar Haddad</div><div class="role">Council</div></div>
+      <div class="cand"><div class="rule"></div><div class="name">Ruth Cohen</div><div class="role">Council</div></div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <img src="mail.svg" alt="">
+    <div class="txt">VOTE BY MAIL</div>
+  </section>
+
+  <section class="steps">
+    <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October&nbsp;20</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Mail it back by November&nbsp;3</span></div>
+  </section>
+
+  <footer class="footer">Paid for by Willowmere Forward &middot; willowmereforward.org</footer>
+
+</div>
+</body>
+</html>

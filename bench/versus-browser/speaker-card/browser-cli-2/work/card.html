@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker Card</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  :root {
+    --bg: #0F1226;
+    --accent: #7C5CFF;
+    --ink: #FFFFFF;
+    --muted: rgba(255,255,255,0.68);
+
+    /* square 1080x1080 defaults */
+    --pad: 78px;
+    --logo-w: 160px;
+    --event: 21px;
+    --avatar: 206px;
+    --ring: 6px;
+    --name: 46px;
+    --role: 24px;
+    --title: 58px;
+    --meta: 22px;
+    --btn-font: 22px;
+    --btn-pad: 20px 42px;
+    --gap: 42px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    font-family: 'Inter', sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  .card {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    padding: var(--pad);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  /* ambient accent glows */
+  .card::before,
+  .card::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .card::before {
+    width: 90vmin; height: 90vmin;
+    top: -42vmin; right: -32vmin;
+    background: radial-gradient(circle, rgba(124,92,255,0.34) 0%, rgba(124,92,255,0) 68%);
+  }
+  .card::after {
+    width: 70vmin; height: 70vmin;
+    bottom: -34vmin; left: -26vmin;
+    background: radial-gradient(circle, rgba(124,92,255,0.20) 0%, rgba(124,92,255,0) 70%);
+  }
+
+  /* ---------- header ---------- */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    flex: none;
+  }
+  .header img { width: var(--logo-w); height: auto; display: block; }
+  .rule {
+    width: 1px;
+    height: calc(var(--logo-w) * 0.2);
+    background: rgba(255,255,255,0.28);
+    flex: none;
+  }
+  .event-name {
+    font-size: var(--event);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+
+  /* ---------- body ---------- */
+  .body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--gap);
+    min-height: 0;
+    padding: var(--gap) 0;
+  }
+
+  .speaker {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--avatar) * 0.16);
+    flex: none;
+  }
+  .avatar {
+    width: var(--avatar);
+    height: var(--avatar);
+    flex: none;
+    border-radius: 50%;
+    padding: var(--ring);
+    background: linear-gradient(145deg, var(--accent), rgba(124,92,255,0.25));
+    box-shadow: 0 18px 50px rgba(0,0,0,0.42);
+  }
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 50%;
+    object-fit: cover;
+    aspect-ratio: 1 / 1;
+    background: #1b1f3a;
+  }
+  .who { min-width: 0; }
+  .who .nm {
+    font-size: var(--name);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.18;
+  }
+  .who .rl {
+    margin-top: 0.42em;
+    font-size: var(--role);
+    font-weight: 500;
+    color: var(--accent);
+    line-height: 1.3;
+  }
+
+  .title {
+    font-size: var(--title);
+    font-weight: 700;
+    line-height: 1.18;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+  .title .hl { color: var(--accent); }
+
+  /* ---------- footer ---------- */
+  .footer {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+    padding-top: calc(var(--gap) * 0.75);
+    border-top: 1px solid rgba(255,255,255,0.14);
+  }
+  .meta {
+    font-size: var(--meta);
+    font-weight: 500;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+  .btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--btn-pad);
+    border-radius: 999px;
+    background: var(--accent);
+    color: #FFFFFF;
+    font-size: var(--btn-font);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 14px 34px rgba(124,92,255,0.40);
+  }
+
+  /* =================== LANDSCAPE 1920x1080 =================== */
+  @media (min-aspect-ratio: 5/4) {
+    :root {
+      --pad: 84px;
+      --logo-w: 178px;
+      --event: 23px;
+      --avatar: 400px;
+      --ring: 8px;
+      --name: 46px;
+      --role: 24px;
+      --title: 70px;
+      --meta: 24px;
+      --btn-font: 24px;
+      --btn-pad: 22px 48px;
+      --gap: 38px;
+    }
+    .body {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 72px;
+    }
+    .left {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .speaker {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 32px;
+      flex: 0 0 auto;
+      width: 470px;
+    }
+    .who { width: 100%; }
+    .who .rl { margin-top: 0.5em; }
+    .title { max-width: 1120px; }
+  }
+
+  /* =================== STORY 1080x1920 =================== */
+  @media (max-aspect-ratio: 4/5) {
+    :root {
+      --pad: 90px;
+      --logo-w: 190px;
+      --event: 24px;
+      --avatar: 380px;
+      --ring: 9px;
+      --name: 62px;
+      --role: 31px;
+      --title: 82px;
+      --meta: 28px;
+      --btn-font: 30px;
+      --btn-pad: 30px 62px;
+      --gap: 60px;
+    }
+    .body {
+      justify-content: center;
+      gap: 68px;
+    }
+    .speaker {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 40px;
+    }
+    .footer {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 40px;
+      padding-top: 52px;
+    }
+    .btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+
+    <header class="header">
+      <img src="logo.svg" alt="Fieldnotes Conf logo">
+      <div class="rule"></div>
+      <div class="event-name">Fieldnotes Conf 2026</div>
+    </header>
+
+    <main class="body">
+      <div class="left">
+        <div class="title">
+          Shipping at the speed of <span class="hl">trust</span>: what ten years of
+          on-call taught us about resilient systems
+        </div>
+      </div>
+
+      <div class="speaker">
+        <div class="avatar"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+        <div class="who">
+          <div class="nm">Maya Okonkwo&#8209;Lindqvist</div>
+          <div class="rl">Principal Engineer, Northwind Labs</div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="meta">November 14, 2026 &middot; Harbor Hall, Lisbon</div>
+      <div class="btn">Get tickets</div>
+    </footer>
+
+  </div>
+</body>
+</html>

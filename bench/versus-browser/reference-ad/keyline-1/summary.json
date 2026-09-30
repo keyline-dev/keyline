@@ -1,0 +1,33 @@
+{
+  "arm": "keyline",
+  "cacheRead": 131497,
+  "cacheWrite": 16158,
+  "calls": 10,
+  "callsByTool": {
+    "layer_add": 2,
+    "layer_update": 4,
+    "render": 2,
+    "scene_describe": 2
+  },
+  "claudeVersion": "2.1.251",
+  "coldCostUsd": 0.9971720053745552,
+  "commit": "d098e31",
+  "costUsd": 0.49185950000000006,
+  "filesOk": true,
+  "fixedOverhead": 5209,
+  "imagesSeen": 2,
+  "input": 1308,
+  "jsMeasure": false,
+  "label": "1",
+  "model": "claude-opus-5[1m]",
+  "outcome": "success",
+  "output": 10539,
+  "peakContext": 19922,
+  "promptVersion": "vs1",
+  "secs": 138.629,
+  "task": "reference-ad",
+  "thinking": 4241,
+  "timedOut": false,
+  "totalTokens": 159502,
+  "turns": 11
+}

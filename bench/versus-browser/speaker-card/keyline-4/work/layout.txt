@@ -1,0 +1,60 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  header frame 72,72 936×48
+   logoImg image 72,72 160×48 contain
+   divider frame 254,80 2×32
+   eventNameTxt text 278,82 339×29 24px
+  main frame 72,164 936×844
+   speakerBlock frame 72,227 936×168
+    portraitImg image 72,227 168×168 cover
+    nameBlock frame 268,269 740×85
+     nameTxt text 268,269 740×46 40px
+     roleTxt text 268,323 740×31 24px
+   textBlock frame 72,435 936×510
+    rule frame 72,435 84×6
+    titleTxt text 72,475 936×296 66px 4L
+    dateTxt text 72,805 936×31 26px
+    btn frame 72,870 229×75
+     btnTxt text 116,892 141×31 26px
+  glow ellipse 540,-216 780×780
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  header frame 88,88 1744×48
+   logoImg image 88,88 160×48 contain
+   divider frame 270,96 2×32
+   eventNameTxt text 294,98 339×29 24px
+  main frame 88,176 1744×816
+   speakerBlock frame 88,355 440×459
+    portraitImg image 88,355 300×300 cover
+    nameBlock frame 88,683 440×131
+     nameTxt text 88,683 440×92 40px 2L
+     roleTxt text 88,783 440×31 24px
+   textBlock frame 608,377 1224×415
+    rule frame 608,377 84×6
+    titleTxt text 608,419 1224×195 58px 3L
+    dateTxt text 608,650 1224×31 26px
+    btn frame 608,717 229×75
+     btnTxt text 652,739 141×31 26px
+  glow ellipse 1114,-346 940×940
+story 1080×1920
+ root frame 0,0 1080×1920
+  header frame 80,80 920×48
+   logoImg image 80,80 160×48 contain
+   divider frame 262,88 2×32
+   eventNameTxt text 286,89 363×31 26px
+  main frame 80,216 920×1624
+   speakerBlock frame 80,485 920×260
+    portraitImg image 80,485 260×260 cover
+    nameBlock frame 368,565 632×99
+     nameTxt text 368,565 632×55 48px
+     roleTxt text 368,628 632×36 28px
+   textBlock frame 80,821 920×751
+    rule frame 80,821 84×6
+    titleTxt text 80,879 920×470 84px 5L
+    dateTxt text 80,1401 920×39 32px
+    btn frame 80,1492 250×80
+     btnTxt text 124,1514 162×36 30px
+  glow ellipse 410,-154 940×940

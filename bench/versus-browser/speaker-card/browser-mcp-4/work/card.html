@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker card</title>
+<style>
+@font-face{
+  font-family:"Inter";
+  src:url("Inter.ttf") format("truetype");
+  font-weight:100 900;
+  font-style:normal;
+  font-display:block;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#05060d}
+body{font-family:"Inter",sans-serif;-webkit-font-smoothing:antialiased}
+
+:root{
+  --bg:#0F1226;
+  --accent:#7C5CFF;
+}
+
+.card{
+  position:relative;
+  overflow:hidden;
+  background:var(--bg);
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+}
+/* soft accent glow */
+.card::before{
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(124,92,255,.38) 0%, rgba(124,92,255,0) 70%);
+  pointer-events:none;
+}
+.card::after{
+  content:"";
+  position:absolute;
+  left:0;top:0;right:0;
+  height:6px;
+  background:linear-gradient(90deg,var(--accent),#b9a6ff 55%,rgba(124,92,255,0));
+}
+
+/* ---------- shared pieces ---------- */
+.header{display:flex;align-items:center;gap:22px;flex:0 0 auto}
+.header img{display:block}
+.header .divider{width:2px;background:rgba(255,255,255,.22);border-radius:2px;align-self:stretch}
+.eventname{
+  font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:#EDEBFF;white-space:nowrap;
+}
+
+.person{display:flex;align-items:center;flex:0 0 auto}
+.portrait{
+  border-radius:50%;
+  flex:0 0 auto;
+  object-fit:cover;
+  aspect-ratio:1/1;
+  background:#1b1f3d;
+  box-shadow:0 0 0 var(--ring,6px) rgba(124,92,255,.85),
+             0 0 0 calc(var(--ring,6px) + 10px) rgba(124,92,255,.18);
+}
+.name{font-weight:800;letter-spacing:-.02em;line-height:1.08}
+.role{color:#A9AECF;font-weight:500;line-height:1.3}
+
+.kicker{
+  color:var(--accent);font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+}
+.title{
+  font-weight:800;letter-spacing:-.025em;line-height:1.12;
+  overflow-wrap:break-word;
+}
+.title em{font-style:normal;color:#C9BBFF}
+
+.meta{
+  display:flex;align-items:center;flex-wrap:wrap;flex:0 0 auto;
+  border-top:1px solid rgba(255,255,255,.14);
+}
+.date{color:#D7D9EC;font-weight:500;white-space:nowrap}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--accent);color:#fff;font-weight:700;
+  border-radius:999px;white-space:nowrap;
+  box-shadow:0 10px 30px rgba(124,92,255,.35);
+}
+
+/* ================= SQUARE 1080x1080 ================= */
+body.square .card{width:1080px;height:1080px;padding:76px 76px 72px}
+body.square .card::before{width:820px;height:820px;right:-300px;top:-330px}
+body.square .header{gap:24px}
+body.square .header img{width:160px;height:48px}
+body.square .header .divider{height:38px;align-self:center}
+body.square .eventname{font-size:26px}
+body.square .person{gap:34px;margin-top:66px}
+body.square .portrait{width:196px;height:196px;--ring:6px}
+body.square .name{font-size:47px}
+body.square .role{font-size:25px;margin-top:12px}
+body.square .kicker{font-size:20px;margin-top:76px}
+body.square .title{font-size:66px;margin-top:24px}
+body.square .meta{gap:28px;margin-top:auto;padding-top:56px;justify-content:space-between}
+body.square .date{font-size:25px}
+body.square .btn{font-size:25px;padding:0 44px;height:70px}
+
+/* ================= LANDSCAPE 1920x1080 ================= */
+body.landscape .card{width:1920px;height:1080px;padding:82px 96px 86px}
+body.landscape .card::before{width:1000px;height:1000px;right:-260px;top:-380px}
+body.landscape .split{display:flex;gap:80px;flex:1 1 auto;min-height:0;align-items:stretch}
+body.landscape .left{display:flex;flex-direction:column;flex:1 1 auto;min-width:0;padding-top:40px}
+body.landscape .right{
+  flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  width:540px;
+}
+body.landscape .person{flex-direction:column;align-items:center;width:100%}
+body.landscape .who{width:100%}
+body.landscape .header img{width:160px;height:48px}
+body.landscape .header .divider{height:40px;align-self:center}
+body.landscape .eventname{font-size:28px}
+body.landscape .portrait{width:430px;height:430px;--ring:7px}
+body.landscape .name{font-size:42px;margin-top:46px;text-align:center}
+body.landscape .role{font-size:24px;margin-top:14px;text-align:center}
+body.landscape .kicker{font-size:21px;margin-top:auto}
+body.landscape .title{font-size:88px;margin-top:28px}
+body.landscape .meta{gap:40px;margin-top:auto;padding-top:52px;justify-content:space-between}
+body.landscape .date{font-size:28px}
+body.landscape .btn{font-size:27px;padding:0 50px;height:76px}
+
+/* ================= STORY 1080x1920 ================= */
+body.story .card{width:1080px;height:1920px;padding:110px 84px 120px}
+body.story .card::before{width:900px;height:900px;left:-320px;top:340px}
+body.story .header{gap:24px;justify-content:center}
+body.story .header img{width:160px;height:48px}
+body.story .header .divider{height:38px;align-self:center}
+body.story .eventname{font-size:27px}
+body.story .person{flex-direction:column;align-items:center;margin-top:104px}
+body.story .portrait{width:440px;height:440px;--ring:8px}
+body.story .name{font-size:60px;margin-top:56px;text-align:center}
+body.story .role{font-size:30px;margin-top:16px;text-align:center}
+body.story .kicker{font-size:23px;margin-top:104px;text-align:center}
+body.story .title{font-size:76px;margin-top:30px;text-align:center}
+body.story .meta{
+  flex-direction:column;gap:44px;margin-top:auto;padding-top:96px;align-items:center;
+}
+body.story .date{font-size:30px;text-align:center}
+body.story .btn{font-size:30px;padding:0 60px;height:88px}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="header">
+    <img src="logo.svg" alt="">
+    <div class="divider"></div>
+    <div class="eventname">Fieldnotes Conf 2026</div>
+  </div>
+
+  <div class="split">
+    <div class="left">
+      <div class="kicker">Keynote</div>
+      <h1 class="title">Shipping at the speed of trust: <em>what ten years of on-call taught us about resilient systems</em></h1>
+
+      <div class="meta">
+        <div class="date">November 14, 2026 · Harbor Hall, Lisbon</div>
+        <div class="btn">Get tickets</div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="person">
+        <img class="portrait" src="portrait.png" alt="Maya Okonkwo-Lindqvist">
+        <div class="who">
+          <div class="name">Maya Okonkwo-Lindqvist</div>
+          <div class="role">Principal Engineer, Northwind Labs</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const size = new URLSearchParams(location.search).get('size') || 'square';
+  document.body.className = size;
+  // For square & story the DOM order should be: header, person, kicker, title, meta
+  if (size !== 'landscape') {
+    const card = document.getElementById('card');
+    const left = card.querySelector('.left');
+    const right = card.querySelector('.right');
+    const person = right.querySelector('.person');
+    card.insertBefore(person, card.querySelector('.split'));
+    while (left.firstChild) card.appendChild(left.firstChild);
+    card.querySelector('.split').remove();
+  }
+  document.fonts.ready.then(()=>document.documentElement.setAttribute('data-ready','1'));
+</script>
+</body>
+</html>

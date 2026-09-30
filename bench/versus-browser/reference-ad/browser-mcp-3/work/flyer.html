@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #ffffff; }
+  body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+
+  #flyer {
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    --s: 1;
+    --pad: calc(56px * var(--s));
+    --gap: calc(34px * var(--s));
+  }
+
+  .band { width: 100%; }
+
+  /* 1. Headline */
+  .headline {
+    flex: 1 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    padding: calc(46px * var(--s)) var(--pad) calc(36px * var(--s));
+    color: #1B2A5C;
+    font-weight: 800;
+    font-size: calc(var(--hl) * 1px * var(--s));
+    line-height: 1.1;
+    letter-spacing: calc(-1px * var(--s));
+    text-align: center;
+  }
+  .headline .r { color: #D0202E; }
+  .headline > .inner { flex: 1 1 auto; min-width: 0; }
+
+  /* 2. Photo band */
+  .photo {
+    flex: 3 0 calc(var(--photoH) * 1px);
+    min-height: calc(var(--photoH) * 1px);
+    max-height: calc(var(--photoMax) * 1px);
+    overflow: hidden;
+  }
+  .photo img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: center var(--objY);
+    display: block;
+  }
+
+  /* 3. Candidates */
+  .cands {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    padding: calc(40px * var(--s)) var(--pad) calc(38px * var(--s));
+    gap: var(--gap);
+  }
+  .cand { flex: 1 1 0; min-width: 0; text-align: center; }
+  .cand .name {
+    color: #1B2A5C; font-weight: 800;
+    font-size: calc(var(--nm) * 1px * var(--s));
+    line-height: 1.15;
+    letter-spacing: calc(-0.5px * var(--s));
+  }
+  .cand .rule {
+    width: calc(54px * var(--s)); height: calc(4px * var(--s));
+    background: #D0202E; border-radius: 999px;
+    margin: calc(13px * var(--s)) auto calc(11px * var(--s));
+  }
+  .cand .role {
+    color: #5A6485; font-weight: 700;
+    font-size: calc(var(--rl) * 1px * var(--s));
+    line-height: 1.2;
+    letter-spacing: calc(1.6px * var(--s));
+    text-transform: uppercase;
+  }
+
+  /* 4. CTA bar */
+  .cta {
+    flex: none;
+    background: #D0202E;
+    display: flex; align-items: center; justify-content: center;
+    gap: calc(24px * var(--s));
+    padding: calc(32px * var(--s)) calc(20px * var(--s));
+  }
+  .cta img {
+    width: calc(56px * var(--s)); height: calc(44px * var(--s));
+    display: block; flex: none;
+  }
+  .cta span {
+    color: #fff; font-weight: 800;
+    font-size: calc(var(--ct) * 1px * var(--s));
+    letter-spacing: calc(2px * var(--s));
+    line-height: 1.3; white-space: nowrap;
+  }
+
+  /* 5. Steps */
+  .steps {
+    flex: 1 0 auto;
+    padding: calc(42px * var(--s)) var(--pad) calc(34px * var(--s));
+    display: flex; flex-direction: column; justify-content: center;
+    gap: calc(26px * var(--s));
+  }
+  .step { display: flex; align-items: center; gap: calc(20px * var(--s)); }
+  .step img {
+    width: calc(40px * var(--s)); height: calc(40px * var(--s));
+    flex: none; display: block;
+  }
+  .step span {
+    color: #1B2A5C; font-weight: 600;
+    font-size: calc(var(--st) * 1px * var(--s));
+    line-height: 1.25;
+  }
+
+  /* 6. Footer */
+  .footer {
+    flex: none;
+    padding: calc(26px * var(--s)) calc(16px * var(--s)) calc(30px * var(--s));
+    text-align: center;
+    color: #5A6485; font-weight: 500;
+    font-size: calc(var(--ft) * 1px * var(--s));
+    line-height: 1.35;
+    border-top: calc(2px * var(--s)) solid #E4E7F0;
+  }
+
+  /* --- sky (narrow) variant: candidates stack --- */
+  #flyer.sky .cands { flex-direction: column; gap: calc(24px * var(--s)); }
+  #flyer.sky .steps { gap: calc(24px * var(--s)); }
+</style>
+</head>
+<body>
+<div id="flyer">
+  <div class="headline band"><div class="inner">Proven <span class="r">RESULTS</span> for <span class="r">WILLOWMERE</span> Families</div></div>
+
+  <div class="photo band"><img src="photo.png" alt=""></div>
+
+  <div class="cands band">
+    <div class="cand">
+      <div class="name">Dana Levi</div>
+      <div class="rule"></div>
+      <div class="role">Mayor</div>
+    </div>
+    <div class="cand">
+      <div class="name">Omar Haddad</div>
+      <div class="rule"></div>
+      <div class="role">Council</div>
+    </div>
+    <div class="cand">
+      <div class="name">Ruth Cohen</div>
+      <div class="rule"></div>
+      <div class="role">Council</div>
+    </div>
+  </div>
+
+  <div class="cta band">
+    <img src="mail.svg" alt="">
+    <span>VOTE BY MAIL</span>
+  </div>
+
+  <div class="steps band">
+    <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October&nbsp;20</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Mail it back by November&nbsp;3</span></div>
+  </div>
+
+  <div class="footer band">
+    Paid for by Willowmere Forward · willowmereforward.org
+  </div>
+</div>
+
+<script>
+  const PRESETS = {
+    portrait: { w:1080, h:1350, s:1,    variant:'',    photoH:430, photoMax:9999, objY:'45%',
+                hl:64, nm:34, rl:23, ct:52, st:30, ft:21 },
+    wide:     { w:1200, h:1000, s:0.85, variant:'',    photoH:300, photoMax:9999, objY:'85%',
+                hl:64, nm:34, rl:23, ct:52, st:30, ft:21 },
+    sky:      { w:300,  h:600,  s:0.28, variant:'sky', photoH:150, photoMax:169, objY:'50%',
+                hl:64, nm:34, rl:23, ct:52, st:30, ft:21 }
+  };
+
+  function layout(name) {
+    const p = PRESETS[name];
+    const f = document.getElementById('flyer');
+    f.className = p.variant;
+    f.style.width = p.w + 'px';
+    f.style.height = p.h + 'px';
+    for (const k of ['s','photoH','photoMax','objY','hl','nm','rl','ct','st','ft'])
+      f.style.setProperty('--' + k, p[k]);
+    document.body.style.width = p.w + 'px';
+    document.body.style.height = p.h + 'px';
+    return p;
+  }
+  window.layout = layout;
+
+  // measurement helper: report overflow / clipping problems
+  window.audit = function () {
+    const f = document.getElementById('flyer');
+    const fb = f.getBoundingClientRect();
+    const out = { flyer: [f.clientWidth, f.clientHeight],
+                  scrollH: f.scrollHeight, items: [] };
+    f.querySelectorAll('.headline,.photo,.cands,.cta,.steps,.footer,.cand,.step,.cta span,.cand .name,.cand .role,.step span,.footer')
+     .forEach(el => {
+       const r = el.getBoundingClientRect();
+       const cls = el.className || el.tagName;
+       out.items.push({
+         cls, top: +(r.top - fb.top).toFixed(1), bottom: +(r.bottom - fb.top).toFixed(1),
+         left: +(r.left - fb.left).toFixed(1), right: +(r.right - fb.left).toFixed(1),
+         ovX: el.scrollWidth - el.clientWidth, ovY: el.scrollHeight - el.clientHeight
+       });
+     });
+    return out;
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker card</title>
+<style>
+  @font-face{
+    font-family:"Inter";
+    src:url("Inter.ttf") format("truetype");
+    font-weight:100 900;
+    font-style:normal;
+    font-display:block;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:#0F1226;}
+  body{
+    font-family:"Inter",sans-serif;
+    color:#fff;
+    -webkit-font-smoothing:antialiased;
+    font-synthesis:none;
+  }
+
+  .card{
+    position:relative;
+    overflow:hidden;
+    background:#0F1226;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* soft accent glow */
+  .card::before{
+    content:"";
+    position:absolute;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(124,92,255,.38) 0%, rgba(124,92,255,0) 68%);
+    pointer-events:none;
+  }
+  .card::after{
+    content:"";
+    position:absolute;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(124,92,255,.16) 0%, rgba(124,92,255,0) 70%);
+    pointer-events:none;
+  }
+
+  .inner{position:relative;z-index:2;display:flex;flex-direction:column;width:100%;height:100%;}
+
+  /* ---------- header ---------- */
+  .brand{display:flex;align-items:center;flex:0 0 auto;}
+  .brand img{display:block;}
+  .rule{background:rgba(255,255,255,.22);flex:0 0 auto;}
+  .event{
+    font-weight:700;
+    text-transform:uppercase;
+    white-space:nowrap;
+    color:#fff;
+  }
+
+  /* ---------- speaker ---------- */
+  .who{display:flex;align-items:center;flex:0 0 auto;}
+  .avatar{
+    flex:0 0 auto;
+    border-radius:50%;
+    background-image:url("portrait.png");
+    background-size:cover;
+    background-position:center 22%;
+    background-repeat:no-repeat;
+  }
+  .name{font-weight:700;letter-spacing:-.015em;white-space:nowrap;}
+  .role{font-weight:500;color:#B9AEF2;}
+
+  /* ---------- title ---------- */
+  .title{
+    font-weight:700;
+    letter-spacing:-.022em;
+    text-wrap:balance;
+    color:#fff;
+  }
+  .title .hl{color:#7C5CFF;}
+
+  /* ---------- footer ---------- */
+  .hr{width:100%;height:1px;background:rgba(255,255,255,.15);flex:0 0 auto;margin-top:auto;}
+  .foot{display:flex;align-items:center;flex:0 0 auto;}
+  .when{font-weight:500;color:#D5D2E6;white-space:nowrap;}
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:#7C5CFF;
+    color:#fff;
+    font-weight:700;
+    white-space:nowrap;
+    border-radius:999px;
+  }
+
+  /* =======================================================
+     SQUARE 1080 x 1080
+     ======================================================= */
+  body.square .card{width:1080px;height:1080px;padding:76px 80px;}
+  body.square .card::before{width:820px;height:820px;right:-300px;top:-330px;}
+  body.square .card::after{width:700px;height:700px;left:-320px;bottom:-300px;}
+
+  body.square .brand{gap:22px;}
+  body.square .brand img{width:160px;height:48px;}
+  body.square .rule{width:2px;height:34px;}
+  body.square .event{font-size:25px;letter-spacing:.17em;}
+
+  body.square .who{gap:30px;margin-top:auto;}
+  body.square .avatar{
+    width:168px;height:168px;
+    box-shadow:0 0 0 4px #7C5CFF, 0 0 0 12px rgba(124,92,255,.20);
+  }
+  body.square .name{font-size:44px;line-height:1.1;}
+  body.square .role{font-size:23px;line-height:1.35;margin-top:9px;}
+
+  body.square .title{font-size:70px;line-height:1.14;margin-top:58px;}
+
+  body.square .hr{margin-top:auto;}
+  body.square .foot{padding-top:40px;gap:28px;justify-content:space-between;}
+  body.square .when{font-size:24px;}
+  body.square .btn{font-size:24px;height:70px;padding:0 44px;letter-spacing:.005em;}
+
+  /* =======================================================
+     LANDSCAPE 1920 x 1080
+     ======================================================= */
+  body.landscape .card{width:1920px;height:1080px;padding:74px 96px;}
+  body.landscape .card::before{width:900px;height:900px;right:-260px;top:-380px;}
+  body.landscape .card::after{width:760px;height:760px;left:-340px;bottom:-330px;}
+
+  body.landscape .brand{gap:24px;}
+  body.landscape .brand img{width:160px;height:48px;}
+  body.landscape .rule{width:2px;height:34px;}
+  body.landscape .event{font-size:26px;letter-spacing:.18em;}
+
+  body.landscape .cols{
+    display:flex;
+    align-items:center;
+    gap:88px;
+    flex:1 1 auto;
+    min-height:0;
+    padding:44px 0 0;
+  }
+  body.landscape .left{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;}
+  body.landscape .right{
+    flex:0 0 auto;
+    width:500px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+  }
+  body.landscape .who{flex-direction:column;align-items:center;}
+
+  body.landscape .avatar{
+    width:360px;height:360px;
+    box-shadow:0 0 0 6px #7C5CFF, 0 0 0 18px rgba(124,92,255,.18);
+  }
+  body.landscape .name{font-size:38px;line-height:1.15;margin-top:36px;}
+  body.landscape .role{font-size:22px;line-height:1.4;margin-top:10px;white-space:nowrap;}
+
+  body.landscape .title{font-size:84px;line-height:1.12;}
+
+  body.landscape .hr{margin-top:0;}
+  body.landscape .foot{padding-top:40px;gap:36px;justify-content:space-between;}
+  body.landscape .when{font-size:26px;}
+  body.landscape .btn{font-size:25px;height:74px;padding:0 48px;}
+
+  /* =======================================================
+     STORY 1080 x 1920
+     ======================================================= */
+  body.story .card{width:1080px;height:1920px;padding:110px 84px 104px;align-items:center;text-align:center;}
+  body.story .card::before{width:900px;height:900px;right:-320px;top:-360px;}
+  body.story .card::after{width:820px;height:820px;left:-340px;bottom:-280px;}
+  body.story .inner{align-items:center;text-align:center;}
+
+  body.story .brand{gap:24px;justify-content:center;}
+  body.story .brand img{width:160px;height:48px;}
+  body.story .rule{width:2px;height:34px;}
+  body.story .event{font-size:26px;letter-spacing:.18em;}
+
+  body.story .who{flex-direction:column;align-items:center;margin-top:auto;}
+  body.story .avatar{
+    width:400px;height:400px;
+    box-shadow:0 0 0 7px #7C5CFF, 0 0 0 20px rgba(124,92,255,.18);
+  }
+  body.story .name{font-size:56px;line-height:1.12;margin-top:48px;}
+  body.story .role{font-size:28px;line-height:1.4;margin-top:16px;}
+
+  body.story .title{font-size:88px;line-height:1.14;margin-top:84px;}
+
+  body.story .hr{margin-top:auto;}
+  body.story .foot{flex-direction:column;padding-top:60px;gap:42px;}
+  body.story .when{font-size:28px;}
+  body.story .btn{font-size:27px;height:82px;padding:0 56px;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="inner" id="inner"></div>
+  </div>
+
+<script>
+  const SIZE = new URLSearchParams(location.search).get("size") || "square";
+  document.body.className = SIZE;
+
+  const BRAND = `
+    <div class="brand">
+      <img src="logo.svg" alt="">
+      <div class="rule"></div>
+      <div class="event">Fieldnotes Conf 2026</div>
+    </div>`;
+
+  const WHO = `
+    <div class="who">
+      <div class="avatar" role="img" aria-label="Portrait of Maya Okonkwo-Lindqvist"></div>
+      <div class="whotext">
+        <div class="name">Maya Okonkwo-Lindqvist</div>
+        <div class="role">Principal Engineer, Northwind Labs</div>
+      </div>
+    </div>`;
+
+  const TITLE = `
+    <h1 class="title">Shipping at the speed of <span class="hl">trust</span>: what ten years of on-call taught us about resilient systems</h1>`;
+
+  const FOOT = `
+    <div class="hr"></div>
+    <div class="foot">
+      <div class="when">November 14, 2026 &middot; Harbor Hall, Lisbon</div>
+      <div class="btn">Get tickets</div>
+    </div>`;
+
+  let html;
+  if (SIZE === "landscape") {
+    html = BRAND + `
+      <div class="cols">
+        <div class="left">` + TITLE + `</div>
+        <div class="right">` + WHO + `</div>
+      </div>` + FOOT;
+  } else {
+    html = BRAND + WHO + TITLE + FOOT;
+  }
+  document.getElementById("inner").innerHTML = html;
+
+  // signal font + image readiness
+  window.__ready = false;
+  Promise.all([
+    document.fonts.load('700 60px Inter'),
+    document.fonts.load('500 24px Inter'),
+    document.fonts.ready
+  ]).then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))
+    .then(() => { window.__ready = true; });
+</script>
+</body>
+</html>

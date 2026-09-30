@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker Card</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  :root {
+    --bg: #0F1226;
+    --accent: #7C5CFF;
+    --muted: rgba(255,255,255,0.68);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #05060f;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  .card {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    color: #fff;
+    display: flex;
+    isolation: isolate;
+  }
+
+  /* decorative glow */
+  .card::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,92,255,0.40) 0%, rgba(124,92,255,0.12) 45%, rgba(124,92,255,0) 70%);
+    pointer-events: none;
+  }
+  .card::after {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    left: 0; right: 0; bottom: 0;
+    height: 10px;
+    background: linear-gradient(90deg, var(--accent) 0%, #B49CFF 50%, rgba(124,92,255,0.25) 100%);
+  }
+
+  .inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ---------- shared pieces ---------- */
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+  }
+  .brand img { display: block; }
+  .brand .divider {
+    width: 2px;
+    background: rgba(255,255,255,0.22);
+    align-self: stretch;
+    margin: 2px 0;
+  }
+  .brand .event {
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: rgba(255,255,255,0.92);
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  .portrait {
+    border-radius: 50%;
+    overflow: hidden;
+    flex: none;
+    background: #1b1f3d;
+    box-shadow: 0 0 0 var(--ring, 6px) rgba(124,92,255,0.95),
+                0 0 0 calc(var(--ring, 6px) + 8px) rgba(124,92,255,0.18);
+  }
+  .portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 42%;
+    display: block;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 34px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  .name {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.04;
+  }
+  .role {
+    font-weight: 500;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+
+  .title {
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+  .title .nb { white-space: nowrap; }
+  .title em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: rgba(255,255,255,0.80);
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .meta .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    border-radius: 999px;
+    white-space: nowrap;
+    line-height: 1;
+    box-shadow: 0 10px 34px rgba(124,92,255,0.40);
+  }
+
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 40px;
+  }
+
+  /* =======================================================
+     SQUARE 1080 x 1080
+     ======================================================= */
+  body.square .card { width: 1080px; height: 1080px; }
+  body.square .card::before { width: 900px; height: 900px; right: -320px; top: -300px; }
+  body.square .inner {
+    flex-direction: column;
+    padding: 76px 80px 84px;
+    gap: 0;
+  }
+  body.square .brand img { width: 160px; height: 48px; }
+  body.square .brand .event { font-size: 23px; }
+  body.square .speaker {
+    display: flex; align-items: center; gap: 34px;
+    margin-top: 62px;
+  }
+  body.square .portrait { width: 188px; height: 188px; --ring: 6px; }
+  body.square .eyebrow { font-size: 15px; margin-bottom: 14px; }
+  body.square .name { font-size: 46px; }
+  body.square .role { font-size: 24px; margin-top: 12px; }
+  body.square .title { font-size: 74px; margin-top: 72px; }
+  body.square .footer { margin-top: auto; padding-top: 60px; }
+  body.square .meta { font-size: 25px; }
+  body.square .btn { font-size: 24px; padding: 25px 46px; }
+
+  /* =======================================================
+     LANDSCAPE 1920 x 1080
+     ======================================================= */
+  body.landscape .card { width: 1920px; height: 1080px; }
+  body.landscape .card::before { width: 1000px; height: 1000px; right: -280px; top: -260px; }
+  body.landscape .inner {
+    flex-direction: row;
+    align-items: stretch;
+    padding: 84px 96px 92px;
+    gap: 96px;
+  }
+  body.landscape .left {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  body.landscape .right {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+  }
+  body.landscape .brand img { width: 173px; height: 52px; }
+  body.landscape .brand .event { font-size: 25px; }
+  body.landscape .title { font-size: 88px; margin-top: 52px; max-width: 1160px; text-wrap-style: stable; }
+  body.landscape .speaker { margin-top: 44px; }
+  body.landscape .eyebrow { font-size: 16px; margin-bottom: 16px; }
+  body.landscape .name { font-size: 50px; }
+  body.landscape .role { font-size: 26px; margin-top: 12px; }
+  body.landscape .footer { margin-top: auto; padding-top: 52px; }
+  body.landscape .meta { font-size: 27px; }
+  body.landscape .btn { font-size: 26px; padding: 27px 52px; }
+  body.landscape .portrait { width: 440px; height: 440px; --ring: 9px; }
+
+  /* =======================================================
+     STORY 1080 x 1920
+     ======================================================= */
+  body.story .card { width: 1080px; height: 1920px; }
+  body.story .card::before { width: 1000px; height: 1000px; right: -330px; top: -280px; }
+  body.story .inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 130px 88px 150px;
+  }
+  body.story .brand img { width: 187px; height: 56px; }
+  body.story .brand .event { font-size: 26px; }
+  body.story .portrait { width: 460px; height: 460px; --ring: 9px; margin-top: 110px; }
+  body.story .eyebrow { font-size: 18px; margin-top: 76px; margin-bottom: 0; }
+  body.story .name { font-size: 62px; margin-top: 28px; }
+  body.story .role { font-size: 30px; margin-top: 18px; }
+  body.story .title { font-size: 76px; margin-top: 100px; }
+  body.story .footer {
+    margin-top: auto;
+    padding-top: 72px;
+    flex-direction: column;
+    gap: 44px;
+  }
+  body.story .meta { font-size: 29px; justify-content: center; }
+  body.story .btn { font-size: 28px; padding: 30px 62px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="inner" id="inner"></div>
+</div>
+
+<script>
+  const size = new URLSearchParams(location.search).get('size') || 'square';
+  document.body.className = size;
+
+  const brand = `
+    <div class="brand">
+      <img src="logo.svg" alt="">
+      <div class="divider"></div>
+      <div class="event">FIELDNOTES CONF 2026</div>
+    </div>`;
+
+  const portrait = `
+    <div class="portrait"><img src="portrait.png" alt=""></div>`;
+
+  const speakerText = `
+    <div class="who">
+      <div class="eyebrow">Featured Speaker</div>
+      <div class="name">Maya&nbsp;Okonkwo-Lindqvist</div>
+      <div class="role">Principal Engineer, Northwind&nbsp;Labs</div>
+    </div>`;
+
+  const title = `
+    <h1 class="title">Shipping at the speed of <em>trust</em>: what ten years of <span class="nb">on-call</span> taught us about resilient systems</h1>`;
+
+  const footer = `
+    <div class="footer">
+      <div class="meta"><span class="dot"></span><span>November 14, 2026 · Harbor Hall, Lisbon</span></div>
+      <div class="btn">Get tickets</div>
+    </div>`;
+
+  const inner = document.getElementById('inner');
+
+  if (size === 'landscape') {
+    inner.innerHTML = `
+      <div class="left">
+        ${brand}
+        ${title}
+        <div class="speaker">${speakerText}</div>
+        ${footer}
+      </div>
+      <div class="right">${portrait}</div>`;
+  } else if (size === 'story') {
+    inner.innerHTML = `${brand}${portrait}${speakerText}${title}${footer}`;
+  } else {
+    inner.innerHTML = `
+      ${brand}
+      <div class="speaker">${portrait}${speakerText}</div>
+      ${title}
+      ${footer}`;
+  }
+
+  document.fonts.ready.then(() => document.documentElement.setAttribute('data-ready', '1'));
+</script>
+</body>
+</html>

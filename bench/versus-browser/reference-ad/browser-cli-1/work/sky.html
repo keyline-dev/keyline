@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: "Inter";
+    src: url("Inter.ttf") format("truetype");
+    font-weight: 100 900;
+    font-style: normal;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:300px; height:600px; overflow:hidden; }
+  body {
+    font-family:"Inter", sans-serif;
+    background:#fff;
+    color:#1B2A5C;
+    -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column;
+    justify-content:space-evenly;
+    padding:14.56px 0 12.32px;
+    row-gap:9.52px;
+  }
+  .pad { padding-left:16.8px; padding-right:16.8px; }
+
+  /* 1. headline */
+  h1 {
+    font-size:19.6px; line-height:1.08; font-weight:800;
+    letter-spacing:-0.448px; text-wrap:balance;
+  }
+  h1 em { color:#D0202E; font-style:normal; }
+
+  /* 2. photo band */
+  .photo {
+    width:100%; flex:1 1 auto;
+    min-height:66.0px; max-height:186.0px;
+    overflow:hidden; display:block;
+  }
+  .photo img { width:100%; height:100%; object-fit:cover; object-position:50% 70%; display:block; }
+
+  /* 3. candidates */
+  .cands { display:grid; grid-template-columns:repeat(3, 1fr); gap:6.16px; }
+  .card {
+    background:#F1F4FB; border-radius:3.92px;
+    padding:5.6px 3.92px 6.16px;
+    text-align:center; display:flex; flex-direction:column; align-items:center;
+  }
+  .bar { display:block; width:11.2px; height:1.4px; background:#D0202E; border-radius:0.84px; }
+  .cname { font-size:9.52px; font-weight:700; line-height:1.15; margin-top:3.92px; white-space:nowrap; }
+  .crole {
+    font-size:5.6px; font-weight:600; color:#D0202E;
+    text-transform:uppercase; letter-spacing:0.336px; margin-top:1.68px;
+  }
+
+  /* 4. CTA bar */
+  .cta {
+    width:100%; background:#D0202E; color:#fff;
+    display:flex; align-items:center; justify-content:center; gap:6.16px;
+    padding:6.72px 5.6px;
+  }
+  .cta img { width:15.68px; height:12.32px; display:block; }
+  .cta span { font-size:11.76px; font-weight:800; letter-spacing:0.84px; line-height:1; white-space:nowrap; }
+
+  /* 5. steps */
+  ol { list-style:none; display:flex; flex-direction:column; gap:5.04px; }
+  ol li { display:flex; align-items:center; gap:4.48px; }
+  .chk { width:10.64px; height:10.64px; flex:none; display:block; }
+  ol li span { font-size:7.84px; font-weight:500; line-height:1.25; }
+
+  /* 6. footer */
+  footer { font-size:5.88px; font-weight:500; color:#616A8C; }
+</style></head>
+<body>
+  <h1 class="pad">Proven <em>RESULTS</em> for <em>WILLOWMERE</em> Families</h1>
+
+  <figure class="photo"><img src="photo.png" alt=""></figure>
+
+  <section class="cands pad">
+      <div class="card">
+        <span class="bar"></span>
+        <div class="cname">Dana Levi</div>
+        <div class="crole">Mayor</div>
+      </div>
+      <div class="card">
+        <span class="bar"></span>
+        <div class="cname">Omar Haddad</div>
+        <div class="crole">Council</div>
+      </div>
+      <div class="card">
+        <span class="bar"></span>
+        <div class="cname">Ruth Cohen</div>
+        <div class="crole">Council</div>
+      </div>
+  </section>
+
+  <div class="cta"><img src="mail.svg" alt=""><span>VOTE BY MAIL</span></div>
+
+  <ol class="pad">
+      <li><img class="chk" src="check.svg" alt=""><span>Request your ballot by October 20</span></li>
+      <li><img class="chk" src="check.svg" alt=""><span>Fill it out at home</span></li>
+      <li><img class="chk" src="check.svg" alt=""><span>Mail it back by November 3</span></li>
+  </ol>
+
+  <footer class="pad">Paid for by Willowmere Forward &middot; willowmereforward.org</footer>
+</body></html>

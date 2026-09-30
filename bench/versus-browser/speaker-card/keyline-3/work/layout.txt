@@ -1,0 +1,69 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  glow ellipse 180,0 900×900
+  page frame 0,0 1080×1080
+   header frame 76,76 928×48
+    logoImg image 76,76 160×48 contain
+    hdivide rect 258,85 2×30
+    eventName text 282,87 327×27 22px
+   body frame 76,180 928×824
+    portraitImg image 76,188 210×210 cover
+    textcol frame 76,442 928×555
+     speakerName text 76,442 928×53 46px
+     speakerRole text 76,509 928×31 24px
+     sp1 spacer 76,554 928×16
+     rule rect 76,584 84×4
+     sp2 spacer 76,602 928×16
+     talkTitle text 76,632 928×183 52px 3L
+     sp3 spacer 76,829 928×12
+     dateVenue text 76,855 928×31 22px
+     sp4 spacer 76,900 928×18
+     cta frame 76,932 206×65
+      ctaLabel text 116,950 126×29 24px
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  glow ellipse 820,0 1100×1100
+  page frame 0,0 1920×1080
+   header frame 96,96 1728×56
+    logoImg image 96,96 186×56 contain
+    hdivide rect 304,107 2×34
+    eventName text 328,109 363×30 25px
+   body frame 96,212 1728×772
+    portraitImg image 1364,368 460×460 cover
+    textcol frame 96,280 1178×636
+     speakerName text 96,280 1178×62 54px
+     speakerRole text 96,358 1178×35 27px
+     sp1 spacer 96,409 1178×18
+     rule rect 96,443 96×4
+     sp2 spacer 96,463 1178×18
+     talkTitle text 96,497 1178×213 60px 3L
+     sp3 spacer 96,726 1178×14
+     dateVenue text 96,756 1178×35 25px
+     sp4 spacer 96,807 1178×22
+     cta frame 96,845 229×71
+      ctaLabel text 142,865 137×31 26px
+story 1080×1920
+ root frame 0,0 1080×1920
+  glow ellipse 80,0 1000×1000
+  page frame 0,0 1080×1920
+   header frame 90,90 900×59
+    logoImg image 90,90 196×59 contain
+    hdivide rect 308,103 2×34
+    eventName text 332,104 375×31 26px
+   body frame 90,229 900×1601
+    portraitImg image 90,372 400×400 cover
+    textcol frame 90,836 900×852
+     speakerName text 90,836 900×74 64px
+     speakerRole text 90,928 900×42 32px
+     sp1 spacer 90,988 900×22
+     rule rect 90,1028 100×4
+     sp2 spacer 90,1050 900×22
+     talkTitle text 90,1090 900×360 76px 4L
+     sp3 spacer 90,1468 900×18
+     dateVenue text 90,1504 900×42 30px
+     sp4 spacer 90,1564 900×26
+     cta frame 90,1608 258×80
+      ctaLabel text 140,1630 158×36 30px

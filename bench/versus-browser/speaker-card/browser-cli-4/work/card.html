@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker card</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  :root {
+    --bg: #0F1226;
+    --accent: #7C5CFF;
+    --text: #FFFFFF;
+    --muted: rgba(255,255,255,.66);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  .card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(120% 90% at 100% 0%, rgba(124,92,255,.30) 0%, rgba(124,92,255,0) 58%),
+      radial-gradient(90% 80% at 0% 100%, rgba(124,92,255,.16) 0%, rgba(124,92,255,0) 60%),
+      var(--bg);
+    overflow: hidden;
+  }
+
+  /* thin accent rule at the very top */
+  .card::before {
+    content: '';
+    position: absolute; inset: 0 0 auto 0;
+    height: var(--rule, 6px);
+    background: linear-gradient(90deg, var(--accent) 0%, rgba(124,92,255,.15) 100%);
+  }
+
+  /* ---------- header ---------- */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: var(--headGap, 22px);
+    flex: 0 0 auto;
+  }
+  .header img { display: block; width: var(--logoW, 160px); height: auto; }
+  .eventname {
+    font-weight: 700;
+    font-size: var(--eventFs, 22px);
+    letter-spacing: .18em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* ---------- speaker block ---------- */
+  .speaker {
+    display: flex;
+    align-items: center;
+    gap: var(--spkGap, 28px);
+    flex: 0 0 auto;
+  }
+  .avatar {
+    flex: 0 0 auto;
+    width: var(--avatar, 180px);
+    height: var(--avatar, 180px);
+    border-radius: 50%;
+    overflow: hidden;
+    background: #1b1f3d;
+    box-shadow: 0 0 0 var(--ring, 4px) var(--accent), 0 0 0 calc(var(--ring, 4px) + 6px) rgba(124,92,255,.22);
+  }
+  .avatar img {
+    display: block;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: 50% 42%;
+  }
+  .who { min-width: 0; }
+  .name {
+    font-weight: 700;
+    font-size: var(--nameFs, 42px);
+    line-height: 1.12;
+    letter-spacing: -.015em;
+  }
+  .role {
+    margin-top: var(--roleGap, 8px);
+    font-weight: 500;
+    font-size: var(--roleFs, 24px);
+    line-height: 1.3;
+    color: var(--muted);
+  }
+
+  /* ---------- talk title ---------- */
+  .title {
+    font-weight: 700;
+    font-size: var(--titleFs, 54px);
+    line-height: 1.14;
+    letter-spacing: -.022em;
+    text-wrap: balance;
+    max-width: var(--titleMax, 100%);
+  }
+  .title .hl { color: var(--accent); }
+
+  /* ---------- footer ---------- */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+    flex: 0 0 auto;
+  }
+  .meta {
+    font-weight: 500;
+    font-size: var(--metaFs, 24px);
+    line-height: 1.35;
+    color: var(--muted);
+  }
+  .meta b { color: var(--text); font-weight: 600; }
+  .cta {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: var(--ctaFs, 24px);
+    letter-spacing: .005em;
+    line-height: 1;
+    padding: var(--ctaPadY, 22px) var(--ctaPadX, 44px);
+    border-radius: 999px;
+    white-space: nowrap;
+    box-shadow: 0 10px 30px rgba(124,92,255,.35);
+  }
+
+  /* =======================================================
+     SQUARE 1080 x 1080
+     ======================================================= */
+  body.square .card {
+    padding: 76px 78px 72px;
+    --rule: 6px;
+    --logoW: 160px; --eventFs: 22px; --headGap: 22px;
+    --avatar: 176px; --ring: 4px; --spkGap: 30px;
+    --nameFs: 40px; --roleFs: 23px;
+    --titleFs: 58px;
+    --metaFs: 23px; --ctaFs: 23px; --ctaPadY: 21px; --ctaPadX: 42px;
+  }
+  body.square .body,
+  body.story .body,
+  body.square .right,
+  body.story .right,
+  body.square .left,
+  body.story .left {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  body.square .left, body.story .left { flex: 0 0 auto; }
+
+  body.square .speaker { margin-top: 64px; }
+  /* auto margins centre the title in the space left between speaker and footer */
+  body.square .title   { margin-top: auto; margin-bottom: auto; padding: 56px 0; }
+  body.square .footer  { margin-top: 0; }
+
+  /* =======================================================
+     LANDSCAPE 1920 x 1080
+     ======================================================= */
+  body.landscape .card {
+    padding: 78px 96px 74px;
+    --rule: 7px;
+    --logoW: 176px; --eventFs: 24px; --headGap: 24px;
+    --avatar: 360px; --ring: 5px;
+    --nameFs: 42px; --roleFs: 25px;
+    --titleFs: 64px;
+    --metaFs: 25px; --ctaFs: 25px; --ctaPadY: 24px; --ctaPadX: 50px;
+  }
+  body.landscape .body {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: stretch;
+    gap: 96px;
+    margin-top: 34px;
+    min-height: 0;
+  }
+  body.landscape .left {
+    flex: 0 0 auto;
+    width: 560px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding-bottom: 12px;
+  }
+  body.landscape .speaker {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 36px;
+  }
+  body.landscape .right {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 12px;
+  }
+  body.landscape .title { margin-top: auto; margin-bottom: auto; padding: 48px 0; }
+
+  /* =======================================================
+     STORY 1080 x 1920
+     ======================================================= */
+  body.story .card {
+    padding: 120px 84px 110px;
+    --rule: 8px;
+    --logoW: 176px; --eventFs: 24px; --headGap: 24px;
+    --avatar: 340px; --ring: 6px;
+    --nameFs: 56px; --roleFs: 30px; --roleGap: 12px;
+    --titleFs: 70px;
+    --metaFs: 29px; --ctaFs: 29px; --ctaPadY: 27px; --ctaPadX: 58px;
+  }
+  body.story .header { justify-content: center; }
+  body.story .speaker {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 40px;
+    margin-top: 118px;
+  }
+  body.story .title {
+    margin-top: auto;
+    margin-bottom: auto;
+    padding: 104px 0;
+    text-align: center;
+  }
+  body.story .footer {
+    margin-top: 0;
+    flex-direction: column;
+    gap: 46px;
+  }
+  body.story .meta { text-align: center; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <header class="header">
+      <img src="logo.svg" alt="Fieldnotes Conf logo">
+      <div class="eventname">FIELDNOTES CONF 2026</div>
+    </header>
+
+    <div class="body">
+      <div class="left">
+        <div class="speaker">
+          <div class="avatar"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+          <div class="who">
+            <div class="name">Maya Okonkwo&#8209;Lindqvist</div>
+            <div class="role">Principal Engineer, Northwind Labs</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right">
+        <h1 class="title">Shipping at the speed of <span class="hl">trust</span>: what ten years of on&#8209;call taught us about resilient systems</h1>
+
+        <footer class="footer">
+          <div class="meta"><b>November 14, 2026</b> · Harbor Hall, Lisbon</div>
+          <div class="cta">Get tickets</div>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var size = (location.search.match(/size=([a-z]+)/) || [])[1] || 'square';
+    document.body.className = size;
+  </script>
+</body>
+</html>
