@@ -21,6 +21,12 @@ pub struct RenderFile {
     pub rows: Option<PathBuf>,
     /// The file format (default `png`).
     pub format: Option<String>,
+    /// A still at this moment, seconds.
+    pub time: Option<f64>,
+    /// Lossy quality, 1–100.
+    pub quality: Option<u32>,
+    /// A file size cap, KB.
+    pub max_kb: Option<u32>,
 }
 
 /// The report `render` prints, and whether the design has a `!` defect.
@@ -62,6 +68,15 @@ impl Server {
         }
         if let Some(f) = &r.format {
             args["format"] = json!(f);
+        }
+        for (key, v) in [
+            ("time", json!(r.time)),
+            ("quality", json!(r.quality)),
+            ("maxKB", json!(r.max_kb)),
+        ] {
+            if !v.is_null() {
+                args[key] = v;
+            }
         }
         let blocks = self.render_impl(from(args.clone())?).await?;
         let out = r.out.clone().unwrap_or_else(|| PathBuf::from("."));

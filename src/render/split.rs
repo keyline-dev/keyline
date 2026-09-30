@@ -152,9 +152,10 @@ impl Ctx<'_> {
 /// antialiasing without reaching another line's glyphs).
 fn line_bands(text: &Text, fit: &crate::text::Fit) -> Vec<(f32, f32)> {
     let mut para = text.repaint(fit, fit.wrap_width, &Paint::default(), false);
-    let ink: Vec<(f32, f32)> = (0..para.line_number())
-        .map(|i| {
-            let b = *para.get_path_at(i).1.bounds();
+    let ink: Vec<(f32, f32)> = crate::text::line_paths(&mut para)
+        .iter()
+        .map(|line| {
+            let b = *line.bounds();
             (b.top, b.bottom)
         })
         .collect();

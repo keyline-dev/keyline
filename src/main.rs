@@ -21,10 +21,17 @@ async fn main() -> anyhow::Result<()> {
             o.operands.join(" ")
         ),
     };
-    let render_only =
-        o.out.is_some() || !o.sizes.is_empty() || o.rows.is_some() || o.format.is_some();
+    let render_only = o.out.is_some()
+        || !o.sizes.is_empty()
+        || o.rows.is_some()
+        || o.format.is_some()
+        || o.time.is_some()
+        || o.quality.is_some()
+        || o.max_kb.is_some();
     if render.is_none() && render_only {
-        anyhow::bail!("--out, --size, --rows and --format go with render; see keyline-mcp --help");
+        anyhow::bail!(
+            "--out, --size, --rows, --format, --time, --quality and --max-kb go with render; see keyline-mcp --help"
+        );
     }
     // A scene's images are beside it: rendering one may read its folder.
     if let Some(scene) = &render {
@@ -58,6 +65,9 @@ async fn main() -> anyhow::Result<()> {
                 sizes: o.sizes,
                 rows: o.rows,
                 format: o.format,
+                time: o.time,
+                quality: o.quality,
+                max_kb: o.max_kb,
             })
             .await
             .map_err(anyhow::Error::msg)?;

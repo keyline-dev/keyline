@@ -181,7 +181,7 @@ fn text_content(layer: &Layer, k: f32, (w, h): Forced) -> (f32, f32) {
             return height;
         }
         let mut p = t.paragraph_at(width);
-        p.layout(width);
+        crate::text::wrap(&mut p, width);
         let (top, bottom) = t.cap_trim(&p, t.font_size());
         height - top - bottom
     };

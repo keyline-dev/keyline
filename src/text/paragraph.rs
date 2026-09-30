@@ -1,7 +1,7 @@
 //! Building Skia paragraphs from a text's runs and style.
 
 use skia_safe::{
-    FontArguments, FontStyle, Paint,
+    FontArguments, FontStyle, Paint, Path, PathBuilder,
     font_arguments::{VariationPosition, variation_position::Coordinate},
     font_style::{Slant, Weight, Width},
     textlayout::{
@@ -20,7 +20,7 @@ impl Text<'_> {
     /// the drop shadow; an outline pass leaves it off so it isn't doubled.
     pub fn repaint(&self, fit: &Fit, width: f32, paint: &Paint, shadow: bool) -> Paragraph {
         let mut p = self.build(fit.font_size, fit.line_limit, Some(paint), shadow);
-        p.layout(width);
+        super::wrap(&mut p, width);
         p
     }
 
@@ -28,7 +28,7 @@ impl Text<'_> {
     /// counting text drawn with the number of the moment.
     pub fn redraw(&self, fit: &Fit, width: f32) -> Paragraph {
         let mut p = self.build(fit.font_size, fit.line_limit, None, true);
-        p.layout(width);
+        super::wrap(&mut p, width);
         p
     }
 
@@ -161,4 +161,23 @@ impl Text<'_> {
         }
         s
     }
+}
+
+/// Each line's glyph outlines, paragraph coordinates, built run by run:
+/// skia's own `Paragraph::get_path_at` drops or shifts runs on a line that
+/// changes font or size.
+pub fn line_paths(p: &mut Paragraph) -> Vec<Path> {
+    let mut lines: Vec<PathBuilder> = (0..p.line_number()).map(|_| PathBuilder::new()).collect();
+    p.visit(|line, info| {
+        let (Some(info), Some(path)) = (info, lines.get_mut(line)) else {
+            return;
+        };
+        let o = info.origin();
+        for (g, at) in info.glyphs().iter().zip(info.positions()) {
+            if let Some(glyph) = info.font().get_path(*g) {
+                path.add_path_with_offset(&glyph, (o.x + at.x, o.y + at.y), None);
+            }
+        }
+    });
+    lines.iter_mut().map(PathBuilder::detach).collect()
 }

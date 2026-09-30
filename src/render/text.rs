@@ -159,8 +159,8 @@ fn outline_glyphs(
     paint: &Paint,
 ) {
     let mut para = t.repaint(fit, width, &Paint::default(), false);
-    let merged = (0..para.line_number())
-        .map(|line| para.get_path_at(line).1)
+    let merged = crate::text::line_paths(&mut para)
+        .into_iter()
         .map(|path| path.simplify().unwrap_or(path))
         .reduce(|all, line| all.op(&line, skia_safe::PathOp::Union).unwrap_or(all))
         .unwrap_or_default();

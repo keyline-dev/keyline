@@ -7,12 +7,23 @@ mod fit;
 mod lines;
 pub mod markup;
 mod paragraph;
+pub use paragraph::line_paths;
 mod registry;
 mod runs;
 #[cfg(test)]
 mod tests;
 
 use crate::scene::{Align, Color, Direction, Highlight, Kind, Layer, Resize, TextWrap};
+
+/// Room added to every wrap width, px: boxes built from a measured width
+/// can come back a float's hair narrower (padding added, then taken away),
+/// which would wrap text that fits exactly. Far below a visible pixel.
+const WRAP_SLACK: f32 = 0.01;
+
+/// Lays `p` out wrapped at `width`, with [`WRAP_SLACK`].
+pub(crate) fn wrap(p: &mut skia_safe::textlayout::Paragraph, width: f32) {
+    p.layout(width + WRAP_SLACK);
+}
 
 pub use registry::{add_fonts, families, load_fonts, typeface};
 pub use runs::Run;

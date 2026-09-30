@@ -15,12 +15,12 @@ impl Text<'_> {
                 let mut p = self.paragraph(self.font_size, None);
                 p.layout(f32::MAX);
                 let w = p.max_intrinsic_width().ceil();
-                p.layout(w);
+                super::wrap(&mut p, w);
                 (w, p.height().ceil())
             }
             Resize::AutoHeight => {
                 let mut p = self.paragraph(self.font_size, self.max_lines);
-                p.layout(width);
+                super::wrap(&mut p, width);
                 (width, p.height().ceil())
             }
             Resize::Fit | Resize::Fixed | Resize::Truncate => (width, height),
@@ -35,7 +35,7 @@ impl Text<'_> {
     /// Height of the text wrapped at `width`, at its font size.
     pub fn height_at(&self, width: f32) -> f32 {
         let mut p = self.paragraph(self.font_size, self.max_lines);
-        p.layout(width);
+        super::wrap(&mut p, width);
         p.height().ceil()
     }
 
@@ -63,7 +63,7 @@ impl Text<'_> {
     /// the text wrapped at `width`.
     pub fn first_baseline(&self, width: f32) -> f32 {
         let mut p = self.paragraph(self.font_size, None);
-        p.layout(width);
+        super::wrap(&mut p, width);
         p.get_line_metrics()
             .first()
             .map_or_else(|| p.alphabetic_baseline(), |m| m.baseline as f32)
@@ -89,16 +89,16 @@ impl Text<'_> {
             _ => (self.font_size, self.max_lines),
         };
         let mut p = self.paragraph(size, max_lines);
-        p.layout(width);
+        super::wrap(&mut p, width);
         let wrap_width = self.wrap_width(&p, size, max_lines, width);
         if wrap_width < width {
-            p.layout(wrap_width);
+            super::wrap(&mut p, wrap_width);
         }
         let truncated = max_lines.is_some() && p.did_exceed_max_lines();
         // Cut text reports what it needs uncut, at its size: the fix.
         let whole = truncated.then(|| {
             let mut q = self.paragraph(size, None);
-            q.layout(wrap_width);
+            super::wrap(&mut q, wrap_width);
             q
         });
         let whole = whole.as_ref().unwrap_or(&p);
@@ -126,7 +126,7 @@ impl Text<'_> {
         }
         let at = |w: f32| {
             let mut q = self.paragraph(size, max_lines);
-            q.layout(w);
+            super::wrap(&mut q, w);
             q
         };
         match self.wrap {
@@ -199,7 +199,7 @@ impl Text<'_> {
 
     fn fits(&self, size: f32, width: f32, height: f32) -> bool {
         let mut p = self.paragraph(size, self.max_lines);
-        p.layout(width);
+        super::wrap(&mut p, width);
         p.height() <= height + 0.5 && p.longest_line() <= width + 0.5 && !p.did_exceed_max_lines()
     }
 
@@ -211,7 +211,7 @@ impl Text<'_> {
 
     fn lines_fitting(&self, size: f32, width: f32, height: f32) -> usize {
         let mut p = self.paragraph(size, None);
-        p.layout(width);
+        super::wrap(&mut p, width);
         let n = p
             .get_line_metrics()
             .iter()

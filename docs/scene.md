@@ -281,7 +281,7 @@ In a grid, a child with a px size keeps it and sits at its cell's start; otherwi
 | `place` | `top-left`, `top`, `top-right`, `left`, `center`, `right`, `bottom-left`, `bottom`, `bottom-right` | none | Pins the layer to that spot of its parent at every size |
 | `margin` | px or `[x, y]` | 0 | Distance from the parent's edges for `place`; a placed `fill` size stops at it on both sides |
 
-Free children use the parent's whole box; its padding doesn't apply.
+Free children use the parent's whole box; its padding doesn't apply. A `"N%"` `x` or `y` is that share of the parent at every size and moves the layer without resizing it. A free frame sized by a stack with `fill` or `%` places its children on the box the stack gave it.
 
 ### Stacks
 
@@ -497,7 +497,7 @@ An image fill works on any shape: a photo in a circle is `{"type": "ellipse", "f
 
 | `mask` | Shows |
 |---|---|
-| a gradient | The layer faded by the gradient's alpha (a photo fading out) |
+| a gradient | The layer faded by the gradient's alpha over its box (a photo fading out); nothing outside the box shows |
 | `"ellipse"` or a [named shape](#appendix-names) (`"blob-3"`) | The layer inside that shape |
 | `{"path": "M…"}` | The layer inside that path |
 | `{"layer": "logo"}` | The layer where another layer is; the mask layer isn't drawn itself |
@@ -630,7 +630,7 @@ A number may be `"random(lo, hi)"`, as in GSAP: each target (each layer, or each
 {"type": "path", "d": "M0 40 C 40 0, 80 80, 120 40", "stroke": "#000", "animate": {"draw": {"from": 0}, "duration": 2}}
 ```
 
-It works on every stroke: paths, shapes, lines, ellipses and text outlines. A line draws from its start to its end, an ellipse clockwise from the top, a path from its first point, and text letter by letter; dashes and end markers follow the drawn part. Stills at a `time` show the share drawn then; at rest, all of it is drawn.
+It works on every stroke: paths, shapes, lines, ellipses and text outlines. A line draws from its start to its end, an ellipse clockwise from the top, a path from its first point, and text letter by letter; dashes and end markers follow the drawn part, and an ellipse's dashes start at the top too. Stills at a `time` show the share drawn then; at rest, all of it is drawn.
 
 ### Counting
 
@@ -720,7 +720,7 @@ A layer of `type: "shot"` is a shot: a full-size frame that plays in turn with t
 | `duration` | Seconds | 0.5 | Overlaps the two shots; a cut has none |
 | `ease` | Ease | `power2.inOut` | |
 
-Each shot starts where the one before ends minus its transition. The scene's length is where the last shot ends unless `duration` says otherwise. A transition can't be longer than either shot it joins.
+Each shot starts where the one before ends minus its transition. The scene's length is where the last shot ends unless `duration` says otherwise; a longer `duration` holds the last shot to the end. A transition can't be longer than either shot it joins.
 
 ## Template files
 

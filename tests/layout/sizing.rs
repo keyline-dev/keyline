@@ -256,3 +256,42 @@ fn a_free_frame_whose_children_all_fill_is_a_plain_box() {
     check(&b, "g", (40.0, 0.0, 100.0, 100.0));
     check(&b, "r", (40.0, 0.0, 100.0, 100.0));
 }
+
+#[test]
+fn a_percent_position_moves_a_child_without_resizing_it() {
+    // In a `fill` free frame placed by a stack.
+    let s = scene(
+        json!([{"id": "page", "type": "frame", "width": "fill", "height": "fill",
+        "flexDirection": "column", "alignItems": "flex-start",
+        "children": [{"id": "stage", "type": "frame", "width": "fill", "height": 200,
+            "children": [{"id": "r", "type": "rect", "x": "10%", "y": "50%", "width": 270, "height": 20}]}]}]),
+    );
+    check(
+        &boxes(&s, &size("s", 1000.0, 500.0, 1.0)),
+        "r",
+        (100.0, 100.0, 270.0, 20.0),
+    );
+    // At the top level, on a taller size.
+    let s = scene(json!([{"id": "card", "type": "rect", "y": "50%", "width": 300, "height": 100}]));
+    check(
+        &boxes(&s, &size("s", 1000.0, 1000.0, 1.0)),
+        "card",
+        (0.0, 500.0, 300.0, 100.0),
+    );
+}
+
+#[test]
+fn a_fill_frame_in_a_stack_places_pinned_children_on_its_own_box() {
+    let s = scene(
+        json!([{"id": "page", "type": "frame", "width": "fill", "height": "fill",
+        "flexDirection": "column", "alignItems": "flex-start",
+        "children": [{"id": "stage", "type": "frame", "width": "fill", "height": 200,
+            "children": [{"id": "r", "type": "rect", "x": 900, "width": 50, "height": 20,
+                "constraints": {"horizontal": "right"}}]}]}]),
+    );
+    check(
+        &boxes(&s, &size("s", 1000.0, 500.0, 1.0)),
+        "r",
+        (900.0, 0.0, 50.0, 20.0),
+    );
+}

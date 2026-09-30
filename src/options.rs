@@ -38,6 +38,9 @@ render:
   --size <id>             A size to draw (repeatable; default: all)
   --rows <rows.json>      A JSON list of token values: one render per row
   --format <format>       png (default), jpeg, webp, pdf, apng, gif, mp4 or webm
+  --time <s>              A still of that moment of an animated scene
+  --quality <1-100>       JPEG, WebP and video quality
+  --max-kb <n>            Lower a lossy file's quality until it fits
   render reads images beside the scene file, prints what the render tool
   replies, and exits 1 if the design has a ! defect.
 
@@ -75,6 +78,12 @@ pub struct Options {
     pub rows: Option<PathBuf>,
     /// `--format`: `render`'s file format (default `png`).
     pub format: Option<String>,
+    /// `--time`: `render` a still at this moment, seconds.
+    pub time: Option<f64>,
+    /// `--quality`: `render`'s lossy quality, 1–100.
+    pub quality: Option<u32>,
+    /// `--max-kb` (or `--maxKB`): `render`'s file size cap, KB.
+    pub max_kb: Option<u32>,
 }
 
 impl Options {
@@ -137,11 +146,20 @@ impl Options {
                 "--size" => o.sizes.push(value()?),
                 "--rows" => o.rows = Some(value()?.into()),
                 "--format" => o.format = Some(value()?),
+                "--time" => o.time = Some(number(flag, &value()?)?),
+                "--quality" => o.quality = Some(number(flag, &value()?)?),
+                "--max-kb" | "--maxKB" => o.max_kb = Some(number(flag, &value()?)?),
                 _ => bail!("unknown argument {arg}; see keyline-mcp --help"),
             }
         }
         Ok(o)
     }
+}
+
+/// `v` as the number `flag` takes.
+fn number<T: std::str::FromStr>(flag: &str, v: &str) -> Result<T> {
+    v.parse()
+        .map_err(|_| anyhow::anyhow!("{flag} takes a number, not {v}"))
 }
 
 /// A value a client left unset: empty, or its `${…}` placeholder unfilled.
@@ -209,6 +227,21 @@ mod tests {
         assert_eq!(o.operands, ["render", "ad.json"]);
         assert_eq!(o.sizes, ["wide"]);
         assert_eq!(o.out, Some("dist".into()));
+        let o = parse(&[
+            "render",
+            "ad.json",
+            "--time=2.5",
+            "--quality",
+            "80",
+            "--maxKB",
+            "300",
+        ])
+        .unwrap();
+        assert_eq!(
+            (o.time, o.quality, o.max_kb),
+            (Some(2.5), Some(80), Some(300))
+        );
+        assert_eq!(parse(&["--max-kb=9"]).unwrap().max_kb, Some(9));
     }
 
     #[test]
@@ -230,5 +263,6 @@ mod tests {
         assert!(e(&["--data"]).contains("--data needs a value"));
         assert!(e(&["--renderer", "metal"]).contains("gpu or cpu"));
         assert!(e(&["--no-motion=maybe"]).contains("true or false"));
+        assert!(e(&["--time", "soon"]).contains("--time takes a number, not soon"));
     }
 }

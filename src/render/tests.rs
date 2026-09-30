@@ -282,13 +282,31 @@ fn gpu_renders_match_the_cpu_closely() {
 
 /// Renders a 100×100, 2 s scene of `layers` `t` seconds in.
 fn pixels_at(layers: serde_json::Value, t: f32) -> impl Fn(i32, i32) -> (u8, u8, u8) {
-    let mut v = json!({"width": 100, "height": 100, "background": "#FFFFFF", "duration": 2,
-        "sizes": [{"id": "a", "width": 100, "height": 100}]});
+    pixels_in(
+        layers,
+        json!([{"id": "a", "width": 100, "height": 100}]),
+        0,
+        t,
+    )
+}
+
+/// Renders size `n` of a 100×100, 2 s scene of `layers` with `sizes`,
+/// `t` seconds in.
+fn pixels_in(
+    layers: serde_json::Value,
+    sizes: serde_json::Value,
+    n: usize,
+    t: f32,
+) -> impl Fn(i32, i32) -> (u8, u8, u8) {
+    let mut v = json!({"width": 100, "height": 100, "background": "#FFFFFF", "duration": 2});
     v["layers"] = layers;
+    v["sizes"] = sizes;
     let scene: Scene = serde_json::from_value(v).unwrap();
     scene.validate().unwrap();
-    let at = crate::anim::at_time(&scene, t, &scene.sizes[0]);
-    let img = render_image(&at, &at.sizes[0], 1.0, &std::env::temp_dir(), false).unwrap();
+    let scene = scene.resolved().into_owned();
+    let size = &scene.sizes[n];
+    let at = crate::anim::at_time(&scene, t, size);
+    let img = render_image(&at, size, 1.0, &std::env::temp_dir(), false).unwrap();
     move |x, y| {
         let c = img.peek_pixels().unwrap().get_color((x, y));
         (c.r(), c.g(), c.b())
@@ -329,4 +347,112 @@ fn a_count_track_draws_the_number_of_the_moment() {
     let start = pixels_at(text.clone(), 0.0);
     let end = pixels_at(text, 2.0);
     assert!(ink(&start) * 3 < ink(&end), "one digit, then four");
+}
+
+/// Dark pixels in a `w`×`h` area from the top left.
+fn dark(px: &dyn Fn(i32, i32) -> (u8, u8, u8), w: i32, h: i32) -> usize {
+    (0..w)
+        .flat_map(|x| (0..h).map(move |y| (x, y)))
+        .filter(|&(x, y)| px(x, y).0 < 128)
+        .count()
+}
+
+#[test]
+fn media_keeps_split_text_and_tracks_moving() {
+    let sizes =
+        json!([{"id": "a", "width": 100, "height": 100}, {"id": "b", "width": 100, "height": 100}]);
+    let split = json!({"id": "t", "type": "text", "text": "Hello", "fontSize": 30, "color": "#000000",
+        "split": "chars", "enter": {"effect": "fade", "duration": 0.5}});
+    let mut on_text = split.clone();
+    on_text["media"] = json!({"b": {"color": "#000010"}});
+    let on_parent = json!({"type": "frame", "width": 100, "height": 100,
+        "media": {"b": {"opacity": 1}}, "children": [split]});
+    for layers in [json!([on_text]), json!([on_parent])] {
+        let start = pixels_in(layers.clone(), sizes.clone(), 1, 0.0);
+        let end = pixels_in(layers.clone(), sizes.clone(), 1, 1.0);
+        assert_eq!(dark(&start, 100, 100), 0, "nothing yet: {layers}");
+        assert!(dark(&end, 100, 100) > 50, "all there: {layers}");
+    }
+    // Self-drawing strokes and counting numbers too.
+    let line = json!([{"type": "line", "x": 10, "y": 50, "width": 80, "height": 0,
+        "stroke": {"width": 6, "color": "#000000"}, "animate": {"draw": [0, 1], "ease": "none"},
+        "media": {"b": {"opacity": 1}}}]);
+    let half = pixels_in(line, sizes.clone(), 1, 0.5);
+    assert_eq!(half(80, 50), (255, 255, 255), "half drawn");
+    let count = json!([{"type": "text", "text": "{{n}}", "fontSize": 40, "color": "#000000",
+        "animate": {"count": [0, 1000], "ease": "none"}, "media": {"b": {"opacity": 1}}}]);
+    let start = pixels_in(count.clone(), sizes.clone(), 1, 0.0);
+    let end = pixels_in(count, sizes, 1, 2.0);
+    assert!(
+        dark(&start, 100, 60) * 3 < dark(&end, 100, 60),
+        "one digit, then four"
+    );
+}
+
+#[test]
+fn media_can_give_a_size_its_own_motion() {
+    let sizes =
+        json!([{"id": "a", "width": 100, "height": 100}, {"id": "b", "width": 100, "height": 100}]);
+    let layers = json!([{"type": "rect", "width": 100, "height": 100, "fill": "#000000",
+        "media": {"b": {"enter": {"effect": "fade", "delay": 1}}}}]);
+    let a = pixels_in(layers.clone(), sizes.clone(), 0, 0.5);
+    let b = pixels_in(layers, sizes, 1, 0.5);
+    assert_eq!((a(50, 50), b(50, 50)), ((0, 0, 0), (255, 255, 255)));
+}
+
+#[test]
+fn a_translate_track_moves_by_the_size_scale() {
+    let sizes = json!([{"id": "a", "width": 100, "height": 100},
+        {"id": "s", "width": 75, "height": 75, "scale": 0.75}]);
+    // A 20 px square moved 40 px right by the end: 30 px at scale 0.75.
+    let layers = json!([{"type": "rect", "x": 0, "y": 0, "width": 20, "height": 20, "fill": "#000000",
+        "animate": {"translate": {"from": [0, 0], "to": [40, 0]}, "duration": 0.1}}]);
+    let px = pixels_in(layers, sizes, 1, 1.0);
+    let left = (0..75).find(|&x| px(x, 7).0 < 128).unwrap();
+    assert_eq!(left, 30, "moved 40 × 0.75");
+}
+
+#[test]
+fn a_stroked_line_that_changes_size_keeps_every_run() {
+    let text = json!([{"type": "text", "x": 2, "y": 20, "fontSize": 30, "color": "#0000",
+        "text": "<span style=\"font-size:16px\">MM</span> MM", "stroke": {"color": "#000000", "width": 2}}]);
+    let px = pixels_at(text, 0.0);
+    let left = (0..20)
+        .flat_map(|x| (20..60).map(move |y| (x, y)))
+        .filter(|&(x, y)| px(x, y).0 < 128)
+        .count();
+    assert!(
+        left > 20,
+        "the small run is outlined where it's set: {left}"
+    );
+}
+
+#[test]
+fn a_gradient_mask_hides_everything_outside_its_box() {
+    // A fade to nothing whose bottom edge falls on a half pixel, and a child
+    // hanging below the masked frame.
+    let layers = json!([
+        {"id": "a", "type": "rect", "x": 10, "y": 10, "width": 30, "height": 50.5, "fill": "#000000",
+         "mask": {"angle": 180, "stops": ["#000000", "#00000000"]}},
+        {"id": "b", "type": "frame", "x": 50, "y": 10, "width": 30, "height": 50.5, "fill": "#000000",
+         "clipsContent": false, "mask": {"angle": 180, "stops": ["#000000", "#00000000"]},
+         "children": [{"id": "c", "type": "rect", "y": 60, "width": 30, "height": 10, "fill": "#FF0000"}]}]);
+    let px = pixels_at(layers, 0.0);
+    assert!(px(25, 12).0 < 30, "masked in at the top: {:?}", px(25, 12));
+    assert!(px(25, 60).0 > 245, "edge row faded out: {:?}", px(25, 60));
+    assert_eq!(px(65, 75), (255, 255, 255), "outside the mask's box");
+}
+
+#[test]
+fn dashes_on_an_ellipse_start_at_the_top() {
+    let ring = json!([{"type": "ellipse", "x": 20, "y": 20, "width": 60, "height": 60,
+        "stroke": {"width": 4, "color": "#000000", "dash": [12, 400]}}]);
+    let px = pixels_at(ring, 0.0);
+    assert!(
+        px(55, 22).0 < 100,
+        "the dash starts at 12 o'clock: {:?}",
+        px(55, 22)
+    );
+    assert_eq!(px(78, 50), (255, 255, 255), "nothing at 3 o'clock");
+    assert_eq!(px(45, 22), (255, 255, 255), "clockwise, not back");
 }

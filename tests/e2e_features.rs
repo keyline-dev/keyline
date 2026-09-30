@@ -610,6 +610,70 @@ fn render_draws_a_scene_file_and_fails_on_a_defect() {
 }
 
 #[test]
+fn the_render_command_takes_a_time_a_quality_and_a_size_cap() {
+    let dir = std::env::temp_dir().join(format!("keyline-mcp-e2e-cliflags-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let scene = dir.join("ad.json");
+    std::fs::write(
+        &scene,
+        json!({"width": 200, "height": 100, "sizes": ["200x100"], "duration": 2,
+            "layers": [{"type": "rect", "width": "fill", "height": "fill", "fill": "linear-gradient(90deg, #D0202E, #1B2A5C, #F5C518, #0A7D4B)",
+                "enter": {"effect": "fade", "duration": 1}},
+                {"type": "text", "text": "Quality", "fontSize": 28, "place": "center"}]})
+        .to_string(),
+    )
+    .unwrap();
+    let run = |args: &[&str]| {
+        let out = dir.join("out");
+        let _ = std::fs::remove_dir_all(&out);
+        let o = std::process::Command::new(env!("CARGO_BIN_EXE_keyline-mcp"))
+            .arg("render")
+            .arg(&scene)
+            .args(["--renderer", "cpu", "--data"])
+            .arg(dir.join("data"))
+            .arg("--out")
+            .arg(&out)
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(
+            o.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&o.stderr),
+            String::from_utf8_lossy(&o.stdout)
+        );
+        let mut files: Vec<String> = std::fs::read_dir(&out)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        files.sort();
+        (String::from_utf8_lossy(&o.stdout).into_owned(), files)
+    };
+    let (text, files) = run(&["--time", "0.5"]);
+    assert!(
+        files.iter().all(|f| f.contains("at0.5s")),
+        "{files:?} {text}"
+    );
+    let size = |args: &[&str]| {
+        let (_, files) = run(args);
+        std::fs::metadata(dir.join("out").join(&files[0]))
+            .unwrap()
+            .len()
+    };
+    let (low, high) = (
+        size(&["--format", "jpeg", "--quality", "5"]),
+        size(&["--format", "jpeg", "--quality", "95"]),
+    );
+    assert!(low < high, "quality 5: {low} bytes, 95: {high}");
+    let (text, _) = run(&["--format", "jpeg", "--max-kb=1"]);
+    assert!(
+        text.contains(" quality ") || text.contains("!too-big"),
+        "{text}"
+    );
+}
+
+#[test]
 fn without_data_the_home_folder_holds_it_on_every_os() {
     // Windows has no HOME; its home folder is USERPROFILE.
     let home = std::env::temp_dir().join(format!("keyline-mcp-e2e-home-{}", std::process::id()));

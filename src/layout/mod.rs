@@ -215,15 +215,14 @@ struct FreeAxis {
 }
 
 /// Position and length on one axis when the parent goes from `old` to
-/// `new`: constraints for px values, a share of the parent for `%`, the
+/// `new`: constraints for px values, a share of the new parent for `%`, the
 /// rest of the parent for `fill`, and `place` wins over all of them.
 fn free_axis(a: FreeAxis, natural: f32, old: f32, new: f32, k: f32) -> (f32, f32) {
-    let pin = if matches!(a.pos, Length::Pct(_)) {
-        Pin::Scale
-    } else {
-        a.pin
+    // A `%` position is a share of the new parent; it never resizes the child.
+    let (pin, (mut pos, mut len)) = match a.pos {
+        Length::Pct(p) => (Pin::Start, (p * new, natural)),
+        _ => (a.pin, axis(a.pin, offset(a.pos, k, old), natural, old, new)),
     };
-    let (mut pos, mut len) = axis(pin, offset(a.pos, k, old), natural, old, new);
     let m = a.inset;
     match a.len {
         Some(Length::Pct(p)) => len = p * new,
@@ -340,7 +339,17 @@ fn finish<'a>(
                         h: it.size.1,
                     };
                     let own = measure(scene, it.layer, k, inner, (None, None), true);
-                    finish(scene, it.layer, own, r, k, true)
+                    // A `fill` or `%` side has no size of its own to resize
+                    // from: its children are placed on the box the stack gave.
+                    let given = |len: Option<Length>, own: f32, got: f32| match len {
+                        Some(Length::Fill | Length::Pct(_)) => got,
+                        _ => own,
+                    };
+                    let natural = (
+                        given(it.layer.width, own.0, r.w),
+                        given(it.layer.height, own.1, r.h),
+                    );
+                    finish(scene, it.layer, natural, r, k, true)
                 })
                 .collect();
             // Absolute children sit on the frame like free children.

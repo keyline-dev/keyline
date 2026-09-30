@@ -157,7 +157,8 @@ impl Serialize for Transition {
     }
 }
 
-/// Each top-level shot's `(index in layers, start, duration, transition in)`.
+/// Each top-level shot's `(index in layers, start, duration, transition in)`;
+/// the last one lasts to the scene's `duration` when that's longer.
 pub fn timeline(scene: &Scene) -> Vec<(usize, f32, f32, Option<Transition>)> {
     let mut out = Vec::new();
     let mut end = 0.0_f32;
@@ -172,6 +173,12 @@ pub fn timeline(scene: &Scene) -> Vec<(usize, f32, f32, Option<Transition>)> {
             out.push((i, start, shot.duration, shot.transition));
             end = start + shot.duration;
         }
+    }
+    // A scene longer than its shots holds the last one, rather than black.
+    if let (Some(total), Some((_, start, dur, _))) = (scene.duration, out.last_mut())
+        && total > *start + *dur
+    {
+        *dur = total - *start;
     }
     out
 }
@@ -290,6 +297,18 @@ mod tests {
         let starts: Vec<f32> = timeline(&s).iter().map(|t| t.1).collect();
         assert_eq!(starts, [0.0, 0.6, 1.1]);
         assert_eq!(length(&s), Some(2.1));
+    }
+
+    #[test]
+    fn a_scene_longer_than_its_shots_holds_the_last_one() {
+        let mut s = scene();
+        s.duration = Some(3.0);
+        assert_eq!(timeline(&s).last().map(|t| t.2), Some(1.9));
+        let visible = place(&mut s, 2.9, (100.0, 50.0));
+        assert_eq!(visible.iter().map(|v| v.0).collect::<Vec<_>>(), [2]);
+        // A shorter duration cuts nothing: the scene just ends sooner.
+        s.duration = Some(1.5);
+        assert_eq!(timeline(&s).last().map(|t| t.2), Some(1.0));
     }
 
     #[test]

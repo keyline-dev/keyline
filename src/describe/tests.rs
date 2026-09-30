@@ -101,6 +101,20 @@ fn overlapping_text_is_a_defect() {
 }
 
 #[test]
+fn a_line_that_changes_size_measures_its_real_ink() {
+    // The smaller run first: its glyphs used to be dropped and the rest
+    // shifted right, onto the next text.
+    let s = scene(
+        json!([{"type": "frame", "flexDirection": "row", "gap": 80, "alignItems": "center", "children": [
+        {"id": "price", "type": "text", "fontSize": 60, "fontWeight": 700,
+         "text": "<span style=\"font-size:40px\"><s>$2,190</s></span>  $1,890"},
+        {"id": "next", "type": "text", "text": "Next thing", "fontSize": 30}]}]),
+    );
+    let w = warnings(&s, None).unwrap();
+    assert!(!w.contains("!overlaps"), "{w}");
+}
+
+#[test]
 fn tightly_set_lines_only_overlap_if_their_glyphs_do() {
     // "Monica" over "JETHANI": the line boxes overlap by a few pixels of
     // ascent and descent space, the letters don't.

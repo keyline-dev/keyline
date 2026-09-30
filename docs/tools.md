@@ -304,6 +304,9 @@ keyline-mcp render campaign.json --out renders/ --size wide --rows rows.json --f
 | `--size <id>` | every size | A size to draw (repeatable) |
 | `--rows <rows.json>` | none | A JSON list of token values, `[{"headline": "Sale"}, …]`: one render per row, as the tool's `rows` |
 | `--format <format>` | `png` | As the tool's `format` |
+| `--time <s>` | none | A still of that moment of an animated scene, as the tool's `time` |
+| `--quality <1-100>` | the format's | As the tool's `quality` |
+| `--max-kb <n>` | none | As the tool's `maxKB` (`--maxKB` works too) |
 
 In GitHub Actions, the repo is an action that installs a release and runs this on every scene a glob matches, failing the job on a `!` defect:
 

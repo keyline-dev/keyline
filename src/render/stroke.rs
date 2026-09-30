@@ -62,8 +62,8 @@ pub(super) fn draw_stroke(
             if s.gradient.is_some() {
                 p = stroke_paint(s, edge, width, k);
             }
-            if trim.is_some() {
-                // Drawn from the top, clockwise: a progress ring.
+            if trim.is_some() || !s.dash.is_empty() {
+                // From the top, clockwise: a progress ring, and dashes start there too.
                 canvas.draw_path(
                     &Path::oval_with_start_index(edge, skia_safe::PathDirection::CW, 0),
                     &p,

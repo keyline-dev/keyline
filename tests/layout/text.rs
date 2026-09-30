@@ -226,3 +226,31 @@ fn text_that_needs_more_room_is_measured_with_its_padding() {
     let d = keyline_mcp::describe::describe(&fixed, None, true, None).unwrap();
     assert!(!d.contains("!truncated"), "{d}");
 }
+
+#[test]
+fn hugging_stacks_never_wrap_their_own_text_at_any_scale() {
+    let row = scene(
+        json!([{"type": "frame", "place": "left", "width": 700, "flexDirection": "column",
+        "alignItems": "flex-start", "children": [
+        {"type": "frame", "flexDirection": "row", "gap": 12, "alignItems": "center", "padding": [20, 32],
+         "children": [
+            {"id": "t", "type": "text", "text": "Book your dates", "fontSize": 30, "fontWeight": 700, "trim": "cap"},
+            {"type": "icon", "name": "arrow-right", "width": 30, "height": 30}]}]}]),
+    );
+    let column = scene(
+        json!([{"type": "frame", "place": "left", "flexDirection": "column", "padding": [20, 32],
+        "children": [{"id": "t", "type": "text", "text": "Book your dates", "fontSize": 30, "fontWeight": 700}]}]),
+    );
+    for (name, s) in [("row", row), ("column", column)] {
+        let one_line = boxes(&s, &size("s", 1000.0, 500.0, 1.0))["t"].h;
+        for step in 30..=100 {
+            let k = step as f32 / 100.0;
+            let h = boxes(&s, &size("s", 1000.0 * k, 500.0 * k, k))["t"].h;
+            assert!(
+                h < one_line * k + 2.0,
+                "{name} wraps at scale {k}: {h} vs one line {}",
+                one_line * k
+            );
+        }
+    }
+}

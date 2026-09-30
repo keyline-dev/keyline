@@ -15,8 +15,9 @@ pub(super) fn ink(p: &Placed) -> Option<Rect> {
     // lines look like they collide.
     let text = Text::of(p.layer, p.k)?;
     let mut para = text.repaint(fit, fit.wrap_width, &skia_safe::Paint::default(), false);
-    let bounds = (0..para.line_number())
-        .map(|line| *para.get_path_at(line).1.bounds())
+    let bounds = crate::text::line_paths(&mut para)
+        .iter()
+        .map(|line| *line.bounds())
         .filter(|b| !b.is_empty())
         .reduce(skia_safe::Rect::join2)?;
     let (x, y) = p.text_origin();

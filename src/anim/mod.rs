@@ -75,6 +75,9 @@ impl LayerTime {
 /// `scene` as drawn `t` seconds in at `size` (which sets how far slides and
 /// pushes travel). Call on a resolved scene (styles and components applied).
 pub fn at_time(scene: &Scene, t: f32, size: &crate::scene::Size) -> Scene {
+    // Sized first: sizing re-reads layers from JSON, which would drop the
+    // per-frame state set below, and `media` may set motion of its own.
+    let scene = &*scene.for_size(size);
     let end = shots::length(scene).unwrap_or(0.0);
     let mut out = scene.clone();
     let k = size.scale.max(1e-3);

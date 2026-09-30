@@ -42,9 +42,13 @@ impl Ctx<'_> {
                         s.color = Color(s.color.0 & 0xFF00_0000);
                     }
                 }
+                // Through a layer like the other masks: drawn straight on,
+                // it would leave everything outside `r` (and a part-covered
+                // edge pixel) unmasked.
                 if let Some(sh) = gradient_shader(&g, r) {
-                    mask.set_shader(sh);
-                    canvas.draw_rect(r, &mask);
+                    let mut fill = opaque();
+                    fill.set_shader(sh);
+                    coverage(canvas, &mask, |c| c.draw_rect(r, &fill));
                 }
             }
             MaskSource::Shape(name) => {
