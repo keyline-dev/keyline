@@ -45,6 +45,9 @@ Omit fields that match defaults. When done, reply in one short line.";
 /// Height of each size in the preview contact sheet.
 const PREVIEW_HEIGHT: f32 = 384.0;
 
+/// Moments a moving scene's preview shows per size.
+const PREVIEW_MOMENTS: usize = 6;
+
 /// The MCP server: the six tools over a scene store.
 #[derive(Clone)]
 pub struct Server {
@@ -268,7 +271,10 @@ fn edited(verb: &str, ids: &[String], scene: &Scene, assets: &std::path::Path) -
         out.push('\n');
         out.push_str(&facts);
     }
-    for hint in crate::ops::dollar_hints(raw) {
+    for hint in crate::ops::dollar_hints(raw)
+        .into_iter()
+        .chain(crate::text::markup::tag_hints(raw))
+    {
         out.push('\n');
         out.push_str(&hint);
     }

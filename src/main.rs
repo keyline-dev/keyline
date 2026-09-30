@@ -27,10 +27,11 @@ async fn main() -> anyhow::Result<()> {
         || o.format.is_some()
         || o.time.is_some()
         || o.quality.is_some()
-        || o.max_kb.is_some();
+        || o.max_kb.is_some()
+        || o.preview;
     if render.is_none() && render_only {
         anyhow::bail!(
-            "--out, --size, --rows, --format, --time, --quality and --max-kb go with render; see keyline-mcp --help"
+            "--out, --size, --rows, --format, --time, --quality, --max-kb and --preview go with render; see keyline-mcp --help"
         );
     }
     // A scene's images are beside it: rendering one may read its folder.
@@ -68,6 +69,7 @@ async fn main() -> anyhow::Result<()> {
                 time: o.time,
                 quality: o.quality,
                 max_kb: o.max_kb,
+                preview: o.preview,
             })
             .await
             .map_err(anyhow::Error::msg)?;

@@ -83,7 +83,8 @@ pub(super) fn patched(l: &Layer, key: &str) -> Result<Option<Layer>, String> {
     let Some(patch) = l.at.get(key) else {
         return Ok(None);
     };
-    if let Some(k) = ["id", "type", "children", "media"]
+    // `style` is applied before `media`, so a size can't swap it.
+    if let Some(k) = ["id", "type", "children", "media", "style"]
         .iter()
         .find(|k| patch.contains_key(**k))
     {
@@ -276,6 +277,15 @@ mod tests {
             s.validate()
                 .unwrap_err()
                 .contains("media.b can't change type")
+        );
+        let restyle = serde_json::json!({"style": "big"});
+        s.layers[0]
+            .at
+            .insert("b".into(), restyle.as_object().unwrap().clone());
+        assert!(
+            s.validate()
+                .unwrap_err()
+                .contains("media.b can't change style")
         );
         let typo = serde_json::json!({"fontsize": 20});
         s.layers[0]

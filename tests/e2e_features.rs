@@ -723,6 +723,61 @@ fn the_render_command_takes_a_time_a_quality_and_a_size_cap() {
         text.contains(" quality ") || text.contains("!too-big"),
         "{text}"
     );
+    // The preview sheet of an animated scene: six moments.
+    let (text, files) = run(&["--preview"]);
+    assert!(files.contains(&"ad-preview.png".to_owned()), "{files:?}");
+    assert!(text.contains("preview at "), "{text}");
+}
+
+#[tokio::test]
+async fn edits_say_what_the_checks_see_in_masks_tags_leaders_and_shadows() {
+    let mcp = Mcp::start("checks-more").await;
+    let id = mcp
+        .ok("scene_create", json!({"sizes": ["400x300"]}))
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    let reply = mcp
+        .ok("layer_add", json!({"sceneId": id,
+            "styles": {"accent": {"color": "#D0202E", "letterSpacing": 2}},
+            "layers": [
+                {"id": "fade", "type": "rect", "width": 400, "height": 60, "fill": "#1B2A5C",
+                 "mask": "linear-gradient(180deg, #000 0%, rgba(0,0,0,0) 100%)"},
+                {"id": "t", "type": "text", "y": 70, "text": "Big <accent>news</accent>", "fontSize": 20},
+                {"id": "menu", "type": "text", "y": 110, "width": 200, "fontSize": 16, "leader": ".",
+                 "text": "Charred leeks with brown butter\t$14"},
+                {"id": "copy", "type": "frame", "y": 200, "flexDirection": "column", "children": [
+                    {"id": "cta", "type": "rect", "width": 120, "height": 40, "fill": "#D0202E",
+                     "shadow": {"y": 8, "blur": 16, "color": "#00000055"}}]}]}))
+        .await;
+    for want in [
+        "hint: <accent> drops letterSpacing",
+        r#"!leader "Charred leeks with b…" meets "$14""#,
+        "warn shadow clipped by copy",
+    ] {
+        assert!(reply.contains(want), "{want}: {reply}");
+    }
+    let e = mcp
+        .call(
+            "layer_update",
+            json!({"sceneId": id, "ops": [
+            {"target": {"id": "t"}, "set": {"media": {"400x300": {"style": "accent"}}}}]}),
+        )
+        .await
+        .unwrap_err();
+    assert!(e.contains("can't change style"), "{e}");
+    let e = mcp
+        .call(
+            "layer_add",
+            json!({"sceneId": id, "layers": [
+            {"type": "rect", "width": 10, "height": 10, "mask": {"shapes": "x"}}]}),
+        )
+        .await
+        .unwrap_err();
+    assert!(e.contains(r#"{"angle":180,"stops":["#), "{e}");
+    mcp.stop().await;
 }
 
 #[test]

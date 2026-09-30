@@ -183,6 +183,14 @@ pub fn timeline(scene: &Scene) -> Vec<(usize, f32, f32, Option<Transition>)> {
     out
 }
 
+/// How long the scene's `duration` holds its last shot past that shot's
+/// own end, seconds; `None` when it doesn't.
+pub fn held(scene: &Scene) -> Option<f32> {
+    let &(i, _, dur, _) = timeline(scene).last()?;
+    let extra = dur - scene.layers[i].time.shot.as_ref()?.duration;
+    (extra > 0.0005).then_some(extra)
+}
+
 /// How long the scene plays: its `duration`, else where its last shot ends.
 pub fn length(scene: &Scene) -> Option<f32> {
     scene
@@ -277,7 +285,7 @@ fn wipe(angle: f32, edge: f32, before: bool) -> Option<crate::scene::Mask> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Transition, length, place, timeline};
+    use super::{Transition, held, length, place, timeline};
     use crate::scene::Scene;
     use serde_json::json;
 
@@ -306,9 +314,11 @@ mod tests {
         assert_eq!(timeline(&s).last().map(|t| t.2), Some(1.9));
         let visible = place(&mut s, 2.9, (100.0, 50.0));
         assert_eq!(visible.iter().map(|v| v.0).collect::<Vec<_>>(), [2]);
+        assert!(held(&s).is_some_and(|h| (h - 0.9).abs() < 1e-4));
         // A shorter duration cuts nothing: the scene just ends sooner.
         s.duration = Some(1.5);
         assert_eq!(timeline(&s).last().map(|t| t.2), Some(1.0));
+        assert_eq!(held(&s), None);
     }
 
     #[test]

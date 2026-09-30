@@ -309,7 +309,7 @@ As in CSS, text and frames in a column never shrink below their content's height
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `alignSelf` | as `alignItems` | the stack's `alignItems` | This child's own alignment (`baseline` in a column is `flex-start`) |
-| `flexGrow` | number ≥ 0 | 1 for `fill`, else none | Its share of the free space when it `fill`s; above 0 on a child with no size along the stack, it makes it `fill` |
+| `flexGrow` | number ≥ 0 | 1 for `fill`, else none | Its share of the free space when it `fill`s; above 0, it makes a child fill from its size along the stack, as CSS's flex-basis (from nothing when it has none: `width: 0, flexGrow: 1` shares a row evenly) |
 | `layoutPriority` | number | 0 | When a row is too narrow, lower priorities give way first, as in SwiftUI; `"low"` and `"high"` read as −1 and 1, and CSS `flexShrink: 0` as 1 |
 | `position` | `auto`, `absolute` | `auto` | `absolute` takes it out of the flow and places it like a free child |
 
@@ -340,7 +340,7 @@ A size can rearrange the whole grid by changing only its templates in `media`.
 
 ### Per size
 
-`media` changes a layer's fields for some sizes: `"media": {"sky": {"fontSize": 20}, "tall": {"hidden": true}}`. Its keys are size ids or [aspect classes](#aspect-classes), applied broadest first: `landscape`/`square`/`portrait`, then `wide`/`tall`, then the size id. Its values merge into the layer ([Resolution order](#resolution-order)). `media` can't change a layer's `id`, `type`, `children` or `media`; a key that isn't a size or class is an error.
+`media` changes a layer's fields for some sizes: `"media": {"sky": {"fontSize": 20}, "tall": {"hidden": true}}`. Its keys are size ids or [aspect classes](#aspect-classes), applied broadest first: `landscape`/`square`/`portrait`, then `wide`/`tall`, then the size id. Its values merge into the layer ([Resolution order](#resolution-order)). `media` can't change a layer's `id`, `type`, `children`, `media` or `style`; a key that isn't a size or class is an error.
 
 ## Text
 
@@ -499,7 +499,7 @@ An image fill works on any shape: a photo in a circle is `{"type": "ellipse", "f
 
 | `mask` | Shows |
 |---|---|
-| a gradient | The layer faded by the gradient's alpha over its box (a photo fading out); nothing outside the box shows |
+| a gradient, flat (`{"angle": 180, "stops": ["#000", "#0000"]}`), as `{"gradient": …}`, or a CSS `linear-gradient(…)` | The layer faded by the gradient's alpha over its box (a photo fading out); nothing outside the box shows |
 | `"ellipse"` or a [named shape](#appendix-names) (`"blob-3"`) | The layer inside that shape |
 | `{"path": "M…"}` | The layer inside that path |
 | `{"layer": "logo"}` | The layer where another layer is; the mask layer isn't drawn itself |

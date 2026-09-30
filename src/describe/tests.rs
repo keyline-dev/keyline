@@ -224,6 +224,39 @@ fn checks_look_where_a_transformed_text_is_drawn() {
 }
 
 #[test]
+fn a_clipping_frame_that_cuts_a_shadow_says_so() {
+    let card = |padding: f32| {
+        scene(
+            json!([{"id": "copy", "type": "frame", "flexDirection": "column", "padding": padding, "children": [
+            {"id": "cta", "type": "rect", "width": 120, "height": 40, "fill": "#D0202E",
+             "shadow": {"y": 8, "blur": 16, "color": "#00000055"}}]}]),
+        )
+    };
+    let w = warnings(&card(0.0), None).unwrap_or_default();
+    assert!(
+        w.contains("cta rect") && w.contains("warn shadow clipped by copy"),
+        "{w}"
+    );
+    let w = warnings(&card(24.0), None).unwrap_or_default();
+    assert!(!w.contains("shadow clipped"), "room for it: {w}");
+}
+
+#[test]
+fn leader_lines_whose_parts_meet_are_a_defect() {
+    let s = scene(
+        json!([{"id": "menu", "type": "text", "width": 200, "fontSize": 16, "leader": ".",
+        "text": "Soup\t$9\nCharred leeks with brown butter\t$14"}]),
+    );
+    let w = warnings(&s, None).unwrap_or_default();
+    assert!(
+        w.contains("wide menu text")
+            && w.contains(r#"!leader "Charred leeks with b…" meets "$14""#),
+        "{w}"
+    );
+    assert!(!w.contains(r#""Soup""#), "{w}");
+}
+
+#[test]
 fn faint_text_is_judged_as_drawn() {
     let s: Scene = serde_json::from_value(json!({"width": 400,
         "height": 100,

@@ -7,7 +7,8 @@ use skia_safe::{
 };
 
 use super::paint::sk_color;
-use crate::scene::{HighlightStyle, Layer};
+use crate::layout::Placed;
+use crate::scene::{HighlightStyle, Kind, Layer};
 use crate::text::{Fit, Text};
 
 /// Boxes behind the highlighted lines and spans of `para`, drawn at `origin`.
@@ -76,6 +77,31 @@ pub(super) fn leaders(
     true
 }
 
+/// The lines of leader text `p` whose two parts run into each other:
+/// `(left, right)` as written, for the `!leader … meets …` defect.
+pub fn leader_clashes(p: &Placed) -> Vec<(String, String)> {
+    let Kind::Text { more, .. } = &p.layer.kind else {
+        return Vec::new();
+    };
+    let (Some(leader), Some((_, fit)), Some(t)) =
+        (&more.leader, &p.text, Text::drawn(p.layer, p.k))
+    else {
+        return Vec::new();
+    };
+    if !t.display().contains('\t') || leader.is_empty() {
+        return Vec::new();
+    }
+    leader_lines(&t, fit, leader, fit.wrap_width)
+        .iter()
+        .zip(t.display().split('\n'))
+        .filter(|(l, text)| text.contains('\t') && l.room < l.gap)
+        .map(|(_, text)| {
+            let (left, right) = text.split_once('\t').unwrap_or((text, ""));
+            (left.to_owned(), right.to_owned())
+        })
+        .collect()
+}
+
 /// One line of a leader text, laid out.
 struct LeaderLine {
     /// The part before the tab.
@@ -89,6 +115,10 @@ struct LeaderLine {
     baseline: f32,
     /// The line's height, px.
     height: f32,
+    /// Room between the two parts, px: under the leader's gap, they meet.
+    room: f32,
+    /// The gap kept on each side of the leader, px.
+    gap: f32,
 }
 
 /// Each line of leader text `t` (each `\n`-separated part) in a box
@@ -112,7 +142,8 @@ fn leader_lines(t: &Text, fit: &Fit, leader: &str, width: f32) -> Vec<LeaderLine
         let left = t.slice_paragraph(start..tab, size);
         let right = t.slice_paragraph((tab + 1).min(end)..end, size);
         let (lw, rw) = (left.max_intrinsic_width(), right.max_intrinsic_width());
-        let space = width - lw - rw - 2.0 * gap;
+        let room = width - lw - rw;
+        let space = room - 2.0 * gap;
         let dots = (tab + 1 < end && space >= one).then(|| {
             let mut n = ((space - one) / step).floor() as usize + 1;
             let mut dots = t.plain_paragraph(&leader.repeat(n), size, None);
@@ -140,6 +171,8 @@ fn leader_lines(t: &Text, fit: &Fit, leader: &str, width: f32) -> Vec<LeaderLine
             dots,
             baseline,
             height: baseline + below,
+            room,
+            gap,
         });
         start = end + 1;
     }

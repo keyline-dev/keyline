@@ -74,9 +74,16 @@ impl<'de> Deserialize<'de> for Mask {
         use serde::de::Error;
         let err = |e: String| D::Error::custom(format!("mask: {e}"));
         let mut o = match Value::deserialize(d)? {
+            // A CSS gradient string, as fills take; any other string is a shape.
             Value::String(name) => {
+                let source = match super::gradient::from_css(&name) {
+                    Some(g) => MaskSource::Gradient(
+                        serde_json::from_value(g).map_err(|e| err(e.to_string()))?,
+                    ),
+                    None => MaskSource::Shape(name),
+                };
                 return Ok(Mask {
-                    source: MaskSource::Shape(name),
+                    source,
                     mode: MaskMode::Alpha,
                     invert: false,
                 });
@@ -102,6 +109,16 @@ impl<'de> Deserialize<'de> for Mask {
                 (None, None) => Err(err(format!("{k} must be a string"))),
             }
         };
+        // `{gradient: …}`, as a fill writes it: its fields, or a CSS string.
+        match o.remove("gradient") {
+            Some(Value::Object(g)) => o.extend(g),
+            Some(Value::String(css)) => match super::gradient::from_css(&css) {
+                Some(Value::Object(g)) => o.extend(g),
+                _ => return Err(err(format!("{css} isn't a CSS gradient"))),
+            },
+            Some(_) => return Err(err("gradient takes {angle, stops} or a CSS gradient".into())),
+            None => {}
+        }
         let source = if o.contains_key("stops") {
             MaskSource::Gradient(
                 serde_json::from_value(Value::Object(o)).map_err(|e| err(e.to_string()))?,
@@ -116,7 +133,7 @@ impl<'de> Deserialize<'de> for Mask {
             MaskSource::Image(text(&mut o, "image")?)
         } else {
             return Err(err(
-                "use a gradient {stops}, a shape name, {path}, {layer} or {image}".into(),
+                r##"use a gradient {"angle":180,"stops":["#000","#0000"]}, a CSS linear-gradient(…), a shape name, {path}, {layer} or {image}"##.into(),
             ));
         };
         Ok(Mask {
@@ -153,11 +170,38 @@ mod tests {
     }
 
     #[test]
+    fn masks_take_gradients_as_fills_do() {
+        let flat: Mask =
+            serde_json::from_value(json!({"angle": 180, "stops": ["#000000", "#00000000"]}))
+                .unwrap();
+        for v in [
+            json!("linear-gradient(180deg, #000000, #00000000)"),
+            json!({"gradient": {"angle": 180, "stops": ["#000000", "#00000000"]}}),
+            json!({"gradient": "linear-gradient(180deg, #000000, #00000000)"}),
+        ] {
+            let m: Mask = serde_json::from_value(v.clone()).unwrap();
+            assert_eq!(m.source, flat.source, "{v}");
+        }
+        let m: Mask = serde_json::from_value(
+            json!({"gradient": {"angle": 180, "stops": ["#000", "#0000"]}, "invert": true}),
+        )
+        .unwrap();
+        assert!(m.invert);
+        // A shape name is still a shape.
+        let m: Mask = serde_json::from_value(json!("blob-3")).unwrap();
+        assert_eq!(m.source, MaskSource::Shape("blob-3".into()));
+    }
+
+    #[test]
     fn bad_masks_say_what_is_allowed() {
         let e = serde_json::from_value::<Mask>(json!({"shapes": "x"}))
             .unwrap_err()
             .to_string();
         assert!(e.contains("{path}, {layer} or {image}"), "{e}");
+        assert!(
+            e.contains(r#"{"angle":180,"stops":["#),
+            "the flat form: {e}"
+        );
         let e = serde_json::from_value::<Mask>(json!({"layer": "a", "extra": 1}))
             .unwrap_err()
             .to_string();

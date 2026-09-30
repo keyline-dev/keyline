@@ -9,32 +9,89 @@ use skia_safe::{EncodedImageFormat, Image, surfaces};
 use super::{draw_scene, render_image};
 use crate::scene::{Scene, Size};
 
-/// One preview PNG with every size side by side, each scaled to `height`
-/// px: one small image instead of one per size, to save image tokens.
+/// One preview PNG, to save image tokens: every size side by side, each
+/// scaled to `height` px; with `times`, one row per size of the scene at
+/// each of those moments, no wider than [`SHEET_MAX_WIDTH`].
+///
+/// # Errors
+/// Missing assets, or a clip's frames can't be decoded.
 pub fn contact_sheet(
     scene: &Scene,
     sizes: &[Size],
     height: f32,
+    times: &[f32],
     assets_dir: &Path,
 ) -> Result<Vec<u8>> {
     const GAP: f32 = 8.0;
-    let shots = sizes
+    let rows: Vec<Vec<Image>> = if times.is_empty() {
+        vec![
+            sizes
+                .iter()
+                .map(|s| frame(scene, s, None, (height / s.height).min(1.0), assets_dir))
+                .collect::<Result<_>>()?,
+        ]
+    } else {
+        let resolved = scene.resolved();
+        let n = times.len() as f32;
+        sizes
+            .iter()
+            .map(|s| {
+                let fit = (SHEET_MAX_WIDTH - GAP * (n + 1.0)) / (n * s.width);
+                let px = (height / s.height).min(fit).min(1.0);
+                times
+                    .iter()
+                    .map(|&t| frame(&resolved, s, Some(t), px, assets_dir))
+                    .collect::<Result<_>>()
+            })
+            .collect::<Result<_>>()?
+    };
+    let gap = GAP as i32;
+    let w = rows
         .iter()
-        .map(|s| render_image(scene, s, (height / s.height).min(1.0), assets_dir, false))
-        .collect::<Result<Vec<_>>>()?;
-    let w: i32 =
-        shots.iter().map(Image::width).sum::<i32>() + GAP as i32 * (shots.len() as i32 + 1);
-    let h = shots.iter().map(Image::height).max().unwrap_or(1) + 2 * GAP as i32;
+        .map(|r| r.iter().map(|i| i.width() + gap).sum::<i32>() + gap)
+        .max()
+        .unwrap_or(1);
+    let h = rows
+        .iter()
+        .map(|r| r.iter().map(Image::height).max().unwrap_or(0) + gap)
+        .sum::<i32>()
+        + gap;
     let mut surface =
         surfaces::raster_n32_premul((w, h)).ok_or_else(|| anyhow!("can't allocate {w}×{h}"))?;
     let canvas = surface.canvas();
     canvas.clear(skia_safe::Color::from_rgb(128, 128, 128));
-    let mut x = GAP;
-    for shot in &shots {
-        canvas.draw_image(shot, (x, GAP), None);
-        x += shot.width() as f32 + GAP;
+    let mut y = GAP;
+    for row in &rows {
+        let mut x = GAP;
+        for shot in row {
+            canvas.draw_image(shot, (x, y), None);
+            x += shot.width() as f32 + GAP;
+        }
+        y += row.iter().map(Image::height).max().unwrap_or(0) as f32 + GAP;
     }
     encode_png(&surface.image_snapshot())
+}
+
+/// The widest a preview of moments gets, px.
+pub const SHEET_MAX_WIDTH: f32 = 2000.0;
+
+/// `size` drawn at `px` per pixel, at moment `t` (at rest when `None`),
+/// with any clips' frames of that moment.
+fn frame(scene: &Scene, size: &Size, t: Option<f32>, px: f32, assets_dir: &Path) -> Result<Image> {
+    if crate::video::frame::has_video(scene) {
+        let (at, frames) = crate::video::frame::still(scene, size, t.unwrap_or(0.0), assets_dir)?;
+        return super::render_image_with(&at, size, px, assets_dir, false, frames);
+    }
+    match t {
+        Some(t) => render_image(
+            &crate::anim::at_time(scene, t, size),
+            size,
+            px,
+            assets_dir,
+            false,
+        ),
+        None => render_image(scene, size, px, assets_dir, false),
+    }
 }
 
 pub(super) fn encode_png(image: &Image) -> Result<Vec<u8>> {

@@ -253,8 +253,11 @@ fn flex_item<'a>(
         Kind::Spacer { min_length } => Some(min_length * k),
         _ => None,
     };
-    // `flexGrow` alone, with no size along the stack, makes it fill.
-    let grows = len_main.is_none() && c.grow.is_some_and(|g| g > 0.0);
+    // `flexGrow` makes it fill: from nothing with no size along the stack,
+    // else from that size, CSS's flex-basis (`width: 0, flexGrow: 1`
+    // shares a row evenly).
+    let grows = c.grow.is_some_and(|g| g > 0.0)
+        && matches!(len_main, None | Some(Length::Px(_) | Length::Pct(_)));
     let fill =
         (len_main == Some(Length::Fill) || spacer.is_some() || grows) && inner_main.is_some();
     let (min_side, max_side) = if row {
@@ -285,14 +288,14 @@ fn flex_item<'a>(
         layer: c,
         index,
         main: if fill {
-            min_main
+            main_forced.unwrap_or(0.0).max(min_main)
         } else {
             nat_main.max(min_main)
         },
         cross,
         cross_forced,
         fill,
-        fixed_main: main_forced.is_some(),
+        fixed_main: main_forced.is_some() && !grows,
         min_main,
         max_main: max_side.map_or(f32::MAX, |v| v * k),
         align,

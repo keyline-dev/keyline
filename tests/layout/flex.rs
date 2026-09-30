@@ -426,3 +426,28 @@ fn an_overflowing_stack_still_reports_its_absolute_children() {
         .unwrap();
     assert!(off.contains("!hidden"), "{d}");
 }
+
+#[test]
+fn flex_grow_grows_from_a_set_width_like_a_css_basis() {
+    // `width: 0, flexGrow: 1` shares a row evenly, whatever the content.
+    let col = |id: &str, text: &str| {
+        json!({"id": id, "type": "frame", "width": 0, "flexGrow": 1,
+        "flexDirection": "column", "children": [{"type": "text", "width": "fill", "text": text, "fontSize": 20}]})
+    };
+    let s = scene(
+        json!([{"id": "row", "type": "frame", "width": 900, "flexDirection": "row", "gap": 30,
+        "children": [col("a", "Dana"), col("b", "Omar Haddad"), col("c", "Ruth")]}]),
+    );
+    let b = boxes(&s, &size("s", 1000.0, 500.0, 1.0));
+    for id in ["a", "b", "c"] {
+        assert_eq!(b[id].w, 280.0, "{id}: {:?}", b[id]);
+    }
+    // A basis of 100 plus an equal share of the rest.
+    let s = scene(
+        json!([{"id": "row", "type": "frame", "width": 600, "flexDirection": "row", "children": [
+        {"id": "a", "type": "rect", "width": 100, "height": 10, "flexGrow": 1},
+        {"id": "b", "type": "rect", "width": 300, "height": 10, "flexGrow": 1}]}]),
+    );
+    let b = boxes(&s, &size("s", 1000.0, 500.0, 1.0));
+    assert_eq!((b["a"].w, b["b"].w), (200.0, 400.0));
+}

@@ -27,6 +27,8 @@ pub struct RenderFile {
     pub quality: Option<u32>,
     /// A file size cap, KB.
     pub max_kb: Option<u32>,
+    /// Also write the preview sheet, `<scene>-preview.png`.
+    pub preview: bool,
 }
 
 /// The report `render` prints, and whether the design has a `!` defect.
@@ -78,6 +80,9 @@ impl Server {
                 args[key] = v;
             }
         }
+        if r.preview {
+            args["preview"] = json!(true);
+        }
         let blocks = self.render_impl(from(args.clone())?).await?;
         let out = r.out.clone().unwrap_or_else(|| PathBuf::from("."));
         std::fs::create_dir_all(&out).map_err(|e| format!("{}: {e}", out.display()))?;
@@ -114,6 +119,19 @@ impl Server {
             for line in t.text.lines() {
                 let _ = writeln!(text, "{}", copy_out(line, &renders, &out)?);
             }
+        }
+        if let Some(image) = blocks.iter().find_map(|b| b.as_image()) {
+            use base64::Engine as _;
+            let png = base64::engine::general_purpose::STANDARD
+                .decode(&image.data)
+                .map_err(|e| e.to_string())?;
+            let stem = r
+                .scene
+                .file_stem()
+                .map_or_else(|| "scene".into(), |s| s.to_string_lossy());
+            let path = out.join(format!("{stem}-preview.png"));
+            std::fs::write(&path, png).map_err(|e| format!("{}: {e}", path.display()))?;
+            let _ = writeln!(text, "preview {}", path.display());
         }
         Ok(Report {
             defects: text.split_whitespace().any(|w| w.starts_with('!')),

@@ -41,6 +41,8 @@ render:
   --time <s>              A still of that moment of an animated scene
   --quality <1-100>       JPEG, WebP and video quality
   --max-kb <n>            Lower a lossy file's quality until it fits
+  --preview               Also write <scene>-preview.png: every size, or
+                          6 moments of each size of an animated scene
   render reads images beside the scene file, prints what the render tool
   replies, and exits 1 if the design has a ! defect.
 
@@ -84,6 +86,8 @@ pub struct Options {
     pub quality: Option<u32>,
     /// `--max-kb` (or `--maxKB`): `render`'s file size cap, KB.
     pub max_kb: Option<u32>,
+    /// `--preview`: `render` also writes its preview sheet.
+    pub preview: bool,
 }
 
 impl Options {
@@ -129,6 +133,7 @@ impl Options {
             };
             match flag {
                 "-h" | "--help" => o.help = true,
+                "--preview" => o.preview = true,
                 // A value too, for clients that can only fill one in.
                 "--no-motion" => {
                     o.no_motion = match inline.as_deref() {
@@ -242,6 +247,7 @@ mod tests {
             (Some(2.5), Some(80), Some(300))
         );
         assert_eq!(parse(&["--max-kb=9"]).unwrap().max_kb, Some(9));
+        assert!(parse(&["render", "ad.json", "--preview"]).unwrap().preview);
     }
 
     #[test]

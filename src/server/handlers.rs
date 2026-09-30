@@ -8,7 +8,9 @@ use base64::Engine;
 use rmcp::model::ContentBlock;
 use serde_json::Value;
 
-use super::{AssetAddArgs, PREVIEW_HEIGHT, RenderArgs, SceneCreateArgs, Server, err};
+use super::{
+    AssetAddArgs, PREVIEW_HEIGHT, PREVIEW_MOMENTS, RenderArgs, SceneCreateArgs, Server, err,
+};
 use crate::describe::text_report;
 use crate::fetch::{MAX_ASSET_BYTES, fetch};
 
@@ -295,11 +297,29 @@ impl Server {
                 ));
             }
         }
+        // A moving scene's preview shows moments through it, a row per size.
+        let times = match (a.preview, a.time, first.as_deref()) {
+            (true, None, Some(scene)) => moments(scene),
+            (true, Some(t), _) => vec![t],
+            _ => Vec::new(),
+        };
+        if times.len() > 1 {
+            let at: Vec<String> = times
+                .iter()
+                .map(|t| format!("{}", (t * 10.0).round() / 10.0))
+                .collect();
+            let _ = write!(text, "\npreview at {}s", at.join(" "));
+        }
         let mut content = vec![ContentBlock::text(format!("{fetched}{}", text.trim_end()))];
         if let (true, Some(scene)) = (a.preview, first) {
             let assets = self.store.assets_dir();
+            let height = if times.len() > 1 {
+                PREVIEW_HEIGHT / 2.0
+            } else {
+                PREVIEW_HEIGHT
+            };
             let sheet = tokio::task::spawn_blocking(move || {
-                contact_sheet(&scene, &sizes, PREVIEW_HEIGHT, &assets)
+                contact_sheet(&scene, &sizes, height, &times, &assets)
             })
             .await
             .map_err(|e| e.to_string())?
@@ -460,7 +480,22 @@ fn facts(
         if sound {
             out.push_str(", with sound");
         }
+        if let Some(h) = crate::anim::shots::held(scene) {
+            let _ = write!(out, ", last shot held {}s", (h * 10.0).round() / 10.0);
+        }
     }
     let _ = write!(out, ", {} KB", bytes.div_ceil(1024));
     out
+}
+
+/// Moments a moving scene's preview shows: [`PREVIEW_MOMENTS`] evenly
+/// through it, the last just before the end. None for a still scene.
+fn moments(scene: &Scene) -> Vec<f32> {
+    let Some(len) = crate::anim::shots::length(scene).filter(|l| *l > 0.0) else {
+        return Vec::new();
+    };
+    let last = (len - 0.5 / scene.fps.max(1.0)).max(0.0);
+    (1..=PREVIEW_MOMENTS)
+        .map(|i| (len * i as f32 / PREVIEW_MOMENTS as f32).min(last))
+        .collect()
 }

@@ -307,6 +307,38 @@ pub fn expand_styles(
     out
 }
 
+/// One line per style used as a tag in `scene` whose fields a tag can't
+/// carry: `hint: <accent> drops letterSpacing (a tag carries color, …)`.
+pub fn tag_hints(scene: &crate::scene::Scene) -> Vec<String> {
+    let mut used = std::collections::BTreeSet::new();
+    scene.walk(&mut |l| {
+        if let crate::scene::Kind::Text { text, .. } = &l.kind {
+            for name in scene.styles.keys() {
+                if text.contains(&format!("<{name}>")) {
+                    used.insert(name.as_str());
+                }
+            }
+        }
+    });
+    used.into_iter()
+        .filter_map(|name| {
+            let dropped: Vec<&str> = scene.styles[name]
+                .keys()
+                .map(String::as_str)
+                .filter(|k| !SPAN_FIELDS.iter().any(|(f, _)| f == k))
+                .collect();
+            (!dropped.is_empty()).then(|| {
+                let carried: Vec<&str> = SPAN_FIELDS.iter().map(|(f, _)| *f).collect();
+                format!(
+                    "hint: <{name}> drops {} (a tag carries {})",
+                    dropped.join(", "),
+                    carried.join(", ")
+                )
+            })
+        })
+        .collect()
+}
+
 /// Style fields a span can take, with their CSS properties.
 const SPAN_FIELDS: &[(&str, &str)] = &[
     ("color", "color"),
@@ -399,6 +431,22 @@ mod tests {
         assert_eq!(
             (text.as_str(), spans[0].weight),
             ("Proven RESULTS", Some(800))
+        );
+    }
+
+    #[test]
+    fn a_style_tag_names_the_fields_it_drops() {
+        let s: crate::scene::Scene = serde_json::from_value(serde_json::json!({"width": 100, "height": 100,
+            "sizes": [{"id": "a", "width": 100, "height": 100}],
+            "styles": {"accent": {"color": "#D0202E", "letterSpacing": 2}, "plain": {"color": "#000"},
+                "unused": {"shadow": {"blur": 4}}},
+            "layers": [{"id": "t", "type": "text", "text": "A <accent>b</accent> <plain>c</plain>"}]}))
+        .unwrap();
+        assert_eq!(
+            super::tag_hints(&s),
+            [
+                "hint: <accent> drops letterSpacing (a tag carries color, fontWeight, fontStyle, fontSize, fontFamily, textDecoration, highlight)"
+            ]
         );
     }
 

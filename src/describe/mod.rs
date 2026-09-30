@@ -281,6 +281,11 @@ fn line(
             if let Some(others) = checks.overlaps.get(l.id.as_str()) {
                 let _ = write!(out, " !overlaps {}", others.join(","));
             }
+            for (left, right) in crate::render::leader_clashes(p) {
+                let short: String = left.chars().take(20).collect();
+                let more = if short.len() < left.len() { "…" } else { "" };
+                let _ = write!(out, " !leader \"{short}{more}\" meets \"{right}\"");
+            }
             if let (Some(backdrop), Some(ink)) = (&checks.backdrop, ink(p))
                 && let Some((ratio, min)) = contrast(p, ink, backdrop, (opacity, m))
             {
@@ -339,6 +344,8 @@ fn line(
         for (side, px) in cut.iter().filter(|(_, px)| *px > 0.5) {
             let _ = write!(out, " {side} {}px", px.ceil());
         }
+    } else if clip.by != "canvas" && shadow_cut(p, visible) {
+        let _ = write!(out, " warn shadow clipped by {}", clip.by);
     }
     lines.push(out);
     let inner = match &l.kind {
@@ -361,6 +368,33 @@ fn line(
         };
         line(lines, checks, c, own, depth + 1, (opacity, m));
     }
+}
+
+/// Whether a frame that clips its content cuts `p`'s drop shadow: where
+/// its offset, spread and half its blur reach, so a soft tail fading
+/// against the edge doesn't count. Text shadows follow the letters and
+/// aren't judged.
+fn shadow_cut(p: &Placed, visible: Rect) -> bool {
+    if matches!(p.layer.kind, Kind::Text { .. }) {
+        return false;
+    }
+    let r = p.rect;
+    p.layer
+        .look
+        .shadows
+        .iter()
+        .flat_map(crate::scene::OneOrMany::as_slice)
+        .filter(|s| !s.inset && s.color.0 >> 24 != 0)
+        .any(|s| {
+            let grow = (s.spread + s.blur / 2.0).max(0.0) * p.k;
+            let reach = Rect {
+                x: r.x + s.x * p.k - grow,
+                y: r.y + s.y * p.k - grow,
+                w: r.w + 2.0 * grow,
+                h: r.h + 2.0 * grow,
+            };
+            !contains(visible, reach)
+        })
 }
 
 fn intersect(a: Rect, b: Rect) -> Option<Rect> {

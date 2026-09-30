@@ -267,3 +267,71 @@ async fn a_number_counts_up_frame_by_frame_in_a_box_that_holds_still() {
 fn file_path(reply: &str) -> &str {
     reply.split_whitespace().nth(1).unwrap()
 }
+
+#[tokio::test]
+async fn a_moving_preview_shows_moments_and_a_held_last_shot_is_stated() {
+    let mcp = Mcp::start("motion-preview").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"sizes": ["400x200", "200x200"], "duration": 3, "fps": 10}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    mcp.ok(
+        "layer_add",
+        json!({"sceneId": id, "layers": [
+        {"id": "s1", "type": "shot", "duration": 1, "children": [
+            {"type": "rect", "width": "fill", "height": "fill", "fill": "#D0202E"}]},
+        {"id": "s2", "type": "shot", "duration": 1.5, "transition": "fade", "children": [
+            {"type": "rect", "width": "fill", "height": "fill", "fill": "#1B2A5C"}]}]}),
+    )
+    .await;
+    let r = mcp
+        .call_raw("render", json!({"sceneId": id, "preview": true}))
+        .await;
+    let text: String = r
+        .content
+        .iter()
+        .filter_map(|c| c.as_text())
+        .map(|t| t.text.clone())
+        .collect();
+    assert!(text.contains("preview at 0.5 1 1.5 2 2.5 3s"), "{text}");
+    let image = r.content.iter().find_map(|c| c.as_image()).unwrap();
+    let png =
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &image.data).unwrap();
+    // Six moments a row, a row per size, 192 px tall, but no wider than
+    // 2000 px: the 400×200 row shrinks to 162 px tall to fit.
+    assert_eq!(
+        keyline_mcp::render::raster_size(&png),
+        Some((2000.0, 162.0 + 192.0 + 3.0 * 8.0))
+    );
+    // The first moment is the red shot, the last the navy one.
+    let mut reader = png::Decoder::new(std::io::Cursor::new(&png))
+        .read_info()
+        .unwrap();
+    let mut buf = vec![0u8; reader.output_buffer_size().unwrap()];
+    let info = reader.next_frame(&mut buf).unwrap();
+    let px = |x: usize, y: usize| {
+        let at = y * info.line_size + x * info.color_type.samples();
+        (buf[at], buf[at + 2])
+    };
+    let (r, b) = px(20, 20);
+    assert!(r > 150 && b < 100, "first moment: {r},{b}");
+    let (r, b) = px(1980, 20);
+    assert!(b > r, "last moment: {r},{b}");
+
+    // The scene outlasts its shots: the last holds, and the reply says so.
+    let reply = mcp
+        .ok(
+            "render",
+            json!({"sceneId": id, "format": "gif", "sizes": ["200x200"]}),
+        )
+        .await;
+    // Shots end at 2 s (the fade overlaps them by 0.5 s); the scene lasts 3.
+    assert!(reply.contains("last shot held 1s"), "{reply}");
+    mcp.stop().await;
+}

@@ -60,8 +60,10 @@ A **layer line** is `id type x,y w×h`, in px at that size, then:
 | `!clipped by <frame or canvas>: <side> <px>` | defect | Part of the layer falls outside what shows |
 | `!hidden` | defect | The layer is entirely outside what shows |
 | `!overlaps <ids>` | defect | Text ink overlaps other text |
+| `!leader "<left…>" meets "<right>"` | defect | In a `leader` line, the text before the tab runs into the text after it |
 | `!unsafe` | defect | Text sits under the size's `safeArea` |
 | `warn contrast R:1 (WCAG N)` | advisory | Text contrast against what's behind it is below the WCAG level for its size |
+| `warn shadow clipped by <frame>` | advisory | A frame that clips its content (`clipsContent`, on by default) cuts the layer's drop shadow; give it room (padding) or set `clipsContent: false` |
 
 Defects need fixing; advisories need judgment ([concepts](concepts.md#checks-defects-advisories-facts)). In a scene of [shots](scene.md#shots-and-transitions), every shot is checked, each with the layers around it.
 
@@ -79,6 +81,12 @@ After the facts, one line per text that writes a token as `$name` rather than [`
 
 ```text
 hint: did you mean {{price}}? (cta says $price)
+```
+
+And one per style used as a markup tag whose fields a tag can't carry (a tag carries `color`, `fontWeight`, `fontStyle`, `fontSize`, `fontFamily`, `textDecoration` and `highlight`):
+
+```text
+hint: <accent> drops letterSpacing (a tag carries color, fontWeight, fontStyle, fontSize, fontFamily, textDecoration, highlight)
 ```
 
 ### Drawn-text lines
@@ -242,7 +250,7 @@ wide /…/renders/s1a2b3c4d5/wide-v3.gif (1200×628, 2s, 60 frames at 30 fps, pl
 wide /…/renders/s1a2b3c4d5/wide-v3.mp4 (1200×628, 2s, 60 frames at 30 fps, with sound, 610 KB)
 ```
 
-A moving format gives its length, frame count and frame rate; GIF and APNG also say whether they loop (`loops`) or stop on their last frame (`plays once`), from the scene's `loop`; MP4 and WebM say `with sound` when they carry any. An agent opening an animated file sees only its first frame, so these facts are how it checks one. With `maxKB`, `quality N` follows when the quality was lowered (a lowered frame rate shows in the facts), or `!too-big` when even the lowest setting doesn't fit. With `rows`, each line starts with `r<row>`. With `preview`, the reply also carries the preview as an image.
+A moving format gives its length, frame count and frame rate; GIF and APNG also say whether they loop (`loops`) or stop on their last frame (`plays once`), from the scene's `loop`; MP4 and WebM say `with sound` when they carry any; `last shot held 0.4s` means the scene's `duration` outlasts its shots and the last one holds. An agent opening an animated file sees only its first frame, so these facts are how it checks one. With `maxKB`, `quality N` follows when the quality was lowered (a lowered frame rate shows in the facts), or `!too-big` when even the lowest setting doesn't fit. With `rows`, each line starts with `r<row>`. With `preview`, the reply also carries the preview as an image: every size side by side, or, for a scene that moves, a row per size of 6 moments through it, named in a last line (`preview at 0.5 1 1.5 2 2.5 3s`).
 
 ## Templates and variants
 
@@ -307,6 +315,7 @@ keyline-mcp render campaign.json --out renders/ --size wide --rows rows.json --f
 | `--time <s>` | none | A still of that moment of an animated scene, as the tool's `time` |
 | `--quality <1-100>` | the format's | As the tool's `quality` |
 | `--max-kb <n>` | none | As the tool's `maxKB` (`--maxKB` works too) |
+| `--preview` | off | Also writes `<scene>-preview.png`, as the tool's `preview`: every size, or 6 moments of each size of an animated scene |
 
 In GitHub Actions, the repo is an action that installs a release and runs this on every scene a glob matches, failing the job on a `!` defect:
 
