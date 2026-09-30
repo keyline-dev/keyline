@@ -1,4 +1,4 @@
-label	commit	model	cost	turns	secs	calls	tool_chars	images	output	thinking	cache_write	cache_read	smallest_text	defects
+label	commit	model	cost	turns	secs	calls	tool_chars	images	output	thinking	cache_write	cache_read	smallest_text	defects	reply_chars
 baseline-1	b477a87	claude-opus-5-5	0.155	3	37	2	4346	1	3914	1532	9161	12658	portrait 28, wide 24, sky 8	0
 baseline-2	b477a87	claude-opus-5-5	0.116	3	32	2	4238	1	3312	1119	5604	15304	portrait 28, wide 24, sky 8	0
 baseline-3	b477a87	claude-opus-5-5	0.109	3	29	2	4312	1	3093	867	5319	14979	portrait 24, wide 20, sky 7	0

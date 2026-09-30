@@ -8,7 +8,7 @@ Run one (from the repo root):
 KEYLINE_MCP_BENCH=<label> cargo test --test llm_e2e -- --ignored --nocapture
 ```
 
-Each `<label>/` holds `prompt.md` (system prompt and task), `events.jsonl` (every turn and tool call), `layout.txt` (problems, then every layer's box per size), a PNG per size and `summary.json`. `results.tsv` has one row per run: cost (API-equivalent), turns, tool calls, tokens, smallest text per size and defects left. The commit column ends in `+dirty` when `src/` had uncommitted changes.
+Each `<label>/` holds `prompt.md` (system prompt and task), `events.jsonl` (every turn and tool call), `layout.txt` (problems, then every layer's box per size), a PNG per size and `summary.json`. `results.tsv` has one row per run: cost (API-equivalent), turns, tool calls, tool traffic (the calls' arguments and the replies, characters), tokens, smallest text per size, defects left, and the replies' characters alone (`reply_chars`, part of the traffic; rows before it have none). The commit column ends in `+dirty` when `src/` had uncommitted changes.
 
 Runs vary a lot with how long the model thinks, so compare several runs per change, not one.
 

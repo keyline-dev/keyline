@@ -53,7 +53,7 @@ impl Ctx<'_> {
             return Ok(());
         };
         if highlights {
-            super::text_extras::highlights(canvas, &t, para, origin, p.k, l);
+            super::text_extras::highlights(canvas, &t, para, origin, p.k, l, None);
         }
         // Knockout letters erase their parent frame instead of painting.
         let knock = |mut paint: Paint| {

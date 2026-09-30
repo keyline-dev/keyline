@@ -19,6 +19,7 @@ pub(super) fn highlights(
     origin: (f32, f32),
     k: f32,
     layer: &Layer,
+    band: Option<(f32, f32)>,
 ) {
     for (range, h) in t.highlights() {
         let mut paint = skia_safe::Paint::default();
@@ -34,6 +35,12 @@ pub(super) fn highlights(
         }
         let pad = h.padding * k;
         for b in para.get_rects_for_range(range, RectHeightStyle::Tight, RectWidthStyle::Tight) {
+            // Only one line's boxes, drawn whole: a padded or ragged box
+            // reaches past its line's band into the one above.
+            let mid = b.rect.center_y();
+            if band.is_some_and(|(top, bottom)| mid < top || mid >= bottom) {
+                continue;
+            }
             let r = b.rect.with_offset(origin).with_outset((pad, pad * 0.5));
             let radius = h.radius * k;
             canvas.draw_rrect(skia_safe::RRect::new_rect_xy(r, radius, radius), &paint);

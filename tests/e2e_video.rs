@@ -323,14 +323,25 @@ async fn quality_and_max_kb_hold_for_video_on_every_encoder() {
         );
         let budget = default / 1024 / 3;
         let (capped, line) = render_mp4(&mcp, &id, json!({"maxKB": budget})).await;
+        // libx264 lowers its quality; a hardware encoder takes a bitrate.
+        let how = if encoder == "software" {
+            " quality "
+        } else {
+            " "
+        };
         assert!(
-            line.contains(" bitrate "),
-            "{encoder}: says the bitrate: {line}"
+            line.contains(how) && (line.contains(" quality ") || line.contains(" bitrate ")),
+            "{encoder}: says how: {line}"
         );
+        // Under the budget, and not far under it.
         assert!(
-            capped <= budget * 1024 || line.contains("!too-big"),
+            capped <= budget * 1024 && capped * 10 >= budget * 1024 * 6,
             "{encoder}: {capped} bytes for a {budget} KB budget: {line}"
         );
+        // A budget nothing meets: the smallest file tried, said to be too big.
+        let (tiny, line) = render_mp4(&mcp, &id, json!({"maxKB": 1})).await;
+        assert!(line.contains("!too-big"), "{encoder}: {line}");
+        assert!(tiny < capped, "{encoder}: {tiny} vs {capped}");
         mcp.stop().await;
     }
 }

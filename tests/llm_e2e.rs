@@ -125,7 +125,7 @@ async fn claude_builds_the_reference_ad() {
                 .cloned()
                 .unwrap_or_default()
         });
-    let (mut calls, mut traffic, mut images) = (0, 0, 0);
+    let (mut calls, mut traffic, mut replies, mut images) = (0, 0, 0, 0);
     for b in blocks {
         match b["type"].as_str() {
             Some("tool_use") => {
@@ -140,16 +140,19 @@ async fn claude_builds_the_reference_ad() {
                         if p["type"] == "image" {
                             images += 1;
                         } else {
-                            traffic += p["text"].as_str().map_or(0, str::len);
+                            replies += p["text"].as_str().map_or(0, str::len);
                         }
                     }
                 }
-                Value::String(s) => traffic += s.len(),
+                Value::String(s) => replies += s.len(),
                 _ => {}
             },
             _ => {}
         }
     }
+    // Arguments and replies, counted apart: replies are what the server
+    // adds to the context.
+    traffic += replies;
     let u = &result["usage"];
     println!(
         "{calls} tool calls, {} turns, ~{} tokens of text tool traffic (target ~{TOKEN_TARGET}), {images} preview images",
@@ -190,6 +193,7 @@ async fn claude_builds_the_reference_ad() {
             rendered: &rendered,
             calls,
             traffic,
+            replies,
             images,
         };
         let dir = run.save();
@@ -211,6 +215,8 @@ struct Run<'a> {
     rendered: &'a str,
     calls: usize,
     traffic: usize,
+    /// The tool replies' text, characters: part of `traffic`.
+    replies: usize,
     images: usize,
 }
 
@@ -262,7 +268,8 @@ impl Run<'_> {
         let summary = json!({
             "label": self.label, "commit": commit, "model": model,
             "costUsd": r["total_cost_usd"], "turns": r["num_turns"], "durationMs": r["duration_ms"],
-            "toolCalls": self.calls, "toolTrafficChars": self.traffic, "previewImages": self.images,
+            "toolCalls": self.calls, "toolTrafficChars": self.traffic, "replyChars": self.replies,
+            "previewImages": self.images,
             "usage": u, "smallestTextPx": smallest, "defects": defects,
         });
         std::fs::write(
@@ -273,11 +280,11 @@ impl Run<'_> {
 
         let tsv = root.join("results.tsv");
         let mut rows = std::fs::read_to_string(&tsv).unwrap_or_else(|_| {
-            "label\tcommit\tmodel\tcost\tturns\tsecs\tcalls\ttool_chars\timages\toutput\tthinking\tcache_write\tcache_read\tsmallest_text\tdefects\n".into()
+            "label\tcommit\tmodel\tcost\tturns\tsecs\tcalls\ttool_chars\timages\toutput\tthinking\tcache_write\tcache_read\tsmallest_text\tdefects\treply_chars\n".into()
         });
         let px: Vec<String> = smallest.iter().map(|(s, v)| format!("{s} {v}")).collect();
         rows.push_str(&format!(
-            "{}\t{commit}\t{model}\t{:.3}\t{}\t{:.0}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{defects}\n",
+            "{}\t{commit}\t{model}\t{:.3}\t{}\t{:.0}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{defects}\t{}\n",
             self.label,
             r["total_cost_usd"].as_f64().unwrap_or_default(),
             r["num_turns"],
@@ -290,6 +297,7 @@ impl Run<'_> {
             u["cache_creation_input_tokens"],
             u["cache_read_input_tokens"],
             px.join(", "),
+            self.replies,
         ));
         std::fs::write(&tsv, rows).unwrap();
         dir

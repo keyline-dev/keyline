@@ -155,8 +155,8 @@ impl Ctx<'_> {
 
 impl Ctx<'_> {
     /// Split text's highlights, whole as if unsplit, one line at a time:
-    /// each line's arrives with its first piece (that piece's opacity and
-    /// offset), so it never shows before its letters.
+    /// each line's boxes arrive with its first piece (that piece's opacity
+    /// and offset), so none shows before its letters.
     fn split_highlights(
         &self,
         canvas: &skia_safe::Canvas,
@@ -188,9 +188,15 @@ impl Ctx<'_> {
             paint.set_alpha_f(away.opacity.clamp(0.0, 1.0));
             canvas.save_layer(&SaveLayerRec::default().paint(&paint));
             canvas.translate((away.offset[0] * p.k, away.offset[1] * p.k));
-            let band = skia_safe::Rect::new(-1e6, oy + top, 1e6, oy + bottom);
-            canvas.clip_rect(band, None, false);
-            super::text_extras::highlights(canvas, &text, para, (ox, oy), p.k, p.layer);
+            super::text_extras::highlights(
+                canvas,
+                &text,
+                para,
+                (ox, oy),
+                p.k,
+                p.layer,
+                Some((top, bottom)),
+            );
             canvas.restore();
         }
     }

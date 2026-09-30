@@ -480,6 +480,24 @@ fn split_text_draws_its_highlight_whole_and_with_its_first_letter() {
 }
 
 #[test]
+fn a_split_lines_highlight_waits_for_its_own_words() {
+    // Tight lines: line 2's highlight box reaches up past the midpoint
+    // between the lines, into line 1's band.
+    let text = json!([{"id": "t", "type": "text", "x": 5, "y": 20, "fontSize": 24, "lineHeight": 0.8,
+        "color": "#000000", "text": "Hi\n<span style=\"background-color:#FFD400\">you</span>",
+        "split": "words", "stagger": 1, "enter": {"effect": "fade", "duration": 0.2}}]);
+    let yellow = |(r, g, b): (u8, u8, u8)| r > 200 && g > 170 && b < 120;
+    let any = |px: &dyn Fn(i32, i32) -> (u8, u8, u8)| {
+        (0..100).any(|y| (0..100).any(|x| yellow(px(x, y))))
+    };
+    assert!(
+        !any(&pixels_at(text.clone(), 0.5)),
+        "line 2's highlight before its word"
+    );
+    assert!(any(&pixels_at(text, 1.5)), "and with it");
+}
+
+#[test]
 fn leader_lines_keep_their_markup_on_one_baseline() {
     let menu = json!([{"id": "m", "type": "text", "x": 0, "y": 20, "width": 100, "fontSize": 14,
         "color": "#000000", "leader": ".",

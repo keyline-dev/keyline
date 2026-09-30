@@ -311,7 +311,7 @@ impl Ctx<'_> {
             // highlights, which the letters sit on.
             Kind::Text { .. } if self.hide_text => {
                 if let (Some((para, _)), Some(t)) = (&p.text, crate::text::Text::drawn(l, p.k)) {
-                    text_extras::highlights(canvas, &t, para, p.text_origin(), p.k, l);
+                    text_extras::highlights(canvas, &t, para, p.text_origin(), p.k, l, None);
                 }
             }
             Kind::Text { .. } => match l.time.moment {

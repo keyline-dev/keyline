@@ -34,13 +34,14 @@ pub struct Video {
     pub bytes: Vec<u8>,
     /// The rate it was encoded at.
     pub rate: Rate,
-    /// Still over `maxKB` at the lowest bitrate tried.
+    /// Still over `maxKB` after every try; the file is the smallest tried.
     pub too_big: bool,
 }
 
 /// Encodes `size` of a moving scene at `fps` as a video file, with its clips'
 /// sound unless `sound` is false, at `quality` (1–100). With `max_kb`, a
-/// file over it is encoded again at the bitrate that budget allows.
+/// file over it is encoded again, up to three times, at a lower quality
+/// (or, on a hardware encoder, the bitrate that budget allows).
 ///
 /// # Errors
 /// No ffmpeg, a scene without `duration`, missing assets, or ffmpeg failing
@@ -59,8 +60,8 @@ pub fn render_video(
     quality: u32,
     max_kb: Option<u32>,
 ) -> Result<Video> {
-    let mut rate = Rate::Quality(quality.clamp(1, 100));
-    let mut bytes = encode_once(scene, size, fps, assets_dir, container, sound, rate)?;
+    let rate = Rate::Quality(quality.clamp(1, 100));
+    let bytes = encode_once(scene, size, fps, assets_dir, container, sound, rate)?;
     let Some(kb) = max_kb else {
         return Ok(Video {
             bytes,
@@ -69,26 +70,95 @@ pub fn render_video(
         });
     };
     let budget = f64::from(kb) * 1024.0;
+    if bytes.len() as f64 <= budget {
+        return Ok(Video {
+            bytes,
+            rate,
+            too_big: false,
+        });
+    }
+    // Constant-quality encoders (libx264, VP9) lower their quality, which
+    // keeps the look even; hardware encoders take a bitrate.
+    let stepped = container == Container::Webm
+        || super::h264_encoder(&super::ffmpeg().map_err(|e| anyhow!(e))?) == "libx264";
     let secs = f64::from(crate::anim::shots::length(scene).unwrap_or(1.0)).max(0.1);
     let audio = if sound && !super::audio::sources(scene, assets_dir).is_empty() {
         160.0
     } else {
         0.0
     };
-    // At most two tries at a bitrate: the budget, then scaled by how far
-    // the first one missed.
-    let mut kbps = (budget * 8.0 * 0.95 / secs / 1000.0 - audio).max(50.0);
-    for _ in 0..2 {
-        if bytes.len() as f64 <= budget {
+    // A setting that grows the file, the encoder's rate at it, and a guess
+    // of the setting for a size from one try: 6 CRF steps, about 17
+    // quality points, halve the size; a bitrate scales it.
+    let (start, rate_at, guess): (f64, fn(f64) -> Rate, Guess) = if stepped {
+        (
+            f64::from(quality.clamp(1, 100)),
+            |q| Rate::Quality(q.clamp(1.0, 100.0) as u32),
+            |q, ratio| q - 17.4 * ratio.log2(),
+        )
+    } else {
+        (
+            (budget * 8.0 * 0.95 / secs / 1000.0 - audio).max(50.0),
+            |k| Rate::Bitrate(k.max(50.0) as u32),
+            |k, ratio| k / ratio,
+        )
+    };
+    let mut tries = vec![(start, bytes)];
+    if !stepped {
+        let r = rate_at(start);
+        tries[0] = (
+            start,
+            encode_once(scene, size, fps, assets_dir, container, sound, r)?,
+        );
+    }
+    // Every try is measured. Up to three more, each between the closest
+    // under and over the budget so far, until one fits within 85% of it.
+    let target = budget * 0.95;
+    for _ in 0..3 {
+        let len = |t: &&(f64, Vec<u8>)| t.1.len();
+        let under = tries
+            .iter()
+            .filter(|t| t.1.len() as f64 <= budget)
+            .max_by_key(len);
+        let over = tries
+            .iter()
+            .filter(|t| t.1.len() as f64 > budget)
+            .min_by_key(len);
+        let next = match (under, over) {
+            (Some(u), _) if u.1.len() as f64 >= budget * 0.85 => break,
+            // Between the two, where the size's log is on target.
+            (Some(u), Some(o)) => {
+                let (lu, lo) = ((u.1.len() as f64).ln(), (o.1.len() as f64).ln());
+                u.0 + (o.0 - u.0) * (target.ln() - lu) / (lo - lu)
+            }
+            (Some(t), None) | (None, Some(t)) => guess(t.0, t.1.len() as f64 / target),
+            (None, None) => break,
+        }
+        // Never above the quality asked for.
+        .min(if stepped { start } else { f64::MAX })
+        .floor();
+        let rate = rate_at(next);
+        if tries.iter().any(|t| rate_at(t.0) == rate) {
             break;
         }
-        if let Rate::Bitrate(_) = rate {
-            kbps = (kbps * budget / bytes.len() as f64 * 0.95).max(50.0);
-        }
-        rate = Rate::Bitrate(kbps.round() as u32);
-        bytes = encode_once(scene, size, fps, assets_dir, container, sound, rate)?;
+        let bytes = encode_once(scene, size, fps, assets_dir, container, sound, rate)?;
+        tries.push((next, bytes));
     }
-    let too_big = bytes.len() as f64 > budget;
+    // The biggest that fits, else the smallest, reported too big.
+    let fits = |t: &&(f64, Vec<u8>)| t.1.len() as f64 <= budget;
+    let best = match tries.iter().filter(fits).max_by_key(|t| t.1.len()) {
+        Some(t) => t,
+        None => tries
+            .iter()
+            .min_by_key(|t| t.1.len())
+            .ok_or_else(|| anyhow!("no encode"))?,
+    };
+    let (rate, too_big) = (rate_at(best.0), !fits(&best));
+    let bytes = tries
+        .into_iter()
+        .find(|t| rate_at(t.0) == rate)
+        .map(|t| t.1)
+        .unwrap_or_default();
     Ok(Video {
         bytes,
         rate,
@@ -96,7 +166,9 @@ pub fn render_video(
     })
 }
 
-/// One encode at `rate`.
+/// A setting's guess from one try: its setting and its size over the target.
+type Guess = fn(f64, f64) -> f64;
+
 fn encode_once(
     scene: &Scene,
     size: &Size,
@@ -168,9 +240,17 @@ fn encode_once(
                     let bits = (w * h) as f32 * fps * per_px;
                     cmd.args(["-b:v", &format!("{}k", (bits / 1000.0).round().max(100.0))]);
                 }
+                // A ceiling at the target kept the average near 60% of it;
+                // the size is measured after, so a looser one is safe.
                 Rate::Bitrate(k) => {
-                    let k = format!("{k}k");
-                    cmd.args(["-b:v", &k, "-maxrate", &k, "-bufsize", &k]);
+                    cmd.args([
+                        "-b:v",
+                        &format!("{k}k"),
+                        "-maxrate",
+                        &format!("{}k", k * 3 / 2),
+                        "-bufsize",
+                        &format!("{}k", k * 2),
+                    ]);
                     if enc == "libx264" {
                         cmd.args(["-preset", "medium"]);
                     }
