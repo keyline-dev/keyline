@@ -199,6 +199,23 @@ In Cline's MCP Servers panel, open the installed servers' settings (`cline_mcp_s
 </details>
 
 <details>
+<summary><b>Codex</b> (OpenAI)</summary>
+
+```sh
+codex mcp add keyline -- keyline-mcp
+```
+
+Or add to `~/.codex/config.toml`: ([guide](https://developers.openai.com/codex/mcp))
+
+```toml
+[mcp_servers.keyline]
+command = "keyline-mcp"
+```
+
+The ChatGPT app itself connects only to remote MCP servers over HTTP, so it can't start keyline, which runs on your machine; use Codex.
+</details>
+
+<details>
 <summary><b>Any other client</b></summary>
 
 Any MCP client that starts stdio servers works: the command is `keyline-mcp`. It runs where the client runs; to render on another machine, make the command `ssh that-machine keyline-mcp`.
