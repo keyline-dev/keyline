@@ -527,3 +527,51 @@ fn a_stroke_only_arc_is_open() {
         assert_eq!(px(50, y), (255, 255, 255), "a radius at y {y}");
     }
 }
+
+#[test]
+fn a_pdf_draws_masked_images_as_the_raster_does() {
+    // Skia's PDF backend misplaced image shaders inside a mask's layer, so
+    // PDF pages draw images as images; they must land on the same pixels.
+    let dir = std::env::temp_dir();
+    let png = two_tone(300, 100, skia_safe::Color::RED, skia_safe::Color::BLUE);
+    let sha = crate::store::sha256_hex(&png);
+    let tmp = dir.join(format!("{sha}.{:?}.tmp", std::thread::current().id()));
+    std::fs::write(&tmp, &png).unwrap();
+    std::fs::rename(&tmp, dir.join(&sha)).unwrap();
+    let scene: Scene = serde_json::from_value(json!({"width": 100, "height": 100, "background": "#FFFFFF",
+        "sizes": [{"id": "a", "width": 100, "height": 100}],
+        "assets": {"p": {"sha256": sha, "width": 300, "height": 100}},
+        "layers": [{"id": "i", "type": "image", "asset": "p", "x": 10, "y": 20, "width": 80, "height": 60,
+            "cornerRadius": 8, "mask": {"angle": 180, "stops": ["#000", "#0000"]}}]}))
+    .unwrap();
+    let draw = |pdf: bool| {
+        let mut surface = surfaces::raster_n32_premul((100, 100)).unwrap();
+        super::draw_scene(
+            surface.canvas(),
+            &scene,
+            &scene.sizes[0],
+            1.0,
+            &dir,
+            false,
+            HashMap::new(),
+            pdf,
+        )
+        .unwrap();
+        surface.image_snapshot()
+    };
+    let (a, b) = (draw(false), draw(true));
+    let (pa, pb) = (a.peek_pixels().unwrap(), b.peek_pixels().unwrap());
+    let worst = (0..100)
+        .flat_map(|y| (0..100).map(move |x| (x, y)))
+        .map(|(x, y)| {
+            let (ca, cb) = (pa.get_color((x, y)), pb.get_color((x, y)));
+            ca.r().abs_diff(cb.r()).max(ca.b().abs_diff(cb.b()))
+        })
+        .max()
+        .unwrap();
+    assert!(worst <= 40, "images drawn apart by {worst} levels");
+    assert!(
+        pb.get_color((25, 25)).r() > 200 && pb.get_color((75, 25)).b() > 200,
+        "red left, blue right, as the photo"
+    );
+}

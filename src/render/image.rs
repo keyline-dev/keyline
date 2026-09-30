@@ -24,14 +24,7 @@ impl Ctx<'_> {
         tile: f32,
         focus: [f32; 2],
     ) -> Result<Paint> {
-        let a = self
-            .scene
-            .assets
-            .get(id)
-            .cloned()
-            .ok_or_else(|| anyhow!("unknown asset {id}"))?;
-        let drawn = image_rect(bx, a.width, a.height, fit, crop, tile, focus);
-        let img = self.image(id, &a, drawn)?;
+        let (img, drawn) = self.image_drawn(id, bx, fit, crop, tile, focus)?;
         let src = skia_safe::Rect::from_wh(img.width() as f32, img.height() as f32);
         let to_drawn = Matrix::rect_2_rect(src, sk_rect(drawn), None)
             .ok_or_else(|| anyhow!("asset {id}: empty image"))?;
@@ -51,6 +44,26 @@ impl Ctx<'_> {
         paint.set_anti_alias(true);
         paint.set_shader(shader);
         Ok(paint)
+    }
+
+    /// Asset `id` decoded, and the rect it's drawn in for box `bx`.
+    pub(super) fn image_drawn(
+        &mut self,
+        id: &str,
+        bx: Rect,
+        fit: Fit,
+        crop: Option<&Crop>,
+        tile: f32,
+        focus: [f32; 2],
+    ) -> Result<(Image, Rect)> {
+        let a = self
+            .scene
+            .assets
+            .get(id)
+            .cloned()
+            .ok_or_else(|| anyhow!("unknown asset {id}"))?;
+        let drawn = image_rect(bx, a.width, a.height, fit, crop, tile, focus);
+        Ok((self.image(id, &a, drawn)?, drawn))
     }
 
     pub(super) fn image(&mut self, id: &str, a: &Asset, drawn: Rect) -> Result<Image> {

@@ -176,3 +176,21 @@ fn a_lone_grid_column_keeps_the_child_in_that_column() {
     check(&b, "b", (0.0, 0.0, 200.0, 100.0));
     check(&b, "c", (0.0, 100.0, 100.0, 100.0));
 }
+
+#[test]
+fn an_item_spanning_auto_rows_gets_their_sum() {
+    // "today" spans two auto rows beside two 100 px items: the rows grow
+    // evenly so it gets its 300 px, as in CSS.
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "width": 400, "gridTemplateColumns": "1fr 1fr", "gap": 10,
+        "children": [
+            {"id": "today", "type": "rect", "height": 300, "gridRow": "1 / span 2", "gridColumn": "1"},
+            {"id": "b", "type": "rect", "height": 100, "gridColumn": "2"},
+            {"id": "c", "type": "rect", "height": 100, "gridColumn": "2"}]}]),
+    );
+    let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
+    check(&b, "today", (0.0, 0.0, 195.0, 300.0));
+    check(&b, "g", (0.0, 0.0, 400.0, 300.0));
+    // b and c each take their 100 px at the top of a 145 px row.
+    assert_eq!(b["c"].y, 155.0);
+}

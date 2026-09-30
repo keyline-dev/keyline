@@ -67,7 +67,16 @@ pub fn render_png_on(
     if backend == Backend::Gpu {
         let (w, h) = pixel_size(size, 1.0);
         let drawn = gpu::render_png(w, h, |canvas| {
-            draw_scene(canvas, scene, size, 1.0, assets_dir, false, HashMap::new())
+            draw_scene(
+                canvas,
+                scene,
+                size,
+                1.0,
+                assets_dir,
+                false,
+                HashMap::new(),
+                false,
+            )
         })?;
         if let Some(png) = drawn {
             return Ok(png);
@@ -119,11 +128,16 @@ pub fn render_image_with(
         assets_dir,
         hide_text,
         seeded,
+        false,
     )?;
     Ok(surface.image_snapshot())
 }
 
-/// Draws the scene onto any canvas, CPU or GPU.
+/// Draws the scene onto any canvas, CPU, GPU or a PDF page (`pdf`).
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one draw's settings, passed through"
+)]
 fn draw_scene(
     canvas: &skia_safe::Canvas,
     scene: &Scene,
@@ -132,6 +146,7 @@ fn draw_scene(
     assets_dir: &Path,
     hide_text: bool,
     seeded: HashMap<String, Image>,
+    pdf: bool,
 ) -> Result<()> {
     canvas.clear(sk_color(scene.background));
     canvas.scale((px, px));
@@ -153,6 +168,7 @@ fn draw_scene(
         rasters: seeded,
         mask_layers,
         drawing_mask: false,
+        pdf,
     };
     let scene = &*scene.for_size(size);
     let placed = layout(scene, size);
@@ -173,6 +189,9 @@ struct Ctx<'a> {
     mask_layers: HashSet<String>,
     /// True while drawing a mask layer into another layer's mask.
     drawing_mask: bool,
+    /// Drawing a PDF page: images go in as images, not image shaders,
+    /// which Skia's PDF backend misplaces inside a mask's layer.
+    pdf: bool,
 }
 
 impl Ctx<'_> {
@@ -332,6 +351,49 @@ impl Ctx<'_> {
                 focus,
                 adjust,
             } => {
+                if self.pdf && adjust.halftone <= 0.0 && *fit != Fit::Tile {
+                    let (img, drawn) = self.image_drawn(
+                        asset,
+                        p.rect,
+                        *fit,
+                        crop.as_ref(),
+                        tile_scale * p.k,
+                        *focus,
+                    )?;
+                    let mut paint = Paint::default();
+                    paint.set_anti_alias(true);
+                    if let Some(cf) = fills::adjust_filter(adjust) {
+                        paint.set_color_filter(cf);
+                    }
+                    canvas.save();
+                    match shape {
+                        Some(shape::Shape::Rect(rr)) if !rr.is_rect() => {
+                            canvas.clip_rrect(rr, ClipOp::Intersect, true);
+                        }
+                        _ => {
+                            canvas.clip_rect(r, ClipOp::Intersect, true);
+                        }
+                    }
+                    canvas.draw_image_rect_with_sampling_options(
+                        &img,
+                        None,
+                        sk_rect(drawn),
+                        skia_safe::SamplingOptions::new(
+                            skia_safe::FilterMode::Linear,
+                            skia_safe::MipmapMode::Linear,
+                        ),
+                        &paint,
+                    );
+                    canvas.restore();
+                    if let (Some(fs), Some(sh)) = (&l.look.fills, shape) {
+                        for f in fs.as_slice() {
+                            if let Some(fp) = self.fill(f, p.rect, p.k)? {
+                                sh.fill(canvas, &fp);
+                            }
+                        }
+                    }
+                    return Ok(());
+                }
                 let mut paint =
                     self.image_paint(asset, p.rect, *fit, crop.as_ref(), tile_scale * p.k, *focus)?;
                 if adjust.halftone > 0.0 {

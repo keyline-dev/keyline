@@ -228,3 +228,21 @@ fn a_hug_stack_capped_by_max_width_measures_its_wrapped_text() {
         "the column holds both: {col:?} {name:?} {age:?}"
     );
 }
+
+#[test]
+fn a_stretched_child_capped_by_max_width_measures_its_wrapped_text() {
+    // The builders' case: a column stretches the frame, maxWidth caps it.
+    let s = scene(
+        json!([{"type": "frame", "width": "fill", "flexDirection": "column", "padding": 40, "children": [
+        {"id": "hugbox", "type": "frame", "maxWidth": 560, "padding": [6, 22], "flexDirection": "column", "children": [
+            {"id": "name", "type": "text", "text": "Sir Winston", "fontSize": 140, "fontWeight": 800}]}]}]),
+    );
+    let b = boxes(&s, &size("s", 1080.0, 900.0, 1.0));
+    let (hugbox, name) = (b["hugbox"], b["name"]);
+    assert_eq!(hugbox.w, 560.0);
+    assert!(name.h > 250.0, "two lines: {name:?}");
+    assert!(
+        (hugbox.h - (name.h + 12.0)).abs() < 1.0,
+        "{hugbox:?} {name:?}"
+    );
+}

@@ -232,7 +232,26 @@ fn flex_item<'a>(
         (c.height, c.width)
     };
     let align = c.align_self.unwrap_or(stack.align);
-    let align = if align == StackAlign::Baseline && !row {
+    // A shape has no content to size it across: with no size across (or a
+    // `%` or `fill` of a stack that hugs), it stretches to the line, as a
+    // CSS flex item does, instead of setting it at the 100 px default box.
+    let contentless = matches!(
+        c.kind,
+        Kind::Rect { .. } | Kind::Ellipse { .. } | Kind::Polygon { .. } | Kind::Path { .. }
+    );
+    let open_across = match len_cross {
+        None => true,
+        Some(Length::Pct(_) | Length::Fill) => inner_cross.is_none(),
+        _ => false,
+    };
+    let relative = matches!(len_cross, Some(Length::Pct(_) | Length::Fill));
+    let stretches = contentless
+        && open_across
+        && inner_cross.is_none()
+        && (align == StackAlign::Stretch || relative);
+    let align = if stretches {
+        StackAlign::Stretch
+    } else if align == StackAlign::Baseline && !row {
         StackAlign::Start
     } else {
         align
@@ -272,6 +291,8 @@ fn flex_item<'a>(
     };
     let natural = measure(scene, c, k, parent, forced, true);
     let (nat_main, cross) = if row { natural } else { (natural.1, natural.0) };
+    // Stretched to the line later; it mustn't set the line at 100 px.
+    let cross = if stretches { 0.0 } else { cross };
     // Like CSS's `min-height: auto`: in a column, text and frames sized by
     // their content keep its height; text in a row gives way down to its
     // longest word. A `fill` or empty frame can shrink to nothing.

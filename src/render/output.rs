@@ -248,6 +248,7 @@ pub fn render_pdf(scene: &Scene, size: &Size, assets_dir: &Path) -> Result<Vec<u
         assets_dir,
         false,
         std::collections::HashMap::new(),
+        true,
     )?;
     page.end_page().close();
     Ok(out)

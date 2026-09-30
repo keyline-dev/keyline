@@ -451,3 +451,30 @@ fn flex_grow_grows_from_a_set_width_like_a_css_basis() {
     let b = boxes(&s, &size("s", 1000.0, 500.0, 1.0));
     assert_eq!((b["a"].w, b["b"].w), (200.0, 400.0));
 }
+
+#[test]
+fn a_shape_with_no_size_across_stretches_to_the_line() {
+    // A bar beside text in a hugging row: as tall as the text, not 100 px,
+    // whether its height is left out or written as 100%.
+    for bar in [
+        json!({"id": "bar", "type": "rect", "width": 6, "fill": "#D0202E"}),
+        json!({"id": "bar", "type": "rect", "width": 6, "height": "100%", "fill": "#D0202E"}),
+    ] {
+        let s = scene(
+            json!([{"id": "row", "type": "frame", "flexDirection": "row", "gap": 10, "children": [
+            bar.clone(), {"id": "t", "type": "text", "text": "Today", "fontSize": 30}]}]),
+        );
+        let b = boxes(&s, &size("s", 1000.0, 500.0, 1.0));
+        assert!(b["t"].h < 60.0, "{:?}", b["t"]);
+        assert_eq!(b["bar"].h, b["t"].h, "{bar}: {:?}", b["bar"]);
+        assert_eq!(b["row"].h, b["t"].h);
+    }
+    // A divider in a hugging column spans it.
+    let s = scene(
+        json!([{"id": "col", "type": "frame", "flexDirection": "column", "children": [
+        {"id": "t", "type": "text", "text": "A wide heading", "fontSize": 40},
+        {"id": "rule", "type": "rect", "height": 2}]}]),
+    );
+    let b = boxes(&s, &size("s", 1000.0, 500.0, 1.0));
+    assert_eq!(b["rule"].w, b["t"].w);
+}

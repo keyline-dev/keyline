@@ -54,10 +54,10 @@ pub(super) fn measure(
         }
     };
     let clamped = clamp(layer, k, size);
-    // A hugged width that min/max changed: text and frames wrap
-    // differently there, so their height is measured again at that width.
+    // A width that min/max changed (hugged, or stretched by a stack): text
+    // and frames wrap differently there, so their height is measured again.
     let wraps = matches!(layer.kind, Kind::Text { .. } | Kind::Frame { .. });
-    if wraps && w.is_none() && h.is_none() && (clamped.0 - size.0).abs() > 0.01 {
+    if wraps && h.is_none() && (clamped.0 - size.0).abs() > 0.01 {
         let (_, ch) = content(scene, layer, k, parent, (Some(clamped.0), None));
         return clamp(layer, k, (clamped.0, ch));
     }

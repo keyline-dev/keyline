@@ -47,7 +47,7 @@ pub(super) fn arrange<'a>(
     let mut rows = rows_given.to_vec();
     rows.resize(n_rows, Track::Auto);
     let parent = (inner.0.unwrap_or(0.0), inner.1.unwrap_or(0.0));
-    let col_w = sizes(&cols, inner.0, col_gap, k, |i| {
+    let mut col_w = sizes(&cols, inner.0, col_gap, k, |i| {
         flow.iter()
             .zip(&slots)
             .filter(|(_, s)| s.1 == i && s.3 == 1)
@@ -57,7 +57,11 @@ pub(super) fn arrange<'a>(
     let span = |sizes: &[f32], at: usize, n: usize, gap: f32| {
         sizes[at..at + n].iter().sum::<f32>() + gap * (n - 1) as f32
     };
-    let row_h = sizes(&rows, inner.1, row_gap, k, |i| {
+    for (c, s) in flow.iter().zip(&slots).filter(|(_, s)| s.3 > 1) {
+        let need = measure(scene, c, k, parent, (None, None), true).0;
+        widen(&mut col_w, &cols, (s.1, s.3), col_gap, need);
+    }
+    let mut row_h = sizes(&rows, inner.1, row_gap, k, |i| {
         flow.iter()
             .zip(&slots)
             .filter(|(_, s)| s.0 == i && s.2 == 1)
@@ -67,6 +71,13 @@ pub(super) fn arrange<'a>(
             })
             .fold(0.0, f32::max)
     });
+    // An item spanning rows needs their sum: what's missing goes to the
+    // `auto` rows it spans, as in CSS.
+    for (c, s) in flow.iter().zip(&slots).filter(|(_, s)| s.2 > 1) {
+        let w = span(&col_w, s.1, s.3, col_gap);
+        let need = measure(scene, c, k, parent, (Some(w), None), true).1;
+        widen(&mut row_h, &rows, (s.0, s.2), row_gap, need);
+    }
     let start =
         |sizes: &[f32], at: usize, gap: f32| sizes[..at].iter().sum::<f32>() + gap * at as f32;
     let items = flow
@@ -164,6 +175,21 @@ impl Taken {
                     .unwrap_or(false)
             })
         })
+    }
+}
+
+/// Grows the `auto` tracks among `n` from `at`, evenly, until they and
+/// their gaps are `need` long.
+fn widen(sizes: &mut [f32], tracks: &[Track], (at, n): (usize, usize), gap: f32, need: f32) {
+    let have = sizes[at..at + n].iter().sum::<f32>() + gap * (n - 1) as f32;
+    let autos: Vec<usize> = (at..at + n)
+        .filter(|&i| matches!(tracks.get(i), Some(Track::Auto)))
+        .collect();
+    if need > have && !autos.is_empty() {
+        let each = (need - have) / autos.len() as f32;
+        for i in autos {
+            sizes[i] += each;
+        }
     }
 }
 

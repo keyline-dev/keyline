@@ -336,7 +336,7 @@ A size can rearrange the whole grid by changing only its templates in `media`.
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `gridArea` | string | none | The named area to fill |
-| `gridRow`, `gridColumn` | `2`, `"1 / span 2"`, `"1 / 3"` or `"span 2"`, from 1 | the next free cell, row by row, one track | Where it starts and how far it spans; given one, it takes the first free cell in that row or column |
+| `gridRow`, `gridColumn` | `2`, `"1 / span 2"`, `"1 / 3"` or `"span 2"`, from 1 | the next free cell, row by row, one track | Where it starts and how far it spans; given one, it takes the first free cell in that row or column. An item spanning `auto` tracks grows them evenly to fit it, as in CSS |
 
 ### Per size
 
