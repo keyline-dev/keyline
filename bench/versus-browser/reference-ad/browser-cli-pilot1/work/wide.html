@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face {
+  font-family: 'Inter';
+  src: url('Inter.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+:root { --s: 0.85; --photo-pos: 74%; }
+html { font-size: calc(16px * var(--s)); }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { width: 100%; height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #FFFFFF;
+  color: #1B2A5C;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+/* ---------- shared ---------- */
+.pad { padding-left: 3.5rem; padding-right: 3.5rem; }
+
+/* ---------- 1. headline ---------- */
+.hero {
+  flex: 0 0 auto;
+  padding-top: 3rem;
+  padding-bottom: 2.25rem;
+}
+.hero h1 {
+  font-size: 4.5rem;
+  line-height: 1.18;
+  font-weight: 800;
+  letter-spacing: -0.022em;
+  color: #1B2A5C;
+  text-wrap: balance;
+}
+.hero h1 .r { color: #D0202E; }
+.hero .rule {
+  margin-top: 1.5rem;
+  width: 8rem;
+  height: 0.4rem;
+  border-radius: 0.2rem;
+  background: #D0202E;
+}
+
+/* ---------- 2. photo band ---------- */
+.photo {
+  flex: 1 1 0;
+  min-height: 9rem;
+  max-height: 40vh;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  background: #7FB0E6;
+}
+.photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% var(--photo-pos);
+}
+
+/* ---------- 3. candidates ---------- */
+.cands {
+  flex: 0 0 auto;
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 2rem;
+  align-items: start;
+}
+.cand { text-align: center; min-width: 0; }
+.cand .badge {
+  width: 6rem;
+  height: 6rem;
+  margin: 0 auto 0.85rem;
+  border-radius: 50%;
+  background: #1B2A5C;
+  color: #fff;
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.25rem solid #D0202E;
+}
+.cand .name {
+  font-size: 2.05rem;
+  font-weight: 700;
+  line-height: 1.16;
+  letter-spacing: -0.015em;
+  color: #1B2A5C;
+  white-space: nowrap;
+}
+.cand .role {
+  margin-top: 0.3rem;
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #D0202E;
+  white-space: nowrap;
+}
+
+/* ---------- 4. CTA bar ---------- */
+.cta {
+  flex: 0 0 auto;
+  width: 100%;
+  background: #D0202E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+  padding: 1.7rem 3.5rem;
+}
+.cta img { display: block; width: 3.5rem; height: 2.75rem; flex: 0 0 auto; }
+.cta span {
+  font-size: 2.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.15;
+  color: #FFFFFF;
+  white-space: nowrap;
+}
+
+/* ---------- 5. steps ---------- */
+.steps {
+  flex: 0 0 auto;
+  padding-top: 2.1rem;
+  padding-bottom: 2.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+}
+.step img { display: block; width: 2.5rem; height: 2.5rem; flex: 0 0 auto; }
+.step span {
+  font-size: 1.65rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: #1B2A5C;
+  white-space: nowrap;
+}
+
+/* ---------- 6. footer ---------- */
+.foot {
+  flex: 0 0 auto;
+  padding-top: 1.1rem;
+  padding-bottom: 1.9rem;
+  border-top: 0.125rem solid #E3E7F1;
+  font-size: 1.2rem;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  color: #6B769B;
+  white-space: nowrap;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero pad">
+    <h1>Proven <span class="r">RESULTS</span> for <span class="r">WILLOWMERE</span> Families</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="photo"><img src="photo.png" alt=""></div>
+
+  <section class="cands pad">
+    <div class="cand"><div class="badge">DL</div><div class="name">Dana Levi</div><div class="role">Mayor</div></div>
+    <div class="cand"><div class="badge">OH</div><div class="name">Omar Haddad</div><div class="role">Council</div></div>
+    <div class="cand"><div class="badge">RC</div><div class="name">Ruth Cohen</div><div class="role">Council</div></div>
+  </section>
+
+  <div class="cta">
+    <img src="mail.svg" alt="">
+    <span>VOTE BY MAIL</span>
+  </div>
+
+  <section class="steps pad">
+    <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October 20</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Mail it back by November 3</span></div>
+  </section>
+
+  <footer class="foot pad">Paid for by Willowmere Forward &middot; willowmereforward.org</footer>
+
+</div>
+</body>
+</html>

@@ -16,6 +16,34 @@ fn n(v: &Value) -> u64 {
     v.as_u64().unwrap_or_default()
 }
 
+/// The event log without image bytes (the PNGs are kept beside it): every
+/// long base64 string becomes `<N base64 chars elided>`, so a run stays small
+/// enough to commit. Lines that aren't JSON are kept as they are.
+pub fn elide_images(stdout: &[u8]) -> String {
+    fn walk(v: &mut Value) {
+        match v {
+            Value::String(s) if s.len() > 4096 && !s.contains(' ') && !s.contains('\n') => {
+                *s = format!("<{} base64 chars elided>", s.len());
+            }
+            Value::Array(a) => a.iter_mut().for_each(walk),
+            Value::Object(o) => o.values_mut().for_each(walk),
+            _ => {}
+        }
+    }
+    let mut out = String::new();
+    for line in String::from_utf8_lossy(stdout).lines() {
+        match serde_json::from_str::<Value>(line) {
+            Ok(mut v) => {
+                walk(&mut v);
+                out.push_str(&v.to_string());
+            }
+            Err(_) => out.push_str(line),
+        }
+        out.push('\n');
+    }
+    out
+}
+
 /// A message's whole input: fresh, cache-written and cache-read tokens.
 fn input_of(u: &Value) -> u64 {
     n(&u["input_tokens"]) + n(&u["cache_creation_input_tokens"]) + n(&u["cache_read_input_tokens"])
@@ -172,6 +200,16 @@ mod tests {
             "mcp__playwright__browser_evaluate",
             &json!({})
         ));
+    }
+
+    #[test]
+    fn image_bytes_are_elided() {
+        let data = "A".repeat(5000);
+        let line =
+            json!({"content": [{"type": "image", "source": {"data": data}}], "text": "keep me"});
+        let out = elide_images(format!("{line}\nnot json\n").as_bytes());
+        assert!(out.contains("<5000 base64 chars elided>"));
+        assert!(out.contains("keep me") && out.contains("not json"));
     }
 
     #[test]

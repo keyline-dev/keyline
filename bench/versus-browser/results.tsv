@@ -1,0 +1,7 @@
+task	arm	label	commit	claude_version	model	correct	total_tokens	input	cache_write	cache_read	output	thinking	fixed_overhead	peak_context	cost	turns	calls	images_seen	js_measure	secs	likeness_k	likeness_c	defects_judge	cold_cost	outcome	prompt
+reference-ad	browser-cli	pilot1	8c8be36+dirty	2.1.251	claude-opus-5[1m]	1	507855	1420	39482	449571	17382	7214	3649	39484	1.055	27	26	7	true	261	13.7	13.3	2	2.871	success	vs1
+reference-ad	browser-mcp	pilot1	fc00080+dirty	2.1.251	claude-opus-5[1m]	1	693906	1434	35996	642379	14097	6287	9297	35998	1.035	33	32	5	true	224	19.9	19.6	4	3.730	success	vs1
+reference-ad	keyline	pilot1	fc00080+dirty	2.1.251	claude-opus-5[1m]	1	137441	1306	18050	109043	9042	5295	5212	18052	0.462	10	9	1	false	119	13.2	13.1	0	0.858	success	vs1
+speaker-card	browser-cli	pilot1	fc00080+dirty	2.1.251	claude-opus-5[1m]	1	666310	1362	44427	602162	18359	4818	3572	46957	1.205	34	33	10	true	235			0	3.681	success	vs1
+speaker-card	browser-mcp	pilot1	fc00080+dirty	2.1.251	claude-opus-5[1m]	1	2129751	1433	50498	2055733	22087	5281	9206	58666	2.087	61	61	6	true	306			0	11.061	error_max_turns	vs1
+speaker-card	keyline	pilot1	fc00080+dirty	2.1.251	claude-opus-5[1m]	1	168875	1246	14843	143782	9004	3310	5138	18628	0.446	12	11	3	false	127			0	1.013	success	vs1

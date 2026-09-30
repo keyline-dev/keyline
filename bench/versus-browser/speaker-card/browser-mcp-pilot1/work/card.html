@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker Card</title>
+<style>
+@font-face {
+  font-family: 'Inter';
+  src: url('Inter.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+:root{
+  --bg:#0F1226;
+  --accent:#7C5CFF;
+  --text:#FFFFFF;
+  --muted:rgba(255,255,255,.66);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{background:#000;}
+body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+
+#card{
+  position:relative;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+}
+
+/* decorative glows */
+#card::before,#card::after{
+  content:"";position:absolute;border-radius:50%;pointer-events:none;
+}
+#card::before{
+  width:60%;aspect-ratio:1;left:-22%;top:-28%;
+  background:radial-gradient(circle,rgba(124,92,255,.38),rgba(124,92,255,0) 68%);
+}
+#card::after{
+  width:65%;aspect-ratio:1;right:-26%;bottom:-32%;
+  background:radial-gradient(circle,rgba(124,92,255,.22),rgba(124,92,255,0) 68%);
+}
+
+.inner{position:relative;z-index:2;display:flex;flex-direction:column;width:100%;height:100%;}
+
+/* ---------- header ---------- */
+.brand{display:flex;align-items:center;gap:var(--brandgap);flex:0 0 auto;}
+.brand img{display:block;height:var(--logoh);width:auto;}
+.brand .rule{width:2px;height:calc(var(--logoh) * .72);background:rgba(255,255,255,.28);border-radius:2px;}
+.brand .evt{
+  font-size:var(--evt);font-weight:700;letter-spacing:.16em;line-height:1;
+  white-space:nowrap;text-transform:uppercase;
+}
+
+/* ---------- speaker ---------- */
+.speaker{display:flex;align-items:center;gap:var(--sgap);flex:0 0 auto;}
+.avatar{
+  flex:0 0 auto;
+  width:var(--av);height:var(--av);
+  border-radius:50%;
+  overflow:hidden;
+  background:#1a1e3a;
+  box-shadow:0 0 0 var(--ring) rgba(124,92,255,.95), 0 0 0 calc(var(--ring) + 4px) rgba(15,18,38,1);
+}
+.avatar img{width:100%;height:100%;object-fit:cover;object-position:50% 42%;display:block;}
+.who{min-width:0;}
+.nb{white-space:nowrap;}
+.who .nm{font-size:var(--nm);font-weight:700;line-height:1.12;letter-spacing:-.015em;}
+.who .rl{font-size:var(--rl);font-weight:500;line-height:1.3;color:var(--muted);margin-top:var(--rlgap);}
+
+/* ---------- title ---------- */
+.title{
+  font-size:var(--ttl);
+  font-weight:800;
+  line-height:1.1;
+  letter-spacing:-.022em;
+  text-wrap:balance;
+  overflow-wrap:break-word;
+  flex:0 0 auto;
+}
+.title .hl{color:var(--accent);}
+
+/* ---------- footer ---------- */
+.foot{display:flex;align-items:center;gap:var(--fgap);flex:0 0 auto;flex-wrap:nowrap;}
+.meta{
+  font-size:var(--meta);font-weight:500;line-height:1.35;color:var(--muted);
+}
+.meta b{color:#fff;font-weight:600;}
+.btn{
+  flex:0 0 auto;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--accent);color:#fff;
+  font-size:var(--btn);font-weight:700;letter-spacing:.005em;
+  padding:var(--btnpy) var(--btnpx);
+  border-radius:999px;
+  white-space:nowrap;
+  box-shadow:0 10px 34px rgba(124,92,255,.42);
+}
+
+.spacer{flex:1 1 auto;min-height:var(--minspace,0px);}
+.foot .spacer{min-height:0;min-width:var(--fgap);}
+
+/* =======================================================
+   SQUARE 1080 x 1080
+   ======================================================= */
+body.square #card{
+  width:1080px;height:1080px;padding:76px;
+  --logoh:46px;--brandgap:22px;--evt:23px;
+  --av:172px;--ring:4px;--sgap:30px;--nm:40px;--rl:23px;--rlgap:8px;
+  --ttl:56px;--ttlmax:96px;--minspace:72px;
+  --meta:24px;--fgap:36px;--btn:24px;--btnpx:40px;--btnpy:21px;
+}
+body.square .brand{margin-bottom:56px;}
+body.square .speaker{margin-bottom:48px;}
+body.square .foot{margin-top:52px;}
+
+/* =======================================================
+   LANDSCAPE 1920 x 1080  (two columns)
+   ======================================================= */
+body.landscape #card{
+  width:1920px;height:1080px;padding:84px 96px;
+  --logoh:48px;--brandgap:24px;--evt:24px;
+  --av:360px;--colw:450px;--ring:5px;--sgap:34px;--nm:44px;--rl:26px;--rlgap:10px;
+  --ttl:56px;--ttlmax:104px;--minspace:0px;
+  --meta:26px;--fgap:44px;--btn:25px;--btnpx:44px;--btnpy:22px;
+}
+body.landscape .inner{flex-direction:column;}
+body.landscape .cols{
+  display:flex;align-items:center;gap:88px;flex:1 1 auto;min-height:0;
+}
+body.landscape .colL{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:32px;text-align:center;width:var(--colw);}
+body.landscape .colR{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;}
+body.landscape .speaker{flex-direction:column;text-align:center;gap:26px;}
+body.landscape .brand{margin-bottom:0;}
+body.landscape .foot{margin-top:56px;}
+body.landscape .title{max-width:100%;}
+
+/* =======================================================
+   STORY 1080 x 1920
+   ======================================================= */
+body.story #card{
+  width:1080px;height:1920px;padding:110px 84px;
+  --logoh:52px;--brandgap:24px;--evt:26px;
+  --av:360px;--ring:6px;--sgap:34px;--nm:52px;--rl:29px;--rlgap:12px;
+  --ttl:68px;--ttlmax:92px;--minspace:76px;
+  --meta:30px;--fgap:40px;--btn:30px;--btnpx:54px;--btnpy:28px;
+}
+body.story .inner{align-items:flex-start;}
+body.story .brand{margin-bottom:0;}
+body.story .speaker{flex-direction:column;align-items:flex-start;gap:34px;width:100%;}
+body.story .foot{flex-direction:column;align-items:flex-start;gap:44px;width:100%;}
+body.story .btn{width:100%;}
+</style>
+</head>
+<body>
+<div id="card">
+  <div class="inner" id="inner"></div>
+</div>
+
+<script>
+const BRAND = `
+  <div class="brand">
+    <img src="logo.svg" alt="">
+    <div class="rule"></div>
+    <div class="evt">Fieldnotes Conf 2026</div>
+  </div>`;
+
+const SPEAKER = `
+  <div class="speaker">
+    <div class="avatar"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+    <div class="who">
+      <div class="nm">Maya <span class="nb">Okonkwo-Lindqvist</span></div>
+      <div class="rl">Principal Engineer, <span class="nb">Northwind Labs</span></div>
+    </div>
+  </div>`;
+
+const TITLE = `
+  <h1 class="title">Shipping at the speed of <span class="hl">trust</span>: what ten years of <span class="nb">on-call</span> taught us about resilient systems</h1>`;
+
+const FOOT = `
+  <div class="foot">
+    <div class="meta"><b>November 14, 2026</b><br>Harbor Hall, Lisbon</div>
+    <div class="spacer"></div>
+    <div class="btn">Get tickets</div>
+  </div>`;
+
+const size = new URLSearchParams(location.search).get('size')
+          || (location.hash || '#square').slice(1);
+document.body.className = size;
+
+const inner = document.getElementById('inner');
+if (size === 'landscape') {
+  inner.innerHTML = BRAND +
+    `<div class="cols">
+       <div class="colL">${SPEAKER}</div>
+       <div class="colR">${TITLE}${FOOT}</div>
+     </div>`;
+} else if (size === 'story') {
+  inner.innerHTML = BRAND +
+    `<div class="spacer"></div>` + SPEAKER +
+    `<div class="spacer"></div>` + TITLE +
+    `<div class="spacer"></div>` + FOOT;
+} else {
+  inner.innerHTML = BRAND + SPEAKER + TITLE + `<div class="spacer"></div>` + FOOT;
+}
+
+/* ---- auto-fit: shrink title until nothing overflows the card ---- */
+function fits(){
+  const card = document.getElementById('card');
+  const cb = card.getBoundingClientRect();
+  const pad = 2;
+  for (const el of document.querySelectorAll('#inner *')){
+    if (el.classList.contains('spacer')) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) continue;
+    if (r.left < cb.left - pad || r.right > cb.right + pad ||
+        r.top < cb.top - pad || r.bottom > cb.bottom + pad) return false;
+  }
+  // scroll overflow check
+  if (inner.scrollHeight > inner.clientHeight + 1) return false;
+  return true;
+}
+
+window.fitCard = function(){
+  const card = document.getElementById('card');
+  const cs = getComputedStyle(card);
+  const max = parseFloat(cs.getPropertyValue('--ttlmax')) || 999;
+  let ttl = parseFloat(cs.getPropertyValue('--ttl'));
+  const set = v => card.style.setProperty('--ttl', v + 'px');
+  let guard = 0;
+  // shrink until it fits
+  while (!fits() && ttl > 18 && guard++ < 200){ ttl -= 1; set(ttl); }
+  // then grow while it still fits (bounded by --ttlmax)
+  guard = 0;
+  while (ttl < max && guard++ < 200){
+    ttl += 1; set(ttl);
+    if (!fits()){ ttl -= 1; set(ttl); break; }
+  }
+  return {ttl, ok: fits()};
+};
+
+document.fonts.ready.then(() => {
+  window.fitCard();
+  document.documentElement.setAttribute('data-ready','1');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vote By Mail Flyer</title>
+<style>
+@font-face{
+  font-family:"Inter";
+  src:url("Inter.ttf") format("truetype");
+  font-weight:100 900;
+  font-style:normal;
+  font-display:block;
+}
+:root{
+  --s:1;
+  --navy:#1B2A5C;
+  --red:#D0202E;
+  --pad:calc(46px * var(--s));
+  --gap:calc(30px * var(--s));
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;}
+body{
+  font-family:"Inter",system-ui,sans-serif;
+  background:#fff;
+  color:var(--navy);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:geometricPrecision;
+}
+#page{
+  width:100%;height:100%;
+  display:flex;flex-direction:column;align-items:stretch;
+  padding:calc(38px * var(--s)) 0 calc(30px * var(--s));
+  overflow:hidden;
+}
+.pad{padding-left:var(--pad);padding-right:var(--pad);}
+
+/* flexible spacer */
+.sp{flex:1 1 auto;height:var(--gap);min-height:calc(10px * var(--s));}
+
+/* 1. headline */
+h1{
+  font-size:calc(66px * var(--s));
+  line-height:1.06;
+  font-weight:800;
+  letter-spacing:calc(-0.6px * var(--s));
+  text-align:center;
+  text-wrap:balance;
+  flex:0 0 auto;
+}
+h1 .r{color:var(--red);}
+
+/* 2. photo band */
+.band{
+  flex:1.5 1 auto;
+  height:calc(372px * var(--s));
+  min-height:calc(150px * var(--s));
+  width:100%;
+  overflow:hidden;
+  background:var(--navy);
+}
+.band img{width:100%;height:100%;object-fit:cover;object-position:50% 62%;display:block;}
+
+/* 3. candidates */
+.cands{
+  flex:0 0 auto;
+  display:flex;
+  align-items:flex-start;
+  gap:calc(26px * var(--s));
+}
+.cand{flex:1 1 0;min-width:0;text-align:center;display:flex;flex-direction:column;align-items:center;}
+.cand .av{
+  width:100%;
+  max-width:calc(184px * var(--s));
+  aspect-ratio:1/1;
+  border-radius:50%;
+  overflow:hidden;
+  background:var(--navy);
+  border:calc(4px * var(--s)) solid var(--navy);
+}
+.cand .av img{width:100%;height:100%;object-fit:cover;object-position:50% 58%;display:block;}
+.cand .nm{
+  margin-top:calc(14px * var(--s));
+  font-size:calc(31px * var(--s));
+  line-height:1.15;
+  font-weight:700;
+  letter-spacing:calc(-0.3px * var(--s));
+  white-space:nowrap;
+}
+.cand .rl{
+  margin-top:calc(4px * var(--s));
+  font-size:calc(19px * var(--s));
+  line-height:1.2;
+  font-weight:600;
+  color:var(--red);
+  text-transform:uppercase;
+  letter-spacing:calc(1.4px * var(--s));
+  white-space:nowrap;
+}
+
+/* 4. CTA bar */
+.cta{
+  flex:0 0 auto;
+  width:100%;
+  background:var(--red);
+  height:calc(104px * var(--s));
+  display:flex;align-items:center;justify-content:center;
+  gap:calc(22px * var(--s));
+}
+.cta img{width:calc(56px * var(--s));height:calc(44px * var(--s));display:block;flex:0 0 auto;}
+.cta span{
+  color:#fff;
+  font-size:calc(46px * var(--s));
+  line-height:1;
+  font-weight:800;
+  letter-spacing:calc(2.6px * var(--s));
+  white-space:nowrap;
+}
+
+/* 5. steps */
+.steps{
+  flex:0 0 auto;
+  display:flex;flex-direction:column;
+  gap:calc(16px * var(--s));
+}
+.step{
+  display:flex;align-items:center;
+  gap:calc(14px * var(--s));
+  min-width:0;
+}
+.step img{width:calc(40px * var(--s));height:calc(40px * var(--s));display:block;flex:0 0 auto;}
+.step p{
+  font-size:calc(25px * var(--s));
+  line-height:1.25;
+  font-weight:600;
+  min-width:0;
+}
+
+/* 6. footer */
+footer{
+  flex:0 0 auto;
+  text-align:center;
+  font-size:calc(19px * var(--s));
+  line-height:1.3;
+  font-weight:500;
+  color:#5a6480;
+  border-top:calc(2px * var(--s)) solid #dfe3ec;
+  padding-top:calc(14px * var(--s));
+}
+
+/* wide layout: lay the steps out in a row when there is lots of width */
+body.wide .steps{
+  flex-direction:row;
+  gap:calc(30px * var(--s));
+  align-items:stretch;
+}
+body.wide .steps{justify-content:space-between;}
+body.wide .step{flex:0 1 auto;}
+</style>
+</head>
+<body>
+<div id="page">
+  <h1 class="pad">Proven <span class="r">RESULTS</span> for <span class="r">WILLOWMERE</span> Families</h1>
+
+  <div class="sp"></div>
+
+  <div class="band"><img src="photo.png" alt=""></div>
+
+  <div class="sp"></div>
+
+  <div class="cands pad">
+    <div class="cand">
+      <div class="av"><img src="photo.png" alt=""></div>
+      <div class="nm">Dana Levi</div>
+      <div class="rl">Mayor</div>
+    </div>
+    <div class="cand">
+      <div class="av"><img src="photo.png" alt=""></div>
+      <div class="nm">Omar Haddad</div>
+      <div class="rl">Council</div>
+    </div>
+    <div class="cand">
+      <div class="av"><img src="photo.png" alt=""></div>
+      <div class="nm">Ruth Cohen</div>
+      <div class="rl">Council</div>
+    </div>
+  </div>
+
+  <div class="sp"></div>
+
+  <div class="cta">
+    <img src="mail.svg" alt="">
+    <span>VOTE BY MAIL</span>
+  </div>
+
+  <div class="sp"></div>
+
+  <div class="steps pad">
+    <div class="step"><img src="check.svg" alt=""><p>Request your ballot by October&nbsp;20</p></div>
+    <div class="step"><img src="check.svg" alt=""><p>Fill it out at home</p></div>
+    <div class="step"><img src="check.svg" alt=""><p>Mail it back by November&nbsp;3</p></div>
+  </div>
+
+  <div class="sp"></div>
+
+  <footer class="pad">Paid for by Willowmere Forward · willowmereforward.org</footer>
+</div>
+<script>
+(function(){
+  var q=new URLSearchParams(location.search);
+  var s=parseFloat(q.get('s')||'1');
+  document.documentElement.style.setProperty('--s',s);
+  if(q.get('layout')==='wide')document.body.classList.add('wide');
+  document.title='flyer '+s;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  glow ellipse 670,-151 620×620
+  glow2 ellipse -194,778 520×520
+  page frame 0,0 1080×1080
+   header frame 76,76 928×48
+    logo image 76,76 160×48 contain
+    divider rect 258,83 2×34
+    eventName text 282,87 327×27 22px
+   person frame 76,215 928×200
+    portraitImg image 76,215 200×200 cover
+    nameBlock frame 306,272 698×86
+     speakerName text 306,272 698×46 40px
+     speakerRole text 306,328 698×30 23px
+   talkTitle text 76,505 928×276 62px 4L
+   footer frame 76,872 928×132
+    metaRow frame 76,872 502×29
+     dot ellipse 76,882 10×10
+     meta text 98,872 480×29 24px
+    button frame 76,931 218×73
+     ctaText text 120,953 130×29 24px
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  glow ellipse 1267,-281 820×820
+  glow2 ellipse -346,778 520×520
+  page frame 0,0 1920×1080
+   header frame 84,84 1752×54
+    logo image 84,84 180×54 contain
+    divider rect 286,94 2×34
+    eventName text 310,97 351×29 24px
+   person frame 84,270 1752×97
+    nameBlock frame 84,270 1752×97
+     speakerName text 84,270 1752×53 46px
+     speakerRole text 84,333 1752×34 26px
+   talkTitle text 84,500 1150×228 68px 3L
+   footer frame 84,860 1752×136
+    metaRow frame 84,860 541×31
+     dot ellipse 84,871 10×10
+     meta text 106,860 519×31 26px
+    button frame 84,921 228×75
+     ctaText text 128,943 140×31 26px
+  portraitBig image 1290,300 480×480 cover
+story 1080×1920
+ root frame 0,0 1080×1920
+  glow ellipse 670,-154 620×620
+  glow2 ellipse -194,1382 520×520
+  page frame 0,0 1080×1920
+   header frame 84,84 912×54
+    logo image 84,84 180×54 contain
+    divider rect 286,94 2×34
+    eventName text 310,97 351×29 24px
+   person frame 84,389 912×300
+    portraitImg image 84,389 300×300 cover
+    nameBlock frame 414,454 582×170
+     speakerName text 414,454 582×124 54px 2L
+     speakerRole text 414,588 582×36 28px
+   talkTitle text 84,940 912×495 88px 5L
+   footer frame 84,1686 912×150
+    metaRow frame 84,1686 560×33
+     dot ellipse 84,1698 10×10
+     meta text 106,1686 538×33 27px
+    button frame 84,1759 233×77
+     ctaText text 128,1781 145×33 27px

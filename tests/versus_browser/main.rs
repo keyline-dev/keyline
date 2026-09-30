@@ -285,7 +285,7 @@ async fn claude_makes_the_images() {
     drop(static_server);
 
     std::fs::create_dir_all(run.join("work")).unwrap();
-    std::fs::write(run.join("events.jsonl"), &stdout).unwrap();
+    std::fs::write(run.join("events.jsonl"), metrics::elide_images(&stdout)).unwrap();
     if !stderr.is_empty() {
         std::fs::write(run.join("stderr.txt"), &stderr).unwrap();
     }

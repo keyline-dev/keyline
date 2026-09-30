@@ -1,0 +1,112 @@
+{
+  "correct": true,
+  "costUsd": 0.107454,
+  "defects": 4,
+  "likenessChrome": 19.554818789164226,
+  "likenessKeyline": 19.890037536621094,
+  "model": "claude-opus-5",
+  "sizes": {
+    "portrait": {
+      "bandsFullWidth": true,
+      "columnsEven": true,
+      "cutOrOverflowing": [],
+      "items": {
+        "1": {
+          "present": true,
+          "readable": true
+        },
+        "2": {
+          "present": true,
+          "readable": true
+        },
+        "3": {
+          "present": true,
+          "readable": true
+        },
+        "4": {
+          "present": true,
+          "readable": true
+        },
+        "5": {
+          "present": true,
+          "readable": true
+        },
+        "6": {
+          "present": true,
+          "readable": true
+        }
+      },
+      "overlapping": [],
+      "photoDistorted": false,
+      "smallestTextLegible": true
+    },
+    "sky": {
+      "bandsFullWidth": true,
+      "columnsEven": true,
+      "cutOrOverflowing": [],
+      "items": {
+        "1": {
+          "present": true,
+          "readable": true
+        },
+        "2": {
+          "present": true,
+          "readable": true
+        },
+        "3": {
+          "present": true,
+          "readable": false
+        },
+        "4": {
+          "present": true,
+          "readable": true
+        },
+        "5": {
+          "present": true,
+          "readable": false
+        },
+        "6": {
+          "present": true,
+          "readable": false
+        }
+      },
+      "overlapping": [],
+      "photoDistorted": false,
+      "smallestTextLegible": false
+    },
+    "wide": {
+      "bandsFullWidth": true,
+      "columnsEven": true,
+      "cutOrOverflowing": [],
+      "items": {
+        "1": {
+          "present": true,
+          "readable": true
+        },
+        "2": {
+          "present": true,
+          "readable": true
+        },
+        "3": {
+          "present": true,
+          "readable": true
+        },
+        "4": {
+          "present": true,
+          "readable": true
+        },
+        "5": {
+          "present": true,
+          "readable": true
+        },
+        "6": {
+          "present": true,
+          "readable": true
+        }
+      },
+      "overlapping": [],
+      "photoDistorted": false,
+      "smallestTextLegible": true
+    }
+  }
+}
