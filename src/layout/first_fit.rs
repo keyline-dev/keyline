@@ -2,6 +2,8 @@
 //! drawn, like SwiftUI's `ViewThatFits`.
 
 use crate::scene::{Kind, Layer, Scene};
+
+use super::{Placed, Rect};
 use crate::text::Text;
 
 use super::measure::{Forced, measure};
@@ -34,29 +36,37 @@ pub(super) fn content(
     last
 }
 
-/// Whether a child fits its own box without shrinking or cutting anything:
-/// text at its full font size with nothing cut, stacks without squeezing.
+/// Whether a child fits its own box with nothing wrong inside it: no text
+/// anywhere in it shrunk, overflowing or cut, no stack squeezed or
+/// overflowing.
 fn fits_inside(scene: &Scene, c: &Layer, k: f32, size: (f32, f32)) -> bool {
-    match &c.kind {
-        Kind::Text { .. } => Text::of(c, k).is_none_or(|t| {
-            let (_, fit) = t.layout(size.0, size.1);
-            !fit.overflow && !fit.truncated && fit.font_size >= t.font_size() - 0.01
-        }),
-        Kind::Frame {
-            children,
-            layout: crate::scene::FrameLayout { stack: Some(s), .. },
-            ..
-        } => {
-            let [t, r, b, l] = s.padding.sides().map(|p| p * k);
-            stack::choose(
-                scene,
-                children,
-                s,
-                k,
-                (Some(size.0 - l - r), Some(size.1 - t - b)),
-            )
-            .fits
+    if let Kind::Frame {
+        children,
+        layout: crate::scene::FrameLayout { stack: Some(s), .. },
+        ..
+    } = &c.kind
+    {
+        let [t, r, b, l] = s.padding.sides().map(|p| p * k);
+        let inner = (Some(size.0 - l - r), Some(size.1 - t - b));
+        if !stack::choose(scene, children, s, k, inner).fits {
+            return false;
         }
-        _ => true,
     }
+    let rect = Rect {
+        x: 0.0,
+        y: 0.0,
+        w: size.0,
+        h: size.1,
+    };
+    sound(&super::finish(scene, c, size, rect, k, false))
+}
+
+/// No text in `p` or below it is shrunk, overflows or is cut, and no
+/// stack overflows.
+fn sound(p: &Placed) -> bool {
+    let text_ok = p.text.as_ref().is_none_or(|(_, fit)| {
+        let full = Text::of(p.layer, p.k).map_or(0.0, |t| t.font_size());
+        !fit.overflow && !fit.truncated && fit.font_size >= full - 0.01
+    });
+    p.overflow.is_none() && text_ok && p.children.iter().all(sound)
 }

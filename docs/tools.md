@@ -259,7 +259,7 @@ A template is a scene file ([its format](scene.md#template-files)) that `scene_c
 | Format | What it is |
 |---|---|
 | `png`, `jpeg`, `webp` | A still per size. A scene with motion is drawn at rest, or at `time` |
-| `pdf` | Vector, one page per size (1 px = 1 pt). Refuses scenes with video |
+| `pdf` | Vector, one page per size (1 px = 1 pt; `a4-portrait` makes an A4 page). Refuses scenes with video |
 | `apng` | Animated PNG: lossless, fully transparent, plays in browsers |
 | `gif` | Animated GIF: plays everywhere, including email and chat, in 256 colors per frame |
 | `mp4` | H.264 video, plays everywhere. Needs [ffmpeg](#ffmpeg) |

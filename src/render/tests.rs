@@ -456,3 +456,74 @@ fn dashes_on_an_ellipse_start_at_the_top() {
     assert_eq!(px(78, 50), (255, 255, 255), "nothing at 3 o'clock");
     assert_eq!(px(45, 22), (255, 255, 255), "clockwise, not back");
 }
+
+#[test]
+fn split_text_draws_its_highlight_whole_and_with_its_first_letter() {
+    let text = json!([{"id": "t", "type": "text", "x": 5, "y": 30, "fontSize": 24, "color": "#000000",
+        "text": "Hi you", "highlight": "#FFD400", "split": "chars",
+        "enter": {"effect": "fade", "duration": 0.5}}]);
+    let start = pixels_at(text.clone(), 0.0);
+    assert!(
+        (0..100).all(|x| start(x, 45) == (255, 255, 255)),
+        "no highlight before its letters"
+    );
+    let end = pixels_at(text, 1.0);
+    // Across the line, spaces and letter joins included: highlight or ink.
+    let row: Vec<_> = (0..100).map(|x| end(x, 45)).collect();
+    let first = row.iter().position(|&c| c != (255, 255, 255)).unwrap();
+    let last = row.iter().rposition(|&c| c != (255, 255, 255)).unwrap();
+    assert!(last - first > 40, "{first}..{last}");
+    let seams: Vec<_> = (first + 2..last - 2)
+        .filter(|&x| row[x].2 > 60 && row[x].0 > 200)
+        .collect();
+    assert!(seams.is_empty(), "unhighlighted at {seams:?}");
+}
+
+#[test]
+fn leader_lines_keep_their_markup_on_one_baseline() {
+    let menu = json!([{"id": "m", "type": "text", "x": 0, "y": 20, "width": 100, "fontSize": 14,
+        "color": "#000000", "leader": ".",
+        "text": "<b>Soda</b>\t<span style=\"color:#FF0000;font-size:22px\">90</span>"}]);
+    let px = pixels_at(menu, 0.0);
+    let red = |(r, g, b): (u8, u8, u8)| r > 200 && g < 80 && b < 80;
+    let dark = |(r, g, b): (u8, u8, u8)| r < 100 && g < 100 && b < 100;
+    let rows = |x0: i32, x1: i32, f: &dyn Fn((u8, u8, u8)) -> bool| {
+        (0..100)
+            .filter(|&y| (x0..x1).any(|x| f(px(x, y))))
+            .collect::<Vec<_>>()
+    };
+    let price = rows(70, 100, &red);
+    assert!(!price.is_empty(), "the price keeps its colour");
+    let soda = rows(0, 30, &dark);
+    // "90" at 22 px stands taller than "Soda" at 14 px, on the same baseline.
+    assert!(price.len() > soda.len() + 3, "the price keeps its size");
+    let (sb, pb) = (*soda.last().unwrap(), *price.last().unwrap());
+    assert!(sb.abs_diff(pb) <= 1, "one baseline: {sb} vs {pb}");
+}
+
+#[test]
+fn a_still_shows_where_a_draw_track_comes_to_rest() {
+    let v = json!({"width": 100, "height": 100, "background": "#FFFFFF",
+        "sizes": [{"id": "a", "width": 100, "height": 100}],
+        "layers": [{"id": "ring", "type": "ellipse", "x": 20, "y": 20, "width": 60, "height": 60,
+            "stroke": {"width": 6, "color": "#000000"}, "animate": {"draw": [0, 0.75]}}]});
+    let scene: Scene = serde_json::from_value(v).unwrap();
+    scene.validate().unwrap();
+    let img = render_image(&scene, &scene.sizes[0], 1.0, &std::env::temp_dir(), false).unwrap();
+    let px = |x, y| img.peek_pixels().unwrap().get_color((x, y)).r();
+    // Clockwise from the top: right, bottom and left drawn; the last quarter not.
+    assert!(px(77, 50) < 100 && px(50, 77) < 100 && px(23, 50) < 100);
+    assert!(px(35, 25) > 200, "top left still open: {}", px(35, 25));
+}
+
+#[test]
+fn a_stroke_only_arc_is_open() {
+    // The right half, top to bottom: no radii back to the center.
+    let arc = json!([{"id": "a", "type": "ellipse", "x": 20, "y": 20, "width": 60, "height": 60,
+        "arc": {"start": 0, "end": 180}, "fill": [], "stroke": {"width": 4, "color": "#000000"}}]);
+    let px = pixels_at(arc, 0.0);
+    assert!(px(77, 50).0 < 100, "the arc: {:?}", px(77, 50));
+    for y in 25..76 {
+        assert_eq!(px(50, y), (255, 255, 255), "a radius at y {y}");
+    }
+}

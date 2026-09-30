@@ -32,6 +32,19 @@ pub const PRESETS: &[(&str, f32, f32, [f32; 4])] = &[
     ("a4-portrait", 2480.0, 3508.0, [0.0; 4]),
 ];
 
+/// Print presets and their resolution, dots per inch: in a PDF their pixels
+/// print at this size (A4 is 2480×3508 px at 300 dpi, a 595×842 pt page).
+const PRINT: &[(&str, f32)] = &[("a4-portrait", 300.0)];
+
+/// Points per pixel in a PDF of size `id`: 72/dpi for a print preset, else
+/// 1 (a pixel is a point).
+pub fn pdf_points_per_px(id: &str) -> f32 {
+    PRINT
+        .iter()
+        .find(|p| p.0 == id)
+        .map_or(1.0, |&(_, dpi)| 72.0 / dpi)
+}
+
 impl SizeSpec {
     /// The explicit size.
     ///

@@ -95,7 +95,7 @@ A size is an object, a preset name, or `"WxH"` (its id is that string: `"300x600
 | `iab-leaderboard` | 728×90 | |
 | `iab-skyscraper` | 160×600 | |
 | `iab-half-page` | 300×600 | |
-| `a4-portrait` | 2480×3508 (300 dpi) | |
+| `a4-portrait` | 2480×3508 (300 dpi) | A PDF of it is an A4 page |
 
 A preset's id is its name.
 
@@ -216,7 +216,7 @@ A clip's sound plays with its pictures: from `trimStart`, at `playbackRate`, loo
 | `type` | Field | Type | Default | Meaning |
 |---|---|---|---|---|
 | `rect` | | | | A rectangle; `borderRadius` rounds it |
-| `ellipse` | `arc` | `{start, end, inner}` | 0, 360, 0 | Part of the ellipse, Degrees from the top; `inner` is a hole, 0–1 of the radius: a ring |
+| `ellipse` | `arc` | `{start, end, inner}` | 0, 360, 0 | Part of the ellipse, Degrees from the top; `inner` is a hole, 0–1 of the radius: a ring. Filled, it's a wedge; with only a stroke, an open arc (a progress ring) |
 | `polygon` | `sides` | number ≥ 3 | 3 | A regular polygon in the box |
 | | `innerRadius` | 0–1 | none | Makes a star: the inner points' share of the outer radius (0.38 classic, 0.8 starburst) |
 | `path` | `d` | string | | SVG path data |
@@ -246,7 +246,7 @@ An icon is 24 px tall unless sized.
 
 ### firstFit
 
-Draws the first of its `children` that fits its box at this size with nothing wrong inside it: no overflow or truncated text, no text shrunk below its `minimumScaleFactor`. When none fits, it draws the last. Typical uses: a long and a short headline, a row CTA and a stacked CTA. `scene_describe` shows what was chosen at each size (`→ short`).
+Draws the first of its `children` that fits its box at this size with nothing wrong anywhere inside it: no text overflowing, truncated or shrunk to fit, no stack squeezed. When none fits, it draws the last. Typical uses: a long and a short headline, a row CTA and a stacked CTA. `scene_describe` shows what was chosen at each size (`→ short`).
 
 ### use
 
@@ -367,7 +367,7 @@ A size can rearrange the whole grid by changing only its templates in `media`.
 | `padding` | Sides | 0 | Space around the text inside its box |
 | `highlight` | Color or `{color, padding, borderRadius, shape: box\|brush}` | none | A box behind each line; CSS `background-color` on text reads as this |
 | `curve` | px | none | Sets one line on a circular arc of this radius; negative bends down |
-| `leader` | string | none | A character that fills each tab's gap: `"Espresso\t$3"` with `leader: "."` draws dot leaders, the price flush right |
+| `leader` | string | none | A character that fills each tab's gap: `"Espresso\t$3"` with `leader: "."` draws dot leaders, the price flush right. Each side keeps its markup, on one baseline; the letters take `color` (not `fill`, strokes or `knockout`) |
 | `knockout` | boolean | false | The letters cut through their parent frame's fill, showing what's behind |
 | `direction` | `auto`, `ltr`, `rtl` | `auto` | |
 | `features` | object | none | OpenType features, e.g. `{"tnum": 1}` |
@@ -394,7 +394,7 @@ Models miscount character offsets, so text takes a small HTML subset instead:
 {"type": "text", "text": "<s>$49</s> <b>$29</b><sup>99</sup> today"}
 ```
 
-- Tags: `<b>` (or `<strong>`), `<i>` (or `<em>`), `<u>`, `<s>`, `<sup>`, `<sub>`, `<br>`, a style's name as a tag (`<accent>`), and `<span style="…">` with CSS: `color`, `font-weight`, `font-style`, `font-size`, `font-family`, `text-decoration`, `background-color` (a highlight). Values can be tokens (`style="color:$red"`).
+- Tags: `<b>` (or `<strong>`), `<i>` (or `<em>`), `<u>`, `<s>`, `<sup>`, `<sub>`, `<br>`, a style's name as a tag (`<accent>`), and `<span style="…">` with CSS: `color`, `font-weight`, `font-style`, `font-size`, `font-family`, `text-decoration`, `background-color` (a highlight). Values can be tokens (`style="color:{{red}}"`). A style's name as a tag carries the style's `color`, `fontWeight`, `fontStyle`, `fontSize`, `fontFamily`, `textDecoration` and `highlight` (a brush too).
 - A `<` that doesn't open a known tag is text; `&lt;`, `&gt;`, `&amp;` and `&quot;` are entities.
 - A `<span>` whose style doesn't parse is an error, not text.
 
@@ -447,6 +447,8 @@ An image fill works on any shape: a photo in a circle is `{"type": "ellipse", "f
 | Grain | `noise` | 0–1 | required | Film grain strength |
 | | `size` | px | 1 | Grain size |
 | | `seed` | number | 0 | Its random pattern |
+
+`rays` are hard-edged sectors, so over a photo they cut across its detail and read much stronger than over a flat color: keep them to about 3–4% there (`"color": "#FFFFFF0A"` with `blendMode: "screen"`), or put them on the flat areas.
 
 ### Filters
 
@@ -630,7 +632,7 @@ A number may be `"random(lo, hi)"`, as in GSAP: each target (each layer, or each
 {"type": "path", "d": "M0 40 C 40 0, 80 80, 120 40", "stroke": "#000", "animate": {"draw": {"from": 0}, "duration": 2}}
 ```
 
-It works on every stroke: paths, shapes, lines, ellipses and text outlines. A line draws from its start to its end, an ellipse clockwise from the top, a path from its first point, and text letter by letter; dashes and end markers follow the drawn part, and an ellipse's dashes start at the top too. Stills at a `time` show the share drawn then; at rest, all of it is drawn.
+It works on every stroke: paths, shapes, lines, ellipses and text outlines. A line draws from its start to its end, an ellipse clockwise from the top, a path from its first point, and text letter by letter; dashes and end markers follow the drawn part, and an ellipse's dashes start at the top too. Stills at a `time` show the share drawn then; at rest, the share where the track ends (all of it without a `draw` track).
 
 ### Counting
 
@@ -651,7 +653,7 @@ GSAP's names: `none`, `power1` … `power4`, `sine`, `expo`, `circ`, `back`, `el
 | Field | Type | On | Meaning |
 |---|---|---|---|
 | `stagger` | Seconds | a frame or `use` layer | Gives its `enter` to its children or instances one after another, this far apart, instead of entering whole |
-| `split` | `chars`, `words` | a text layer | Its `enter`, `exit`, `animate` and `stagger` apply to each letter or word, like GSAP's SplitText. The text is laid out once; each piece moves as a rigid part of it |
+| `split` | `chars`, `words` | a text layer | Its `enter`, `exit`, `animate` and `stagger` apply to each letter or word, like GSAP's SplitText. The text is laid out once; each piece moves as a rigid part of it. A `highlight` stays whole, each line's arriving with its first piece |
 
 ```json
 {

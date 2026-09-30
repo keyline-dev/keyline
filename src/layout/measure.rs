@@ -53,7 +53,15 @@ pub(super) fn measure(
             (w.unwrap_or(cw), h.unwrap_or(ch))
         }
     };
-    clamp(layer, k, size)
+    let clamped = clamp(layer, k, size);
+    // A hugged width that min/max changed: text and frames wrap
+    // differently there, so their height is measured again at that width.
+    let wraps = matches!(layer.kind, Kind::Text { .. } | Kind::Frame { .. });
+    if wraps && w.is_none() && h.is_none() && (clamped.0 - size.0).abs() > 0.01 {
+        let (_, ch) = content(scene, layer, k, parent, (Some(clamped.0), None));
+        return clamp(layer, k, (clamped.0, ch));
+    }
+    clamped
 }
 
 /// A position in px: `x` or `y`, as a px value or a share of the parent.

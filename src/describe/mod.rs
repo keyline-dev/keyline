@@ -121,7 +121,14 @@ pub fn describe(
                 .iter()
                 .filter(|p| first || p.layer.time.shot.is_some())
             {
-                line(&mut lines, &checks, p, clip, 1, 1.0);
+                line(
+                    &mut lines,
+                    &checks,
+                    p,
+                    clip,
+                    1,
+                    (1.0, &skia_safe::Matrix::new_identity()),
+                );
             }
             if full {
                 let _ = writeln!(out, "{} {}×{}", size.id, n(size.width), n(size.height));
@@ -200,19 +207,21 @@ struct Clip<'a> {
     quiet: bool,
 }
 
-/// `opacity` is the product of the ancestors' opacities.
+/// `opacity` is the product of the ancestors' opacities, `m` their visual
+/// transforms.
 fn line(
     lines: &mut Vec<String>,
     checks: &Checks,
     p: &Placed,
     clip: Clip,
     depth: usize,
-    opacity: f32,
+    (opacity, m): (f32, &skia_safe::Matrix),
 ) {
     let visible = clip.rect;
     let r = p.rect;
     let l = p.layer;
     let opacity = opacity * l.opacity;
+    let m = &overlap::through(m, p);
     let mut out = String::new();
     let _ = write!(
         out,
@@ -273,7 +282,7 @@ fn line(
                 let _ = write!(out, " !overlaps {}", others.join(","));
             }
             if let (Some(backdrop), Some(ink)) = (&checks.backdrop, ink(p))
-                && let Some((ratio, min)) = contrast(p, ink, backdrop, opacity)
+                && let Some((ratio, min)) = contrast(p, ink, backdrop, (opacity, m))
             {
                 let _ = write!(out, " warn contrast {ratio:.1}:1 (WCAG {min})");
             }
@@ -350,7 +359,7 @@ fn line(
             quiet: inner.quiet || pushed,
             ..inner
         };
-        line(lines, checks, c, own, depth + 1, opacity);
+        line(lines, checks, c, own, depth + 1, (opacity, m));
     }
 }
 

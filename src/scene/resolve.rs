@@ -113,17 +113,27 @@ pub(super) fn sized(l: &Layer, size: &Size) -> Result<Option<Layer>, String> {
     }))
 }
 
+/// Styles by name.
+type Styles = std::collections::BTreeMap<String, serde_json::Map<String, serde_json::Value>>;
+
 impl Scene {
     /// The scene as drawn at one size: every layer's `at` changes for it
     /// applied. Borrowed when no layer has any. Call on a validated scene.
     pub fn for_size(&self, size: &Size) -> std::borrow::Cow<'_, Scene> {
-        fn go(layers: &mut [Layer], size: &Size) {
+        fn go(layers: &mut [Layer], size: &Size, styles: &Styles) {
             for l in layers {
                 if let Ok(Some(s)) = sized(l, size) {
                     *l = s;
+                    // A size's own text may name styles as tags too.
+                    if let Kind::Text { text, .. } = &mut l.kind
+                        && text.contains('<')
+                        && !styles.is_empty()
+                    {
+                        *text = crate::text::markup::expand_styles(text, styles);
+                    }
                 }
                 if let Some(children) = l.kind.children_mut() {
-                    go(children, size);
+                    go(children, size, styles);
                 }
             }
         }
@@ -133,7 +143,7 @@ impl Scene {
             return std::borrow::Cow::Borrowed(self);
         }
         let mut layers = self.layers.clone();
-        go(&mut layers, size);
+        go(&mut layers, size, &self.styles);
         std::borrow::Cow::Owned(Scene {
             layers,
             ..self.clone()
@@ -208,6 +218,24 @@ impl Scene {
 #[cfg(test)]
 mod tests {
     use crate::scene::{Kind, Scene};
+
+    #[test]
+    fn a_sizes_own_text_expands_style_tags() {
+        let s: Scene = serde_json::from_value(serde_json::json!({"width": 100, "height": 100,
+            "sizes": [{"id": "a", "width": 100, "height": 100}, {"id": "b", "width": 50, "height": 100}],
+            "styles": {"accent": {"color": "#D0202E"}},
+            "layers": [{"id": "t", "type": "text", "text": "Big <accent>news</accent>",
+                "media": {"b": {"text": "Small <accent>news</accent>"}}}]}))
+        .unwrap();
+        s.validate().unwrap();
+        let resolved = s.resolved();
+        let b = resolved.for_size(&s.sizes[1]);
+        let Kind::Text { text, .. } = &b.layers[0].kind else {
+            unreachable!()
+        };
+        assert!(!text.contains("<accent>"), "{text}");
+        assert!(text.contains("#D0202E"), "{text}");
+    }
 
     #[test]
     fn at_changes_a_layer_for_one_size_only() {

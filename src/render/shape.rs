@@ -16,6 +16,9 @@ pub(super) enum Shape {
     Path(Path),
     /// A straight line, stroked only.
     Line(Point, Point),
+    /// An open arc of the ellipse in the box, stroked only: `(box, start,
+    /// sweep)`, degrees clockwise from 3 o'clock (Skia's).
+    Arc(skia_safe::Rect, f32, f32),
 }
 
 impl Shape {
@@ -30,6 +33,7 @@ impl Shape {
                 p.move_to(*a).line_to(*b);
                 p.detach()
             }
+            Shape::Arc(r, start, sweep) => open_arc(*r, *start, *sweep),
         }
     }
 
@@ -45,7 +49,7 @@ impl Shape {
             Shape::Path(p) => {
                 canvas.draw_path(p, paint);
             }
-            Shape::Line(..) => {}
+            Shape::Line(..) | Shape::Arc(..) => {}
         }
     }
 
@@ -65,7 +69,7 @@ impl Shape {
     pub fn bounds(&self) -> skia_safe::Rect {
         match self {
             Shape::Rect(rr) => *rr.rect(),
-            Shape::Oval(r) => *r,
+            Shape::Oval(r) | Shape::Arc(r, ..) => *r,
             Shape::Path(p) => *p.bounds(),
             Shape::Line(a, b) => {
                 skia_safe::Rect::new(a.x.min(b.x), a.y.min(b.y), a.x.max(b.x), a.y.max(b.y))
@@ -92,6 +96,14 @@ pub(super) fn shape_of(p: &Placed) -> Option<Shape> {
         }
         Kind::Image { .. } => Some(Shape::Rect(rounded(0.0))),
         Kind::Ellipse { arc: None, .. } => Some(Shape::Oval(r)),
+        // Stroked only, a part of an ellipse is an open arc, not a wedge.
+        Kind::Ellipse { arc: Some(a), .. }
+            if a.inner <= 0.0
+                && (a.end - a.start).abs() < 360.0
+                && super::fills_of(l).is_empty() =>
+        {
+            Some(Shape::Arc(r, a.start - 90.0, a.end - a.start))
+        }
         Kind::Ellipse { arc: Some(a), .. } => Some(Shape::Path(arc_path(r, a))),
         Kind::Polygon {
             sides,
@@ -187,6 +199,13 @@ fn arc_path(r: skia_safe::Rect, a: &Arc) -> Path {
         b.arc_to(r, start, sweep, false);
         b.close();
     }
+    b.detach()
+}
+
+/// The open arc of the ellipse in `r` from `start`, `sweep` degrees.
+pub(super) fn open_arc(r: skia_safe::Rect, start: f32, sweep: f32) -> Path {
+    let mut b = PathBuilder::new();
+    b.arc_to(r, start, sweep, true);
     b.detach()
 }
 

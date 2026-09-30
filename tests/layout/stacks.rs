@@ -210,3 +210,21 @@ fn stacks_inside_constrained_frames_follow_their_frame() {
     check(&b, "bar", (0.0, 600.0, 1200.0, 100.0));
     check(&b, "cta", (500.0, 620.0, 200.0, 60.0));
 }
+
+#[test]
+fn a_hug_stack_capped_by_max_width_measures_its_wrapped_text() {
+    let s = scene(
+        json!([{"id": "col", "type": "frame", "maxWidth": 700, "flexDirection": "column",
+        "alignItems": "stretch", "children": [
+        {"id": "name", "type": "text", "text": "Sir Winston", "fontSize": 140, "fontWeight": 800},
+        {"id": "age", "type": "text", "text": "7 yrs old, and ready for a sofa of their own.", "fontSize": 36}]}]),
+    );
+    let b = boxes(&s, &size("s", 1080.0, 1080.0, 1.0));
+    let (col, name, age) = (b["col"], b["name"], b["age"]);
+    assert_eq!(col.w, 700.0);
+    assert!(name.h > 250.0, "two lines of 140 px: {name:?}");
+    assert!(
+        (col.h - (name.h + age.h)).abs() < 1.0,
+        "the column holds both: {col:?} {name:?} {age:?}"
+    );
+}

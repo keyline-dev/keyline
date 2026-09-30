@@ -51,6 +51,58 @@ async fn web_fonts_download_once_and_survive_a_restart() {
     mcp.stop().await;
 }
 
+/// A leader in a font that kerns its dots apart (Cormorant Garamond) stays
+/// in the gap: it never runs back over the dish name.
+#[tokio::test]
+#[ignore = "downloads from Google Fonts; run with --ignored"]
+async fn web_fonts_leaders_in_a_kerned_font_stay_in_the_gap() {
+    let mcp = Mcp::start("webfont-leaders").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"sizes": ["600x200"], "background": "#FFFFFF"}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    let line = |y: i32, text: &str| {
+        json!({"type": "text", "x": 0, "y": y, "width": 600, "fontSize": 40,
+        "fontFamily": "Cormorant Garamond", "color": "#000000", "leader": ".", "text": text})
+    };
+    mcp.ok(
+        "layer_add",
+        json!({"sceneId": id, "layers": [
+        line(20, "Charred leeks\t$14"), line(120, "Charred leeks")]}),
+    )
+    .await;
+    let reply = mcp.ok("render", json!({"sceneId": id})).await;
+    let (_, path) = common::file_of(reply.lines().next().unwrap()).unwrap();
+    let mut reader = png::Decoder::new(std::io::BufReader::new(std::fs::File::open(path).unwrap()))
+        .read_info()
+        .unwrap();
+    let mut buf = vec![0u8; reader.output_buffer_size().unwrap()];
+    let info = reader.next_frame(&mut buf).unwrap();
+    let n = info.color_type.samples();
+    let at = |x: usize, y: usize| buf[y * info.line_size + x * n];
+    // Where the name alone ends, on the lower line.
+    let end = (0..600)
+        .filter(|&x| (120..190).any(|y| at(x, y) < 128))
+        .max()
+        .unwrap();
+    for x in 0..=end + 2 {
+        for dy in 0..70 {
+            assert_eq!(
+                at(x, 20 + dy),
+                at(x, 120 + dy),
+                "a dot over the name at x {x}"
+            );
+        }
+    }
+    mcp.stop().await;
+}
+
 /// Two servers on one data dir (two agent sessions, or a benchmark that
 /// renders the agent's scene itself): a font one fetched after the other
 /// started is used by both, not silently replaced by Inter.

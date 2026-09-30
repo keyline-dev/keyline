@@ -96,6 +96,24 @@ pub fn at_time(scene: &Scene, t: f32, size: &crate::scene::Size) -> Scene {
     out
 }
 
+/// How much of `l`'s stroke shows: the moment's share while it moves, else
+/// where its `draw` track comes to rest (all of it without one).
+pub fn drawn(l: &Layer) -> Option<f32> {
+    l.time.drawn.or_else(|| {
+        let seed = track::seed(&l.id);
+        l.time
+            .animate
+            .iter()
+            .flat_map(OneOrMany::as_slice)
+            .fold(None, |d, tr| {
+                match tr.final_value("draw", Val::Num(d.unwrap_or(1.0)), seed) {
+                    Some(Val::Num(v)) => Some(v.clamp(0.0, 1.0)),
+                    _ => d,
+                }
+            })
+    })
+}
+
 /// Starts the clips in `l` `by` seconds later: a shot's clips play from
 /// the shot's start.
 fn delay_clips(l: &mut Layer, by: f32) {

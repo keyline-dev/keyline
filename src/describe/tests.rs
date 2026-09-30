@@ -115,6 +115,24 @@ fn a_line_that_changes_size_measures_its_real_ink() {
 }
 
 #[test]
+fn text_whose_letters_dont_show_overlaps_nothing() {
+    let over = |extra: serde_json::Value| {
+        let mut ghost = json!({"id": "ghost", "type": "text", "text": "Hello", "fontSize": 30, "highlight": "#FFD400"});
+        for (k, v) in extra.as_object().unwrap() {
+            ghost[k] = v.clone();
+        }
+        let s = scene(json!([{"id": "a", "type": "text", "text": "Hello", "fontSize": 30}, ghost]));
+        warnings(&s, None).unwrap_or_default().contains("!overlaps")
+    };
+    assert!(!over(json!({"fill": []})), "a highlight-only layer");
+    assert!(!over(json!({"opacity": 0})), "an invisible layer");
+    assert!(
+        over(json!({"fill": [], "stroke": {"width": 2, "color": "#000000"}})),
+        "outlined letters show"
+    );
+}
+
+#[test]
 fn tightly_set_lines_only_overlap_if_their_glyphs_do() {
     // "Monica" over "JETHANI": the line boxes overlap by a few pixels of
     // ascent and descent space, the letters don't.
@@ -162,6 +180,47 @@ fn warns_on_low_contrast_against_what_is_behind() {
     );
     // Without an asset store the check is skipped.
     assert_eq!(warnings(&s, None), None);
+}
+
+#[test]
+fn highlighted_text_is_judged_against_its_highlight() {
+    // Navy on a yellow highlight, over navy: fine, for a whole text and for
+    // one highlighted word judged over its own letters (the white word
+    // beside it is fine on the navy).
+    let s: Scene = serde_json::from_value(json!({"width": 400, "height": 100,
+        "sizes": [{"id": "a", "width": 400, "height": 100}],
+        "layers": [{"id": "panel", "type": "rect", "width": 400, "height": 100, "fill": "#1B2A5C"},
+            {"id": "whole", "type": "text", "text": "Marked", "x": 10, "y": 10, "fontSize": 20,
+             "color": "#1B2A5C", "highlight": "#FFD400"},
+            {"id": "part", "type": "text", "text": "Plain <span style=\"background-color:#FFD400;color:#1B2A5C\">marked</span>",
+             "x": 10, "y": 50, "fontSize": 20, "color": "#FFFFFF"}]}))
+    .unwrap();
+    let w = warnings(&s, Some(&std::env::temp_dir())).unwrap_or_default();
+    assert!(!w.contains("contrast"), "{w}");
+}
+
+#[test]
+fn checks_look_where_a_transformed_text_is_drawn() {
+    // White text laid out over white, but moved onto the navy half: fine.
+    // "B" laid out clear of "A", but scaled up over it: overlapping.
+    let s: Scene = serde_json::from_value(json!({"width": 400, "height": 100, "background": "#FFFFFF",
+        "sizes": [{"id": "a", "width": 400, "height": 100}],
+        "layers": [{"id": "panel", "type": "rect", "width": 200, "height": 100, "fill": "#1B2A5C"},
+            {"id": "moved", "type": "text", "text": "Moved", "x": 250, "y": 10, "fontSize": 20,
+             "color": "#FFFFFF", "translate": [-230, 0]},
+            {"id": "a", "type": "text", "text": "AAAA", "x": 250, "y": 60, "fontSize": 16, "color": "#000000"},
+            {"id": "b", "type": "text", "text": "BB", "x": 310, "y": 60, "fontSize": 16, "color": "#000000", "scale": 4}]}))
+    .unwrap();
+    let w = warnings(&s, Some(&std::env::temp_dir())).unwrap_or_default();
+    assert!(
+        !w.lines()
+            .any(|l| l.starts_with("a moved") && l.contains("contrast")),
+        "{w}"
+    );
+    assert!(
+        w.contains("!overlaps b") && w.contains("!overlaps a"),
+        "{w}"
+    );
 }
 
 #[test]

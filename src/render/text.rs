@@ -13,13 +13,26 @@ use crate::scene::{Color, Kind, Stroke};
 use crate::text::{Fit, Text};
 
 impl Ctx<'_> {
-    /// Draws text layer `p` (box `r`): its letters filled by `fills` (or the
-    /// short-form `fill`/`gradient`/`color`), then its strokes (or `outline`).
+    /// Draws text layer `p` (box `r`): its highlights, its letters filled
+    /// by `fills` (or the short-form `fill`/`gradient`/`color`), then its
+    /// strokes (or `outline`).
     pub(super) fn draw_text(
         &mut self,
         canvas: &skia_safe::Canvas,
         p: &Placed,
         r: skia_safe::Rect,
+    ) -> Result<()> {
+        self.draw_text_with(canvas, p, r, true)
+    }
+
+    /// [`Self::draw_text`], without the highlights when `highlights` is
+    /// false (split text draws them once, not per piece).
+    pub(super) fn draw_text_with(
+        &mut self,
+        canvas: &skia_safe::Canvas,
+        p: &Placed,
+        r: skia_safe::Rect,
+        highlights: bool,
     ) -> Result<()> {
         let l = p.layer;
         let Kind::Text {
@@ -39,7 +52,9 @@ impl Ctx<'_> {
         let Kind::Text { more, .. } = &l.kind else {
             return Ok(());
         };
-        super::text_extras::highlights(canvas, &t, para, origin, p.k, l);
+        if highlights {
+            super::text_extras::highlights(canvas, &t, para, origin, p.k, l);
+        }
         // Knockout letters erase their parent frame instead of painting.
         let knock = |mut paint: Paint| {
             if more.knockout {
@@ -61,6 +76,8 @@ impl Ctx<'_> {
             super::text_extras::curved(canvas, &t, radius * p.k, r, &knock(paint));
             return Ok(());
         }
+        // ponytail: leader lines draw in their runs' colours only; route
+        // them through the fill and stroke passes if menus need paints.
         if let Some(leader) = &more.leader
             && super::text_extras::leaders(canvas, &t, fit, leader, origin.0, origin.1, width)
         {
@@ -109,15 +126,20 @@ impl Ctx<'_> {
         match &l.look.strokes {
             Some(ss) => {
                 for s in ss.as_slice() {
-                    let paint =
-                        glyph_stroke(s.width.max() * p.k * t.shrink(fit), s, r, l.time.drawn);
+                    let paint = glyph_stroke(
+                        s.width.max() * p.k * t.shrink(fit),
+                        s,
+                        r,
+                        crate::anim::drawn(l),
+                    );
                     outline_glyphs(canvas, &t, fit, width, origin, &paint);
                 }
             }
             None => {
                 if let Some(o) = outline {
                     let s = Stroke::solid(o.width, o.color);
-                    let paint = glyph_stroke(o.width * p.k * t.shrink(fit), &s, r, l.time.drawn);
+                    let paint =
+                        glyph_stroke(o.width * p.k * t.shrink(fit), &s, r, crate::anim::drawn(l));
                     outline_glyphs(canvas, &t, fit, width, origin, &paint);
                 }
             }

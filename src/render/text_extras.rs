@@ -41,8 +41,9 @@ pub(super) fn highlights(
 }
 
 /// Menu lines with a tab: the part before it flush left, the part after
-/// flush right, and the leader character filling the gap. Returns false
-/// when the text has no tab (the caller draws it normally).
+/// flush right, each in its own markup, sharing a baseline, and the leader
+/// character filling the gap. Returns false when the text has no tab (the
+/// caller draws it normally).
 pub(super) fn leaders(
     canvas: &skia_safe::Canvas,
     t: &Text,
@@ -55,30 +56,94 @@ pub(super) fn leaders(
     if !t.display().contains('\t') || leader.is_empty() {
         return false;
     }
-    let size = fit.font_size;
-    let dot = t.plain_paragraph(leader, size, None);
-    let dot_w = dot.max_intrinsic_width().max(1.0);
-    let gap = size * 0.25;
     let mut top = y;
-    for line in t.display().split('\n') {
-        let (left, right) = line.split_once('\t').unwrap_or((line, ""));
-        let l = t.plain_paragraph(left, size, None);
-        let r = t.plain_paragraph(right, size, None);
-        let (lw, rw) = (l.max_intrinsic_width(), r.max_intrinsic_width());
-        l.paint(canvas, (x, top));
-        r.paint(canvas, (x + width - rw, top));
-        let room = width - lw - rw - 2.0 * gap;
-        if !right.is_empty() && room > dot_w {
-            let n = (room / dot_w).floor() as usize;
-            let dots = t.plain_paragraph(&leader.repeat(n), size, None);
-            dots.paint(
-                canvas,
-                (x + width - rw - gap - dots.max_intrinsic_width(), top),
-            );
+    for line in leader_lines(t, fit, leader, width) {
+        let base = top + line.baseline;
+        line.left
+            .paint(canvas, (x, base - line.left.alphabetic_baseline()));
+        line.right.paint(
+            canvas,
+            (
+                x + width - line.right.max_intrinsic_width(),
+                base - line.right.alphabetic_baseline(),
+            ),
+        );
+        if let Some((dots, at)) = &line.dots {
+            dots.paint(canvas, (x + at, base - dots.alphabetic_baseline()));
         }
-        top += l.height();
+        top += line.height;
     }
     true
+}
+
+/// One line of a leader text, laid out.
+struct LeaderLine {
+    /// The part before the tab.
+    left: Paragraph,
+    /// The part after it.
+    right: Paragraph,
+    /// The leader's run and where it starts, px from the left; none when
+    /// there's no room for one.
+    dots: Option<(Paragraph, f32)>,
+    /// The shared baseline, px from the line's top.
+    baseline: f32,
+    /// The line's height, px.
+    height: f32,
+}
+
+/// Each line of leader text `t` (each `\n`-separated part) in a box
+/// `width` px wide.
+fn leader_lines(t: &Text, fit: &Fit, leader: &str, width: f32) -> Vec<LeaderLine> {
+    let size = fit.font_size;
+    let gap = size * 0.25;
+    let width_of = |n: usize| {
+        t.plain_paragraph(&leader.repeat(n), size, None)
+            .max_intrinsic_width()
+    };
+    let one = width_of(1).max(1.0);
+    // Kerning can set a run of dots wider or narrower than one dot × n.
+    let step = (width_of(2) - one).max(1.0);
+    let display = t.display();
+    let mut out = Vec::new();
+    let mut start = 0;
+    for line in display.split('\n') {
+        let end = start + line.len();
+        let tab = line.find('\t').map_or(end, |i| start + i);
+        let left = t.slice_paragraph(start..tab, size);
+        let right = t.slice_paragraph((tab + 1).min(end)..end, size);
+        let (lw, rw) = (left.max_intrinsic_width(), right.max_intrinsic_width());
+        let space = width - lw - rw - 2.0 * gap;
+        let dots = (tab + 1 < end && space >= one).then(|| {
+            let mut n = ((space - one) / step).floor() as usize + 1;
+            let mut dots = t.plain_paragraph(&leader.repeat(n), size, None);
+            while n > 1 && dots.max_intrinsic_width() > space {
+                n -= 1;
+                dots = t.plain_paragraph(&leader.repeat(n), size, None);
+            }
+            let at = width - rw - gap - dots.max_intrinsic_width();
+            (dots, at)
+        });
+        let parts = [Some(&left), Some(&right), dots.as_ref().map(|d| &d.0)];
+        let baseline = parts
+            .iter()
+            .flatten()
+            .map(|p| p.alphabetic_baseline())
+            .fold(0.0, f32::max);
+        let below = parts
+            .iter()
+            .flatten()
+            .map(|p| p.height() - p.alphabetic_baseline())
+            .fold(0.0, f32::max);
+        out.push(LeaderLine {
+            left,
+            right,
+            dots,
+            baseline,
+            height: baseline + below,
+        });
+        start = end + 1;
+    }
+    out
 }
 
 /// One line of text set along a circle of radius `r` px (∩ when positive,

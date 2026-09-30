@@ -197,3 +197,20 @@ fn first_fit_passes_over_text_cut_at_max_lines() {
         Some("short")
     );
 }
+
+#[test]
+fn first_fit_skips_a_child_whose_nested_text_is_cut() {
+    // The first child's frame fits, but the text inside it is truncated.
+    let s = scene(
+        json!([{"id": "ff", "type": "firstFit", "width": 300, "height": 60, "children": [
+            {"id": "card", "type": "frame", "width": 300, "height": 60, "children": [
+                {"type": "text", "text": "Much too long a line to fit in here at all", "fontSize": 30,
+                 "width": 300, "maxLines": 1}]},
+            {"id": "plain", "type": "text", "text": "Fits", "fontSize": 30},
+        ]}]),
+    );
+    assert_eq!(
+        chosen(&s, &size("s", 1000.0, 500.0, 1.0), "ff").as_deref(),
+        Some("plain")
+    );
+}

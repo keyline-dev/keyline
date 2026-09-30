@@ -57,7 +57,8 @@ pub enum Format {
     Jpeg,
     /// Lossy, smaller than JPEG at the same quality.
     Webp,
-    /// Vector PDF, one page at the size in points (1 px = 1 pt).
+    /// Vector PDF, one page at the size in points (1 px = 1 pt; a print
+    /// preset's page is its paper size).
     Pdf,
     /// Animated PNG of an animated scene: lossless, transparent, plays in
     /// browsers.
@@ -170,15 +171,18 @@ pub fn encode(image: &Image, format: Format, quality: u32, max_kb: Option<u32>) 
     })
 }
 
-/// Renders `size` as a one-page vector PDF (1 px = 1 pt). Blurs and
+/// Renders `size` as a one-page vector PDF: 1 px = 1 pt, except a print
+/// preset, whose page is its paper size (`a4-portrait` is A4). Blurs and
 /// shaders Skia can't express in PDF are rasterized inside it.
 ///
 /// # Errors
 /// Missing assets.
 pub fn render_pdf(scene: &Scene, size: &Size, assets_dir: &Path) -> Result<Vec<u8>> {
     let mut out = Vec::new();
-    let mut page =
-        skia_safe::pdf::new_document(&mut out, None).begin_page((size.width, size.height), None);
+    let pt = crate::scene::pdf_points_per_px(&size.id);
+    let mut page = skia_safe::pdf::new_document(&mut out, None)
+        .begin_page((size.width * pt, size.height * pt), None);
+    page.canvas().scale((pt, pt));
     draw_scene(
         page.canvas(),
         scene,
@@ -194,7 +198,27 @@ pub fn render_pdf(scene: &Scene, size: &Size, assets_dir: &Path) -> Result<Vec<u
 
 #[cfg(test)]
 mod tests {
-    use super::{Format, encode};
+    use super::{Format, encode, render_pdf};
+
+    #[test]
+    fn an_a4_pdf_is_an_a4_page() {
+        let page = |size: &str| {
+            let size = crate::scene::SizeSpec::Named(size.into())
+                .resolve()
+                .unwrap();
+            let scene: crate::scene::Scene = serde_json::from_value(serde_json::json!({
+                "width": size.width, "height": size.height, "sizes": [size],
+                "layers": [{"id": "r", "type": "rect", "width": 100, "height": 100, "fill": "#D0202E"}]}))
+            .unwrap();
+            let pdf = render_pdf(&scene, &scene.sizes[0], &std::env::temp_dir()).unwrap();
+            let text = String::from_utf8_lossy(&pdf).into_owned();
+            let at = text.find("/MediaBox [").unwrap() + "/MediaBox [".len();
+            let end = at + text[at..].find(']').unwrap();
+            text[at..end].to_owned()
+        };
+        assert_eq!(page("a4-portrait"), "0 0 595 842");
+        assert_eq!(page("300x200"), "0 0 300 200");
+    }
 
     /// A noisy image, so lossy encoders can't make it tiny.
     fn noisy() -> skia_safe::Image {

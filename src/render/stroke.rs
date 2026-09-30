@@ -74,6 +74,15 @@ pub(super) fn draw_stroke(
                 canvas.draw_rrect(RRect::new_rect_xy(edge, radius, radius), &p);
             }
         }
+        (Shape::Arc(r, start, sweep), _) => {
+            // On the edge shifted by the align, like an ellipse's stroke.
+            let shift = shift(s.align, width);
+            let edge = r.with_outset((shift, shift));
+            if s.gradient.is_some() {
+                p = stroke_paint(s, edge, width, k);
+            }
+            canvas.draw_path(&super::shape::open_arc(edge, *start, *sweep), &p);
+        }
         (Shape::Line(a, b), _) => {
             let d = drawn.unwrap_or(1.0);
             let tip = Point::new(a.x + (b.x - a.x) * d, a.y + (b.y - a.y) * d);

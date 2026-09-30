@@ -92,7 +92,9 @@ impl Ctx<'_> {
         };
         let (ox, oy) = p.text_origin();
         let bands = line_bands(&text, fit);
-        for (i, range) in pieces(text.display(), split).into_iter().enumerate() {
+        let pieces = pieces(text.display(), split);
+        self.split_highlights(canvas, p, &pieces, &bands, (t, end));
+        for (i, range) in pieces.into_iter().enumerate() {
             let boxes = para.get_rects_for_range(
                 range.clone(),
                 RectHeightStyle::Max,
@@ -140,10 +142,53 @@ impl Ctx<'_> {
             // ponytail: clipped to the glyphs' advance box; a glyph that
             // overhangs its advance (italic, swashes) loses the overhang.
             canvas.clip_rect(bx, None, true);
-            self.draw_text(canvas, p, r)?;
+            self.draw_text_with(canvas, p, r, false)?;
             canvas.restore();
         }
         Ok(())
+    }
+}
+
+impl Ctx<'_> {
+    /// Split text's highlights, whole as if unsplit, one line at a time:
+    /// each line's arrives with its first piece (that piece's opacity and
+    /// offset), so it never shows before its letters.
+    fn split_highlights(
+        &self,
+        canvas: &skia_safe::Canvas,
+        p: &Placed,
+        pieces: &[std::ops::Range<usize>],
+        bands: &[(f32, f32)],
+        (t, end): (f32, f32),
+    ) {
+        let (Some((para, _)), Some(text)) = (&p.text, Text::drawn(p.layer, p.k)) else {
+            return;
+        };
+        if text.highlights().is_empty() {
+            return;
+        }
+        let (ox, oy) = p.text_origin();
+        for (line, &(top, bottom)) in bands.iter().enumerate() {
+            let Some(first) = pieces
+                .iter()
+                .position(|r| para.get_line_number_at_utf16_offset(r.start) == Some(line))
+            else {
+                continue;
+            };
+            let seed = track::seed(&format!("{}#{first}", p.layer.id));
+            let (away, _, _) = motion(&p.layer.time, first, seed, t, end);
+            if away.opacity <= 0.0 {
+                continue;
+            }
+            let mut paint = Paint::default();
+            paint.set_alpha_f(away.opacity.clamp(0.0, 1.0));
+            canvas.save_layer(&SaveLayerRec::default().paint(&paint));
+            canvas.translate((away.offset[0] * p.k, away.offset[1] * p.k));
+            let band = skia_safe::Rect::new(-1e6, oy + top, 1e6, oy + bottom);
+            canvas.clip_rect(band, None, true);
+            super::text_extras::highlights(canvas, &text, para, (ox, oy), p.k, p.layer);
+            canvas.restore();
+        }
     }
 }
 

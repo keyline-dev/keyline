@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 
+use skia_safe::Matrix;
+
 use super::intersect;
 use crate::layout::{Placed, Rect};
 use crate::text::Text;
@@ -29,18 +31,61 @@ pub(super) fn ink(p: &Placed) -> Option<Rect> {
     })
 }
 
-/// Pairs of texts whose ink overlaps by more than a pixel each way.
-pub(super) fn overlaps<'s>(placed: &[Placed<'s>]) -> HashMap<&'s str, Vec<&'s str>> {
-    fn collect<'s>(inks: &mut Vec<(&'s str, Rect)>, placed: &[Placed<'s>]) {
-        for p in placed {
-            if let Some(r) = ink(p) {
-                inks.push((&p.layer.id, r));
+/// `p`'s transform after its ancestors' `m`: what its box, and its
+/// children's, are drawn through.
+pub(super) fn through(m: &Matrix, p: &Placed) -> Matrix {
+    crate::render::matrix(p).map_or(*m, |own| Matrix::concat(m, &own))
+}
+
+/// `r` as drawn through `m`: the box around it.
+pub(super) fn mapped(m: &Matrix, r: Rect) -> Rect {
+    let (b, _) = m.map_rect(skia_safe::Rect::from_xywh(r.x, r.y, r.w, r.h));
+    Rect {
+        x: b.left,
+        y: b.top,
+        w: b.width(),
+        h: b.height(),
+    }
+}
+
+/// Whether a text's letters show: not at `opacity` 0, and not `fill: []`
+/// with no stroke or outline (a layer drawn only for its highlight).
+fn visible(p: &Placed) -> bool {
+    let l = p.layer;
+    let unfilled = l
+        .look
+        .fills
+        .as_ref()
+        .is_some_and(|f| f.as_slice().is_empty());
+    let outlined = l
+        .look
+        .strokes
+        .as_ref()
+        .is_some_and(|s| !s.as_slice().is_empty())
+        || matches!(
+            &l.kind,
+            crate::scene::Kind::Text {
+                outline: Some(_),
+                ..
             }
-            collect(inks, &p.children);
+        );
+    l.opacity > 0.0 && (!unfilled || outlined)
+}
+
+/// Pairs of texts whose ink overlaps by more than a pixel each way, where
+/// they're drawn (scaled, rotated or moved).
+pub(super) fn overlaps<'s>(placed: &[Placed<'s>]) -> HashMap<&'s str, Vec<&'s str>> {
+    fn collect<'s>(inks: &mut Vec<(&'s str, Rect)>, placed: &[Placed<'s>], m: &Matrix) {
+        for p in placed {
+            let own = through(m, p);
+            if let Some(r) = ink(p).filter(|_| visible(p)) {
+                inks.push((&p.layer.id, mapped(&own, r)));
+            }
+            collect(inks, &p.children, &own);
         }
     }
     let mut inks = Vec::new();
-    collect(&mut inks, placed);
+    collect(&mut inks, placed, &Matrix::new_identity());
     // ponytail: O(n²) over texts; a sweep line if scenes grow to hundreds.
     let mut out: HashMap<&str, Vec<&str>> = HashMap::new();
     for (i, (a, ra)) in inks.iter().enumerate() {

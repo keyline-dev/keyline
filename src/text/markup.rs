@@ -6,6 +6,7 @@
 //! is text; `&lt;` `&gt;` `&amp;` `&quot;` are entities.
 
 use serde_json::{Map, Value};
+use std::fmt::Write as _;
 
 use crate::scene::Range;
 
@@ -165,6 +166,8 @@ fn span_style(attrs: &str) -> Result<Range, String> {
     let mut obj = Map::new();
     obj.insert("start".into(), 0.into());
     obj.insert("end".into(), 0.into());
+    // A style tag's object highlight, carried as `--highlight-*` properties.
+    let mut hl = Map::new();
     let mut rest = attrs.trim();
     while !rest.is_empty() {
         let (key, after) = rest
@@ -191,10 +194,26 @@ fn span_style(attrs: &str) -> Result<Range, String> {
             let (prop, v) = decl
                 .split_once(':')
                 .ok_or_else(|| format!("{decl}: CSS declarations are property: value"))?;
+            if let Some(key) = prop.trim().strip_prefix("--highlight-") {
+                let v = v.trim();
+                let v = v
+                    .parse::<f64>()
+                    .map_or_else(|_| Value::from(v), Value::from);
+                hl.insert(key.into(), v);
+                continue;
+            }
             let (field, v) = css_declaration(prop.trim(), v.trim())?;
             obj.insert(field.into(), v);
         }
         rest = next.trim_start();
+    }
+    if let Some(color) = obj.remove("highlight") {
+        if hl.is_empty() {
+            obj.insert("highlight".into(), color);
+        } else {
+            hl.insert("color".into(), color);
+            obj.insert("highlight".into(), Value::Object(hl));
+        }
     }
     serde_json::from_value(Value::Object(obj)).map_err(|e| e.to_string())
 }
@@ -264,6 +283,16 @@ pub fn expand_styles(
                 let (_, css) = SPAN_FIELDS.iter().find(|(f, _)| f == k)?;
                 let v = match (k.as_str(), v) {
                     ("fontSize", Value::Number(n)) => format!("{n}px"),
+                    // An object highlight: its color, the rest as properties
+                    // `span_style` reads back.
+                    ("highlight", Value::Object(o)) => {
+                        let mut v = o.get("color")?.as_str()?.to_owned();
+                        for (key, x) in o.iter().filter(|(key, _)| *key != "color") {
+                            let x = x.as_str().map_or_else(|| x.to_string(), str::to_owned);
+                            let _ = write!(v, ";--highlight-{key}:{x}");
+                        }
+                        v
+                    }
                     (_, Value::String(s)) => s.clone(),
                     (_, Value::Number(n)) => n.to_string(),
                     _ => return None,
@@ -371,5 +400,19 @@ mod tests {
             (text.as_str(), spans[0].weight),
             ("Proven RESULTS", Some(800))
         );
+    }
+
+    #[test]
+    fn a_style_tag_keeps_an_object_highlight() {
+        let styles = serde_json::from_value(serde_json::json!({"hl": {"highlight":
+            {"color": "#FFD400", "shape": "brush", "padding": 6, "borderRadius": 3}}}))
+        .unwrap();
+        let out = expand_styles("A <hl>new</hl> home", &styles);
+        super::check(&out).unwrap();
+        let (_, spans) = parse(&out);
+        let h = spans[0].highlight.as_ref().unwrap();
+        assert_eq!(h.style, crate::scene::HighlightStyle::Brush);
+        assert_eq!((h.padding, h.radius), (6.0, 3.0));
+        assert_eq!(h.color.to_string(), "#FFD400");
     }
 }

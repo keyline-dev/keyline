@@ -44,7 +44,7 @@ pub use length::{Inset, Length, Place, Position, Spot};
 pub use look::{EdgeStyle, Edges, Look, OneOrMany, Radius, Side};
 pub use mask::{Mask, MaskMode, MaskSource};
 pub use paint::{BlendMode, Color, Crop, Fit, ImageFill, Outline};
-pub use presets::{PRESETS, SizeSpec};
+pub use presets::{PRESETS, SizeSpec, pdf_points_per_px};
 pub use resolve::{ASPECT_CLASSES, aspect_classes};
 pub use stack::{Dir, Dirs, Gap, Justify, Padding, Stack, StackAlign};
 pub use stroke::{Cap, Join, Marker, Shadow, Stroke, StrokeAlign, StrokeWidth};

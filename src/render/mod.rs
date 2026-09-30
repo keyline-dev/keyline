@@ -38,6 +38,7 @@ use output::encode_png;
 use paint::{sk_blend, sk_color, sk_rect};
 
 pub use animated::{animation_dims, each_frame, render_apng, render_gif};
+pub use effects::matrix;
 pub use image::{image_crop, image_scale, raster_size, svg_size};
 pub use output::{Encoded, Format, contact_sheet, encode, render_pdf};
 pub use text_extras::curve_sagitta;
@@ -266,7 +267,7 @@ impl Ctx<'_> {
         // As in design tools, a frame's stroke sits above its children, unclipped.
         if let Some(sh) = &shape {
             for st in strokes_of(l) {
-                stroke::draw_stroke(canvas, sh, &st, p.k, l.time.drawn);
+                stroke::draw_stroke(canvas, sh, &st, p.k, crate::anim::drawn(l));
             }
         }
         if let Some(m) = &l.mask {
@@ -287,7 +288,13 @@ impl Ctx<'_> {
         let l = p.layer;
         let r = sk_rect(p.rect);
         match &l.kind {
-            Kind::Text { .. } if self.hide_text => {}
+            // The backdrop for contrast checks: no letters, but their
+            // highlights, which the letters sit on.
+            Kind::Text { .. } if self.hide_text => {
+                if let (Some((para, _)), Some(t)) = (&p.text, crate::text::Text::drawn(l, p.k)) {
+                    text_extras::highlights(canvas, &t, para, p.text_origin(), p.k, l);
+                }
+            }
             Kind::Text { .. } => match l.time.moment {
                 Some(moment) if l.time.split.is_some() => self.draw_split(canvas, p, r, moment)?,
                 _ => self.draw_text(canvas, p, r)?,

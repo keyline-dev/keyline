@@ -16,30 +16,31 @@ pub(super) fn sigma(blur: f32) -> f32 {
 }
 
 /// Applies rotation, skew, scale, flips and offset about the box center.
-/// Rotation alone is a single rotate call.
 pub(super) fn transform(canvas: &skia_safe::Canvas, p: &Placed) {
+    if let Some(m) = matrix(p) {
+        canvas.concat(&m);
+    }
+}
+
+/// `p`'s own visual transform (offset, rotation, skew, scale, flips, about
+/// its box center), or `None` when it has none. The checks map boxes
+/// through the same matrix the renderer draws with.
+pub fn matrix(p: &Placed) -> Option<skia_safe::Matrix> {
     let l = p.layer;
+    if !l.look.transforms() && l.rotation == 0.0 {
+        return None;
+    }
     let c = sk_rect(p.rect).center();
-    if !l.look.transforms() {
-        if l.rotation != 0.0 {
-            canvas.rotate(l.rotation, Some(c));
-        }
-        return;
-    }
     let [ox, oy] = l.look.offset;
-    canvas.translate((ox * p.k, oy * p.k));
-    canvas.translate((c.x, c.y));
-    if l.rotation != 0.0 {
-        canvas.rotate(l.rotation, None);
-    }
     let [sx, sy] = l.look.skew;
-    if sx != 0.0 || sy != 0.0 {
-        canvas.skew((sx.to_radians().tan(), sy.to_radians().tan()));
-    }
     let fx = if l.look.flip_x { -1.0 } else { 1.0 };
     let fy = if l.look.flip_y { -1.0 } else { 1.0 };
-    canvas.scale((l.look.scale * fx, l.look.scale * fy));
-    canvas.translate((-c.x, -c.y));
+    let mut m = skia_safe::Matrix::translate((ox * p.k + c.x, oy * p.k + c.y));
+    m.pre_rotate(l.rotation, None);
+    m.pre_skew((sx.to_radians().tan(), sy.to_radians().tan()), None);
+    m.pre_scale((l.look.scale * fx, l.look.scale * fy), None);
+    m.pre_translate((-c.x, -c.y));
+    Some(m)
 }
 
 /// Blurs what's already drawn behind `shape` (frosted glass).
@@ -134,6 +135,7 @@ fn grow(shape: &Shape, by: f32) -> Shape {
             Shape::Oval(r) => Shape::Oval(*r),
             Shape::Path(p) => Shape::Path(p.clone()),
             Shape::Line(a, b) => Shape::Line(*a, *b),
+            Shape::Arc(r, start, sweep) => Shape::Arc(*r, *start, *sweep),
         };
     }
     match shape {

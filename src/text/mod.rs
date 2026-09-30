@@ -195,6 +195,15 @@ impl<'a> Text<'a> {
         out
     }
 
+    /// Each run's letter color: `(UTF-16 range in the display text, color)`.
+    pub fn colors(&self) -> Vec<(std::ops::Range<usize>, Color)> {
+        let utf16 = |byte: usize| self.display[..byte].encode_utf16().count();
+        self.runs
+            .iter()
+            .map(|(range, run)| (utf16(range.start)..utf16(range.end), run.color))
+            .collect()
+    }
+
     /// The first run's style: what leaders and curved text draw with.
     pub fn base_run(&self) -> Option<&Run> {
         self.runs.first().map(|(_, r)| r)

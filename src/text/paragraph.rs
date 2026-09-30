@@ -37,8 +37,29 @@ impl Text<'_> {
         fit.font_size / self.font_size
     }
 
+    /// The display text's bytes `range` laid out on one line, left aligned,
+    /// in their own runs' styles: one side of a leader line.
+    pub fn slice_paragraph(&self, range: std::ops::Range<usize>, size: f32) -> Paragraph {
+        let mut style = ParagraphStyle::new();
+        style.set_text_align(TextAlign::Left);
+        let mut p = with_fonts(|fc| {
+            let mut b = ParagraphBuilder::new(&style, fc.clone());
+            for (r, run) in &self.runs {
+                let (from, to) = (r.start.max(range.start), r.end.min(range.end));
+                if from < to {
+                    b.push_style(&self.style(size, run, None, true));
+                    b.add_text(&self.display[from..to]);
+                    b.pop();
+                }
+            }
+            b.build()
+        });
+        p.layout(f32::MAX);
+        p
+    }
+
     /// `s` laid out on one line in the text's first run's style, left
-    /// aligned: the parts of a leader line.
+    /// aligned: a leader's dots.
     pub fn plain_paragraph(&self, s: &str, size: f32, paint: Option<&Paint>) -> Paragraph {
         let mut style = ParagraphStyle::new();
         style.set_text_align(TextAlign::Left);

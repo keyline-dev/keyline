@@ -179,7 +179,18 @@ impl Track {
     /// `prop`'s value at `t` for the target `seed`, given its own value
     /// `own`; `None` when this track doesn't animate `prop`.
     pub fn value(&self, prop: &str, own: Val, t: f32, seed: u32) -> Option<Val> {
-        let p = self.progress(t);
+        self.value_at(prop, own, self.progress(t), seed)
+    }
+
+    /// `prop`'s value where the track comes to rest: the end of its last
+    /// play (its start after an even number of yoyo plays), or of one play
+    /// when it repeats forever.
+    pub fn final_value(&self, prop: &str, own: Val, seed: u32) -> Option<Val> {
+        let back = self.yoyo && self.repeat >= 0 && self.repeat % 2 == 1;
+        self.value_at(prop, own, if back { 0.0 } else { 1.0 }, seed)
+    }
+
+    fn value_at(&self, prop: &str, own: Val, p: f32, seed: u32) -> Option<Val> {
         let salt = |i: usize| self::seed(prop) ^ (i as u32).wrapping_mul(0x2545_F491);
         Some(match self.props.get(prop)? {
             Keys::FromTo(from, to) => {
@@ -453,6 +464,24 @@ mod tests {
         assert!((o(100.25) - 0.25).abs() < 1e-4, "forever");
         let twice = track(json!({"opacity": [0, 1], "repeat": 1, "ease": "none"}));
         assert_eq!(num(twice.value("opacity", Val::Num(1.0), 5.0, 0)), 1.0);
+    }
+
+    #[test]
+    fn a_track_comes_to_rest_where_its_last_play_ends() {
+        let rest = |v: serde_json::Value| num(track(v).final_value("draw", Val::Num(1.0), 0));
+        assert_eq!(rest(json!({"draw": [0, 0.75]})), 0.75);
+        assert_eq!(
+            rest(json!({"draw": [0, 0.75], "repeat": 1, "yoyo": true})),
+            0.0
+        );
+        assert_eq!(
+            rest(json!({"draw": [0, 0.75], "repeat": 2, "yoyo": true})),
+            0.75
+        );
+        assert_eq!(
+            rest(json!({"draw": [0, 0.75], "repeat": -1, "yoyo": true})),
+            0.75
+        );
     }
 
     #[test]

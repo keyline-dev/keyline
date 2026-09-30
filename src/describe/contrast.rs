@@ -1,27 +1,27 @@
 //! The `warn contrast` advisory: WCAG contrast of text against what is
 //! drawn behind it.
 
-use skia_safe::Pixmap;
+use skia_safe::textlayout::{RectHeightStyle, RectWidthStyle};
+use skia_safe::{Contains, Pixmap};
 
 use crate::layout::{Placed, Rect};
 use crate::scene::{Color, Kind};
 
 /// WCAG contrast of the text's colors, as drawn (their alpha and `opacity`
-/// blended over the backdrop), against the average luminance behind its
-/// ink. Returns `(worst ratio, required)` when below the requirement: 3:1
-/// for large text (≥ 24 px, or ≥ 18.66 px bold), else 4.5:1.
+/// blended over the backdrop), each against the average luminance behind
+/// its own letters (highlights included). Returns `(worst ratio, required)`
+/// when below the requirement: 3:1 for large text (≥ 24 px, or ≥ 18.66 px
+/// bold), else 4.5:1.
 // ponytail: averages the backdrop; text over a busy photo can pass on
 // average yet fail in places. Check per-glyph region if that bites.
 pub(super) fn contrast(
     p: &Placed,
     ink: Rect,
     backdrop: &Pixmap,
-    opacity: f32,
+    (opacity, m): (f32, &skia_safe::Matrix),
 ) -> Option<(f32, f32)> {
     let (_, fit) = p.text.as_ref()?;
     let Kind::Text {
-        color,
-        ranges,
         weight,
         fill,
         gradient,
@@ -35,40 +35,65 @@ pub(super) fn contrast(
     }
     // `fills` paint the letters instead of `color`: judged by the top one
     // when it's a plain color, else not at all.
-    let color = match p.layer.look.fills.as_ref().map(|f| match f {
+    let paints = p.layer.look.fills.as_ref().map(|f| match f {
         crate::scene::OneOrMany::One(p) => std::slice::from_ref(p),
         crate::scene::OneOrMany::Many(v) => v.as_slice(),
-    }) {
-        None => *color,
+    });
+    let text = crate::text::Text::of(p.layer, p.k)?;
+    let (para, _) = p.text.as_ref()?;
+    let (ox, oy) = p.text_origin();
+    // Each run's letters and the boxes they sit in, canvas px.
+    let runs: Vec<(Color, Vec<skia_safe::Rect>)> = text
+        .colors()
+        .into_iter()
+        .map(|(range, c)| {
+            let boxes = para
+                .get_rects_for_range(range, RectHeightStyle::Tight, RectWidthStyle::Tight)
+                .iter()
+                .map(|b| b.rect.with_offset((ox, oy)))
+                .collect();
+            (c, boxes)
+        })
+        .collect();
+    // A plain `fills` color paints every letter instead.
+    let letters = match paints {
+        None => None,
         Some(paints) => match paints.last() {
-            Some(crate::scene::Paint::Solid(s)) => s.color,
+            Some(crate::scene::Paint::Solid(s)) => Some(s.color),
             _ => return None,
         },
     };
     const GRID: i32 = 16;
-    let colors: Vec<Color> = std::iter::once(color)
-        .chain(ranges.iter().filter_map(|r| r.color))
-        .collect();
     let (bw, bh) = (backdrop.width() - 1, backdrop.height() - 1);
-    let mut bg = 0.0;
-    let mut fg = vec![0.0; colors.len()];
+    // Per run: (backdrop luminance sum, text luminance sum, samples).
+    let mut sums = vec![(0.0, 0.0, 0.0_f32); runs.len()];
     for gx in 0..GRID {
         for gy in 0..GRID {
-            let x = (ink.x + ink.w * (gx as f32 + 0.5) / GRID as f32) as i32;
-            let y = (ink.y + ink.h * (gy as f32 + 0.5) / GRID as f32) as i32;
-            let c = backdrop.get_color((x.clamp(0, bw), y.clamp(0, bh)));
+            let x = ink.x + ink.w * (gx as f32 + 0.5) / GRID as f32;
+            let y = ink.y + ink.h * (gy as f32 + 0.5) / GRID as f32;
+            let Some(i) = runs.iter().position(|(_, boxes)| {
+                boxes
+                    .iter()
+                    .any(|b| b.contains(skia_safe::Point::new(x, y)))
+            }) else {
+                continue;
+            };
+            // Sampled where the letter is drawn: scaled, rotated or moved.
+            let at = m.map_point((x, y));
+            let c = backdrop.get_color(((at.x as i32).clamp(0, bw), (at.y as i32).clamp(0, bh)));
             let under = [c.r(), c.g(), c.b()];
-            bg += luminance(under);
-            for (sum, text) in fg.iter_mut().zip(&colors) {
-                *sum += luminance(over(*text, opacity, under));
-            }
+            let fg = letters.unwrap_or(runs[i].0);
+            let s = &mut sums[i];
+            s.0 += luminance(under);
+            s.1 += luminance(over(fg, opacity, under));
+            s.2 += 1.0;
         }
     }
-    let samples = (GRID * GRID) as f32;
-    let worst = fg
+    let worst = sums
         .iter()
-        .map(|f| ratio(f / samples, bg / samples))
-        .fold(f32::MAX, f32::min);
+        .filter(|s| s.2 > 0.0)
+        .map(|&(bg, fg, n)| ratio(fg / n, bg / n))
+        .reduce(f32::min)?;
     let large = fit.font_size >= 24.0 || (fit.font_size >= 18.66 && *weight >= 700);
     let min = if large { 3.0 } else { 4.5 };
     (worst < min).then_some((worst, min))
