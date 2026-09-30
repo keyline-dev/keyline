@@ -63,8 +63,19 @@ pub struct Fit {
 }
 
 impl<'a> Text<'a> {
-    /// `k` is the size's Scale-tool factor; it multiplies the font size.
+    /// `k` is the size's Scale-tool factor; it multiplies the font size. A
+    /// counting text's `{n}` is its widest value, so layout holds still.
     pub fn of(layer: &'a Layer, k: f32) -> Option<Self> {
+        Self::of_at(layer, k, false)
+    }
+
+    /// Like [`Text::of`], with a counting text's `{n}` the number of the
+    /// moment being drawn.
+    pub fn drawn(layer: &'a Layer, k: f32) -> Option<Self> {
+        Self::of_at(layer, k, true)
+    }
+
+    fn of_at(layer: &'a Layer, k: f32, now: bool) -> Option<Self> {
         let Kind::Text {
             text,
             ranges,
@@ -96,7 +107,20 @@ impl<'a> Text<'a> {
             highlight: None,
             shift: None,
         };
-        let (display, runs) = runs::build(text, ranges, &base, *text_case, k);
+        let counted = crate::anim::count::text(layer, now);
+        let (display, runs) = runs::build(
+            counted.as_deref().unwrap_or(text),
+            ranges,
+            &base,
+            *text_case,
+            k,
+        );
+        let mut features: Vec<(String, u32)> =
+            more.features.iter().map(|(k, v)| (k.clone(), *v)).collect();
+        // A counting number keeps its width: tabular figures, where the font has them.
+        if counted.is_some() && !features.iter().any(|(tag, _)| tag == "tnum") {
+            features.push(("tnum".into(), 1));
+        }
         let rtl = match more.direction {
             Direction::Rtl => true,
             Direction::Ltr => false,
@@ -119,7 +143,7 @@ impl<'a> Text<'a> {
                 .map(|s| (s.color, s.x * k, s.y * k, s.blur * k)),
             wrap: more.text_wrap,
             rtl,
-            features: more.features.iter().map(|(k, v)| (k.clone(), *v)).collect(),
+            features,
             highlight: more.highlight.clone(),
         })
     }

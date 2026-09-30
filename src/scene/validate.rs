@@ -17,6 +17,22 @@ impl Scene {
         {
             return Err("duration must be > 0 and fps between 1 and 120".into());
         }
+        if let Some(a) = &self.audio {
+            if !self
+                .assets
+                .get(&a.asset)
+                .and_then(|x| x.clip)
+                .is_some_and(|c| c.audio)
+            {
+                return Err(format!(
+                    "audio: {} isn't a sound; add an MP3, M4A or WAV with asset_add",
+                    a.asset
+                ));
+            }
+            if a.volume < 0.0 || a.trim_start < 0.0 || a.fade_in < 0.0 || a.fade_out < 0.0 {
+                return Err("audio: volume, trimStart, fadeIn and fadeOut must be ≥ 0".into());
+            }
+        }
         let top: Vec<&str> = self
             .layers
             .iter()
@@ -239,6 +255,31 @@ impl Scene {
         }
         if l.time.split.is_some() && !matches!(l.kind, Kind::Text { .. }) {
             return Err("split works on text layers".into());
+        }
+        let animates = |prop: &str| {
+            l.time
+                .animate
+                .iter()
+                .flat_map(super::OneOrMany::as_slice)
+                .any(|t| t.props.contains_key(prop))
+        };
+        if animates("count")
+            && !matches!(&l.kind, Kind::Text { text, .. } if text.contains(crate::anim::count::SLOT))
+        {
+            return Err("count needs text with {n} where the number goes".into());
+        }
+        // Split text moves piece by piece, which strokes and numbers don't.
+        if l.time.split.is_some() && (animates("draw") || animates("count")) {
+            return Err("draw and count don't work on split text; drop split".into());
+        }
+        // A sound has no picture: its 0×0 size would draw nothing, or fail.
+        if let Some((asset, ..)) = l.kind.picture()
+            && self
+                .assets
+                .get(asset)
+                .is_some_and(|a| a.width == 0.0 && a.clip.is_some())
+        {
+            return Err(format!("{asset} is a sound; play it as the scene's audio"));
         }
         check_lengths(l)?;
         super::check::look(self, l)?;

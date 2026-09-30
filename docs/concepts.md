@@ -72,11 +72,11 @@ A scene with a duration moves. Only fields that don't change layout animate (opa
 
 ### The timeline
 
-Layers **enter** and **exit** with named effects (`fade-up`, `pop`…) and move with **keyframes**, GSAP-style, with GSAP's eases. A frame can **stagger** its children's entrances one after another, and text can **split** into letters or words that move on their own.
+Layers **enter** and **exit** with named effects (`fade-up`, `pop`…) and move with **keyframes**, GSAP-style, with GSAP's eases. A frame can **stagger** its children's entrances one after another, and text can **split** into letters or words that move on their own. Strokes can **draw** themselves (a progress ring, a signature), and a number in text can **count** up in a box that holds still.
 
 ### Video and shots
 
-A video clip is a layer, drawn like an image under the titles and graphics above it, trimmed, slowed or looped, and its sound carried into the video. A scene can be a sequence of **shots**: top-level frames that play one after another, each joined to the one before by a **transition** (fade, slide, push, wipe, zoom) that overlaps the two. Times inside a shot count from its start; layers outside the shots, such as a logo, stay on throughout.
+A video clip is a layer, drawn like an image under the titles and graphics above it, trimmed, slowed or looped, and its sound carried into the video, mixed with the scene's **soundtrack** if it has one. A scene can be a sequence of **shots**: top-level frames that play one after another, each joined to the one before by a **transition** (fade, slide, push, wipe, zoom) that overlaps the two. Times inside a shot count from its start; layers outside the shots, such as a logo, stay on throughout.
 
 ## How an agent works with it
 

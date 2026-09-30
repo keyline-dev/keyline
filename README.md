@@ -73,8 +73,8 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 - **Images:** fill, fit, crop or tile, with a focus point that stays in view; adjustments (brightness, contrast, saturation, grayscale, sepia, hue, duotone, tint, halftone)
 - **Icons:** about 5,000 built in, by name: [Lucide](https://lucide.dev) outline icons and [Font Awesome Free](https://fontawesome.com) solid, regular and brand icons, in any color
 - **Reuse:** named styles on any layer, tokens (`"$brand"`) that update every field using them, components placed once or once per data row, and templates: a scene file loaded by URL or path with its variables set, rendered once per row of values
-- **Motion:** GSAP-style animation: enter and exit effects (fade, fade-up, pop, zoom, blur-in), keyframes on opacity, scale, rotation, offset, skew, blur and color with GSAP's eases, `random()` starts, staggered children, and text split into letters or words that move on their own
-- **Video:** video clips as layers, trimmed, slowed or looped, with titles and graphics over them; shots that play in turn, joined by cuts, fades, slides, pushes, wipes or zooms; each clip's own sound carried into the video
+- **Motion:** GSAP-style animation: enter and exit effects (fade, fade-up, pop, zoom, blur-in), keyframes on opacity, scale, rotation, offset, skew, blur and color with GSAP's eases, `random()` starts, staggered children, text split into letters or words that move on their own, strokes that draw themselves, and numbers that count
+- **Video:** video clips as layers, trimmed, slowed or looped, with titles and graphics over them; shots that play in turn, joined by cuts, fades, slides, pushes, wipes or zooms; each clip's own sound carried into the video, mixed with a soundtrack
 - **Assets:** stored under content hashes. URLs are fetched only over http(s), and private and local addresses are refused.
 - **Output:** PNG, JPEG, WebP, vector PDF, animated PNG, animated GIF, MP4 or WebM per size, a still of any moment, with a file-size cap for ad networks, plus an optional contact-sheet preview; rendered on the GPU when available
 

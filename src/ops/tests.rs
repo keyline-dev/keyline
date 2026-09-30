@@ -282,6 +282,27 @@ fn the_scene_itself_can_change_after_creation() {
 }
 
 #[test]
+fn a_soundtrack_is_set_by_its_asset_alone_and_reset_by_null() {
+    let mut s = scene();
+    s.assets.insert(
+        "song".into(),
+        serde_json::from_value(json!({"sha256": "m", "width": 0, "height": 0,
+            "clip": {"duration": 30, "fps": 0, "audio": true}}))
+        .unwrap(),
+    );
+    let set = |v: Value| -> Op {
+        serde_json::from_value(json!({"target": {"scene": true}, "set": v})).unwrap()
+    };
+    update_layers(&mut s, Shared::default(), &[set(json!({"music": "song"}))]).unwrap();
+    assert_eq!(s.audio.as_ref().map(|a| a.asset.as_str()), Some("song"));
+    let e =
+        update_layers(&mut s, Shared::default(), &[set(json!({"audio": "photo"}))]).unwrap_err();
+    assert!(e.contains("audio: photo isn't a sound"), "{e}");
+    update_layers(&mut s, Shared::default(), &[set(json!({"audio": null}))]).unwrap();
+    assert_eq!(s.audio, None);
+}
+
+#[test]
 fn a_style_s_type_steers_the_guesses_and_is_dropped() {
     let mut s = scene();
     let styles =

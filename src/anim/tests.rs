@@ -126,3 +126,49 @@ fn bad_timing_is_refused_in_one_line() {
     let e = serde_json::from_value::<Scene>(v).unwrap_err();
     assert!(e.to_string().contains("unknown effect"), "{e}");
 }
+
+#[test]
+fn draw_and_count_tracks_set_the_moment_and_the_count_box_holds_still() {
+    let s = scene(
+        json!([{"id": "n", "type": "text", "text": "{n} users", "fontSize": 20,
+            "animate": {"count": [0, 12500], "separator": ",", "ease": "none", "draw": [0, 1]}}]),
+        json!({}),
+    );
+    let at = |t: f32| at_time(&s, t, &s.sizes[0]);
+    let (start, mid) = (at(0.0), at(0.5));
+    assert_eq!(
+        (start.layers[0].time.count, mid.layers[0].time.count),
+        (Some(0.0), Some(6250.0))
+    );
+    assert_eq!(mid.layers[0].time.drawn, Some(0.5));
+    assert_eq!(s.layers[0].time.count, None, "at rest: none set");
+    let width = |sc: &Scene| crate::layout::layout(sc, &sc.sizes[0])[0].rect.w;
+    assert_eq!(
+        width(&start),
+        width(&at(1.0)),
+        "measured with 12,500 throughout"
+    );
+    assert_eq!(width(&start), width(&s));
+}
+
+#[test]
+fn draw_and_count_are_refused_where_they_would_do_nothing() {
+    let s: Scene = serde_json::from_value(json!({"width": 100, "height": 100, "duration": 1,
+        "sizes": [{"id": "a", "width": 100, "height": 100}],
+        "layers": [{"id": "t", "type": "text", "text": "{n}", "split": "chars",
+            "animate": {"count": [0, 9]}}]}))
+    .unwrap();
+    let e = s.validate().unwrap_err();
+    assert!(
+        e.starts_with("t: draw and count don't work on split text"),
+        "{e}"
+    );
+    let s: Scene = serde_json::from_value(json!({"width": 100, "height": 100, "duration": 1,
+        "sizes": [{"id": "a", "width": 100, "height": 100}],
+        "layers": [{"id": "t", "type": "text", "text": "9 teams", "animate": {"count": [0, 9]}}]}))
+    .unwrap();
+    assert_eq!(
+        s.validate().unwrap_err(),
+        "t: count needs text with {n} where the number goes"
+    );
+}

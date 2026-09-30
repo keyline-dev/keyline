@@ -147,9 +147,13 @@ fn weight(v: &Value) -> Option<u32> {
     })
 }
 
-/// A keyframe track in GSAP's words: `x`/`y` and `rotation`.
+/// A keyframe track in GSAP's words: `x`/`y`, `rotation`, `drawSVG`; After
+/// Effects' `trimPath`; a `counter`.
 fn track(a: &mut Map<String, Value>) {
     rename(a, "rotation", "rotate");
+    rename(a, "drawSVG", "draw");
+    rename(a, "trimPath", "draw");
+    rename(a, "counter", "count");
     if a.contains_key("translate") {
         return;
     }
@@ -267,5 +271,16 @@ mod tests {
         );
         let v = norm(json!({"animate": {"y": {"from": 40}}}), None);
         assert_eq!(v["animate"]["translate"], json!({"from": [0, 40]}));
+    }
+
+    #[test]
+    fn trim_paths_and_counters_read_as_draw_and_count() {
+        let v = norm(json!({"animate": {"drawSVG": [0, 1]}}), None);
+        assert_eq!(v["animate"], json!({"draw": [0, 1]}));
+        let v = norm(
+            json!({"animate": [{"trimPath": [0, 1]}, {"counter": [0, 9]}]}),
+            None,
+        );
+        assert_eq!(v["animate"], json!([{"draw": [0, 1]}, {"count": [0, 9]}]));
     }
 }

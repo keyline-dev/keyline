@@ -30,8 +30,12 @@ pub enum Val {
 
 /// The properties that animate, and the kind of value each takes. Only
 /// ones that don't change layout: the layout runs once, time only redraws.
+/// `draw` is the share of a stroke drawn (0–1); `count` is the number a
+/// text's `{n}` shows.
 pub const PROPS: &[(&str, Kind)] = &[
     ("opacity", Kind::Num),
+    ("draw", Kind::Num),
+    ("count", Kind::Num),
     ("scale", Kind::Num),
     ("rotate", Kind::Num),
     ("blur", Kind::Num),
@@ -140,6 +144,10 @@ pub struct Track {
     pub repeat: i32,
     /// Every other play runs backwards (false).
     pub yoyo: bool,
+    /// With `count`: digits after the decimal point (0).
+    pub decimals: u8,
+    /// With `count`: put between thousands, e.g. `","` (none).
+    pub separator: String,
 }
 
 impl Track {
@@ -271,7 +279,17 @@ fn keys(prop: &str, kind: Kind, v: &Value) -> Result<Keys, String> {
     }
 }
 
-const TIMING: &[&str] = &["times", "delay", "duration", "ease", "repeat", "yoyo"];
+/// A track's keys that aren't properties: its timing, and `count`'s format.
+const TIMING: &[&str] = &[
+    "times",
+    "delay",
+    "duration",
+    "ease",
+    "repeat",
+    "yoyo",
+    "decimals",
+    "separator",
+];
 
 impl<'de> Deserialize<'de> for Track {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -322,6 +340,15 @@ impl<'de> Deserialize<'de> for Track {
                 .and_then(Value::as_i64)
                 .map_or(0, |r| r.clamp(-1, 10_000) as i32),
             yoyo: o.get("yoyo").and_then(Value::as_bool).unwrap_or(false),
+            decimals: o
+                .get("decimals")
+                .and_then(Value::as_u64)
+                .map_or(0, |d| d.min(6) as u8),
+            separator: o
+                .get("separator")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_owned(),
         })
     }
 }
@@ -377,6 +404,12 @@ impl Serialize for Track {
         }
         if self.yoyo {
             o.insert("yoyo".into(), true.into());
+        }
+        if self.decimals != 0 {
+            o.insert("decimals".into(), self.decimals.into());
+        }
+        if !self.separator.is_empty() {
+            o.insert("separator".into(), self.separator.clone().into());
         }
         o.serialize(s)
     }

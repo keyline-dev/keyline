@@ -161,7 +161,8 @@ roughness}. Shadow: {x, y, blur, spread, color, inset}. Mask: a gradient, shape 
         description = "Change or delete layers atomically. Each op: {target: {id}|{role}|{style}|{component, role?}, \
 set: {fields}} or {target, delete: true} or {target: {id}, detach: true} (a use becomes plain layers). A role targets \
 every layer with it; a style or component target changes it everywhere it's used. tokens {name: value} changes \
-tokens. null resets a field. {target: {scene: true}, set: {background, sizes, duration, fps, loop}} changes the scene."
+tokens. null resets a field. {target: {scene: true}, set: {background, sizes, duration, fps, loop, audio {asset, volume, trimStart, fadeIn, \
+fadeOut}}} changes the scene."
     )]
     async fn layer_update(&self, Parameters(a): Parameters<LayerUpdateArgs>) -> CallToolResult {
         let sets: Vec<Value> = a

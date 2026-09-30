@@ -4,6 +4,8 @@
 //! encoded as MP4 (with the clips' sound, or without) and WebM. Without
 //! ffmpeg, video is refused and APNG still works.
 //!
+//! A scene soundtrack (a WAV) plays under a video, cut to its length.
+//!
 //! The demo with livelier clips: `cargo test --test e2e_video -- --ignored`.
 
 // Test support: a panic is how a test reports failure.
@@ -153,7 +155,7 @@ async fn three_clips_play_as_shots_with_titles_and_sound() {
     assert!(mp4.ends_with(".mp4"), "{reply}");
     // A video's facts: length and frames; players decide the looping.
     assert!(
-        reply.contains(" frames at ") && !reply.contains("loops"),
+        reply.contains(" frames at ") && !reply.contains("loops") && reply.contains(", with sound"),
         "{reply}"
     );
     assert_eq!(
@@ -171,6 +173,104 @@ async fn three_clips_play_as_shots_with_titles_and_sound() {
     let webm = reply.split_whitespace().nth(1).unwrap();
     assert!(webm.ends_with(".webm"), "{reply}");
     assert_eq!(streams(webm), ["video"], "muted leaves sound out");
+    assert!(!reply.contains("with sound"), "{reply}");
+    mcp.stop().await;
+}
+
+/// Seconds of the audio stream in a file.
+fn audio_seconds(file: &str) -> f32 {
+    let out = Command::new("ffprobe")
+        .args([
+            "-v",
+            "error",
+            "-select_streams",
+            "a",
+            "-show_entries",
+            "stream=duration",
+        ])
+        .args(["-of", "csv=p=0", file])
+        .output()
+        .unwrap();
+    String::from_utf8(out.stdout)
+        .unwrap()
+        .trim()
+        .parse()
+        .unwrap()
+}
+
+#[tokio::test]
+async fn a_soundtrack_plays_under_the_video_cut_to_its_length() {
+    if !have_ffmpeg() {
+        return;
+    }
+    let dir = scratch("soundtrack");
+    // Five seconds of tone: longer than the two-second video.
+    let song = dir.join("song.wav");
+    let made = Command::new("ffmpeg")
+        .args(["-v", "error", "-y", "-f", "lavfi", "-i", "sine=f=330:d=5"])
+        .arg(&song)
+        .status()
+        .unwrap()
+        .success();
+    assert!(made, "ffmpeg made the song");
+    let mcp = Mcp::start_args("soundtrack", &["--allow-read", dir.to_str().unwrap()]).await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"sizes": ["320x180"], "duration": 2, "fps": 10}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    let reply = mcp
+        .ok(
+            "asset_add",
+            json!({"sceneId": id, "id": "song", "path": song.to_str().unwrap()}),
+        )
+        .await;
+    assert!(reply.starts_with("song sound 5s v"), "{reply}");
+    mcp.ok("layer_add", json!({"sceneId": id, "layers": [{"type": "rect", "width": 100, "height": 100, "fill": "#3A86FF"}]}))
+        .await;
+    let reply = mcp
+        .ok(
+            "layer_update",
+            json!({"sceneId": id, "ops": [{"target": {"scene": true},
+            "set": {"audio": {"asset": "song", "volume": 0.8, "trimStart": 1, "fadeOut": 0.5}}}]}),
+        )
+        .await;
+    assert!(reply.contains(" ok"), "{reply}");
+
+    let reply = mcp
+        .ok("render", json!({"sceneId": id, "format": "mp4"}))
+        .await;
+    assert!(
+        reply.contains("2s, 20 frames at 10 fps, with sound"),
+        "{reply}"
+    );
+    let mp4 = reply.split_whitespace().nth(1).unwrap();
+    assert_eq!(streams(mp4), ["video", "audio"]);
+    let secs = audio_seconds(mp4);
+    assert!((secs - 2.0).abs() < 0.1, "cut to the video: {secs}s");
+
+    let reply = mcp
+        .ok(
+            "render",
+            json!({"sceneId": id, "format": "webm", "muted": true}),
+        )
+        .await;
+    assert_eq!(streams(reply.split_whitespace().nth(1).unwrap()), ["video"]);
+    assert!(!reply.contains("with sound"), "{reply}");
+    // A picture isn't a soundtrack.
+    let e = mcp
+        .call(
+            "layer_update",
+            json!({"sceneId": id, "ops": [{"target": {"scene": true}, "set": {"audio": "nope"}}]}),
+        )
+        .await
+        .unwrap_err();
+    assert!(e.contains("audio: nope isn't a sound"), "{e}");
     mcp.stop().await;
 }
 

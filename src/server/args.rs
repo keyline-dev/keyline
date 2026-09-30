@@ -97,11 +97,10 @@ pub struct RenderArgs {
     pub(super) scene_id: String,
     /// Size ids; all if omitted.
     pub(super) sizes: Option<Vec<String>>,
-    /// Also return one small image of all sizes side by side.
+    // Undocumented here: the tool's description says what these do.
     #[serde(default)]
     pub(super) preview: bool,
     pub(super) time: Option<f32>,
-    /// true leaves the clips' sound out of mp4/webm
     #[serde(default)]
     pub(super) muted: bool,
     /// Variants: one render per row of token values, e.g. [{"headline": "Sale"}]

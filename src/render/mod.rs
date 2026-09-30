@@ -266,7 +266,7 @@ impl Ctx<'_> {
         // As in design tools, a frame's stroke sits above its children, unclipped.
         if let Some(sh) = &shape {
             for st in strokes_of(l) {
-                stroke::draw_stroke(canvas, sh, &st, p.k);
+                stroke::draw_stroke(canvas, sh, &st, p.k, l.time.drawn);
             }
         }
         if let Some(m) = &l.mask {

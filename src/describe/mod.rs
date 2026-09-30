@@ -63,6 +63,9 @@ pub fn describe(
             .assets
             .iter()
             .map(|(id, a)| {
+                if let (Some(c), 0.0) = (a.clip, a.width) {
+                    return format!("{id} sound {}s", (c.duration * 10.0).round() / 10.0);
+                }
                 let clip = a.clip.map_or_else(String::new, |c| {
                     let sound = if c.audio { " sound" } else { "" };
                     format!(" {}s{sound}", (c.duration * 10.0).round() / 10.0)

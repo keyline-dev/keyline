@@ -279,3 +279,54 @@ fn gpu_renders_match_the_cpu_closely() {
         "GPU and CPU differ by {mean:.2} levels per channel on average"
     );
 }
+
+/// Renders a 100×100, 2 s scene of `layers` `t` seconds in.
+fn pixels_at(layers: serde_json::Value, t: f32) -> impl Fn(i32, i32) -> (u8, u8, u8) {
+    let mut v = json!({"width": 100, "height": 100, "background": "#FFFFFF", "duration": 2,
+        "sizes": [{"id": "a", "width": 100, "height": 100}]});
+    v["layers"] = layers;
+    let scene: Scene = serde_json::from_value(v).unwrap();
+    scene.validate().unwrap();
+    let at = crate::anim::at_time(&scene, t, &scene.sizes[0]);
+    let img = render_image(&at, &at.sizes[0], 1.0, &std::env::temp_dir(), false).unwrap();
+    move |x, y| {
+        let c = img.peek_pixels().unwrap().get_color((x, y));
+        (c.r(), c.g(), c.b())
+    }
+}
+
+#[test]
+fn a_draw_track_draws_that_share_of_the_stroke() {
+    let line = json!([{"type": "line", "x": 10, "y": 50, "width": 80, "height": 0,
+        "stroke": {"width": 6, "color": "#000000"}, "animate": {"draw": [0, 1], "ease": "none"}}]);
+    let half = pixels_at(line.clone(), 0.5);
+    assert_eq!(
+        (half(20, 50), half(80, 50)),
+        ((0, 0, 0), (255, 255, 255)),
+        "half drawn"
+    );
+    let rest = pixels_at(line, 0.0);
+    assert_eq!(rest(20, 50), (255, 255, 255), "nothing before it starts");
+    // A ring draws clockwise from the top: a quarter covers the right-top only.
+    let ring = json!([{"type": "ellipse", "x": 20, "y": 20, "width": 60, "height": 60,
+        "stroke": {"width": 6, "color": "#FF0000"}, "animate": {"draw": {"from": 0, "to": 0.25}, "delay": 1, "duration": 0.01}}]);
+    let q = pixels_at(ring, 1.5);
+    assert!(q(65, 24).1 < 100, "top right: {:?}", q(65, 24));
+    assert_eq!(q(35, 76), (255, 255, 255), "bottom left not yet");
+    assert_eq!(q(24, 35), (255, 255, 255), "left not yet");
+}
+
+#[test]
+fn a_count_track_draws_the_number_of_the_moment() {
+    let text = json!([{"id": "n", "type": "text", "text": "{n}", "fontSize": 40, "color": "#000000",
+        "animate": {"count": [0, 1000], "ease": "none"}}]);
+    let ink = |px: &dyn Fn(i32, i32) -> (u8, u8, u8)| {
+        (0..100)
+            .flat_map(|x| (0..60).map(move |y| (x, y)))
+            .filter(|&(x, y)| px(x, y).0 < 128)
+            .count()
+    };
+    let start = pixels_at(text.clone(), 0.0);
+    let end = pixels_at(text, 2.0);
+    assert!(ink(&start) * 3 < ink(&end), "one digit, then four");
+}

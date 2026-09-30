@@ -21,18 +21,19 @@ const DROP: &[&str] = &[
 /// What `layer_add` adds to its description when motion is on.
 const LAYER_ADD_MOTION: &str = " Motion (needs the scene's duration, or shots): enter/exit \
 fade|fade-up|-down|-left|-right (the way it moves)|pop|zoom-in|zoom-out|blur-in or {effect, delay, duration, ease, \
-distance}; animate {opacity|scale|rotate|blur|translate|skew|color: [values] or {from,to}, delay, duration, ease, \
-repeat (-1), yoyo, times} or a list; values may be \"random(a,b)\"; ease: GSAP names (power2.out, back.out, \
+distance}; animate {opacity|scale|rotate|blur|translate|skew|color|draw (stroke drawn, 0–1)|count (text's {n}; \
+decimals, separator): [values] or {from,to}, delay, duration, ease, repeat (-1), yoyo, times} or a list; values may be \"random(a,b)\"; ease: GSAP names (power2.out, back.out, \
 elastic.inOut, steps(n), none); stagger (s) on frame, use or split text; split chars|words. Durations are seconds. \
 video: asset (a clip), fit, focus, crop, filter, trimStart (s into the clip), delay, playbackRate, loop, muted. \
 {type: shot, duration, transition} (top level; shots play in turn, their times are their own): transition \
 cut|fade|slide-*|push-*|wipe-* (left|right|up|down: the way the new shot moves)|zoom or {type, duration, ease}.";
 
 /// What `asset_add` adds to its description when motion is on.
-const ASSET_ADD_MOTION: &str = " Or a video clip (mp4, mov, webm) by path or url.";
+const ASSET_ADD_MOTION: &str =
+    " Or a video (mp4, mov, webm) or sound (mp3, m4a, wav) by path or url.";
 
 /// What `render` adds to its description when motion is on.
-const RENDER_MOTION: &str = " apng, gif, mp4 or webm (mp4/webm need ffmpeg) renders the motion; time (s) a still of it; muted drops clips' sound.";
+const RENDER_MOTION: &str = " apng, gif, mp4 or webm (mp4/webm need ffmpeg) renders the motion; time (s) a still of it; muted drops the sound.";
 
 /// Arguments that exist only for motion, by tool.
 const MOTION_ARGS: &[(&str, &[&str])] = &[

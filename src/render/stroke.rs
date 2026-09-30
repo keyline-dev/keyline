@@ -1,21 +1,47 @@
 //! Strokes around shapes: inside, centered or outside, dashed, capped,
 //! per side on rects, with markers at line ends.
 
-use skia_safe::{ClipOp, PaintCap, PaintJoin, PaintStyle, PathBuilder, PathEffect, Point, RRect};
+use skia_safe::{
+    ClipOp, PaintCap, PaintJoin, PaintStyle, Path, PathBuilder, PathEffect, Point, RRect,
+};
 
 use super::fills::gradient_shader;
 use super::paint::sk_color;
 use super::shape::{Shape, corner_radii, rrect_corners};
 use crate::scene::{Cap, Color, Join, Marker, Stroke, StrokeAlign, StrokeWidth};
 
-/// Draws `s` around `shape`; `k` scales widths and dashes.
-pub(super) fn draw_stroke(canvas: &skia_safe::Canvas, shape: &Shape, s: &Stroke, k: f32) {
+/// Draws `s` around `shape`; `k` scales widths and dashes. `drawn` is the
+/// share of its length drawn (all when `None`), from its start: a line's
+/// first end, the top of an ellipse, clockwise.
+pub(super) fn draw_stroke(
+    canvas: &skia_safe::Canvas,
+    shape: &Shape,
+    s: &Stroke,
+    k: f32,
+    drawn: Option<f32>,
+) {
     let width = s.width.max() * k;
-    if width <= 0.0 {
+    if width <= 0.0 || drawn.is_some_and(|d| d <= 0.0) {
         return;
     }
+    // A line shortens itself, so its end markers follow the tip.
+    let trim = drawn
+        .filter(|_| !matches!(shape, Shape::Line(..)))
+        .and_then(|d| PathEffect::trim(0.0, d, None));
+    let stroke_paint = |s: &Stroke, r: skia_safe::Rect, width: f32, k: f32| {
+        let mut p = stroke_paint(s, r, width, k);
+        if let Some(t) = &trim {
+            let both = match p.path_effect() {
+                Some(e) => PathEffect::compose(e, t.clone()),
+                None => t.clone(),
+            };
+            p.set_path_effect(both);
+        }
+        p
+    };
     let mut p = stroke_paint(s, shape.bounds(), width, k);
     match (shape, s.width) {
+        // ponytail: per-side borders are filled strips and ignore `draw`; trim them if asked.
         (Shape::Rect(rr), StrokeWidth::Sides(sides)) => {
             side_borders(canvas, *rr.rect(), sides.map(|w| w * k), s.align, &p);
         }
@@ -36,13 +62,23 @@ pub(super) fn draw_stroke(canvas: &skia_safe::Canvas, shape: &Shape, s: &Stroke,
             if s.gradient.is_some() {
                 p = stroke_paint(s, edge, width, k);
             }
-            // Radii past half the box make Skia draw an ellipse.
-            let radius = (r.width().max(r.height()) + shift).max(0.0);
-            canvas.draw_rrect(RRect::new_rect_xy(edge, radius, radius), &p);
+            if trim.is_some() {
+                // Drawn from the top, clockwise: a progress ring.
+                canvas.draw_path(
+                    &Path::oval_with_start_index(edge, skia_safe::PathDirection::CW, 0),
+                    &p,
+                );
+            } else {
+                // Radii past half the box make Skia draw an ellipse.
+                let radius = (r.width().max(r.height()) + shift).max(0.0);
+                canvas.draw_rrect(RRect::new_rect_xy(edge, radius, radius), &p);
+            }
         }
         (Shape::Line(a, b), _) => {
-            canvas.draw_line(*a, *b, &p);
-            markers(canvas, *a, *b, s, width);
+            let d = drawn.unwrap_or(1.0);
+            let tip = Point::new(a.x + (b.x - a.x) * d, a.y + (b.y - a.y) * d);
+            canvas.draw_line(*a, tip, &p);
+            markers(canvas, *a, tip, s, width);
         }
         (Shape::Path(path), _) => {
             canvas.save();

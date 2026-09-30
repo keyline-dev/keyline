@@ -1,0 +1,90 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×900
+portrait 1080×1350
+ root frame 0,0 1080×1350
+  headline text 0,0 1080×362 88px 3L
+  photoBand image 0,362 1080×292 cover crop 52%h
+  candidates frame 0,654 1080×168
+   cand1 frame 60,694 304×88
+    text1 text 60,694 304×48 44px
+    text2 text 60,752 304×30 25px
+   cand2 frame 388,694 304×88
+    text3 text 388,694 304×48 44px
+    text4 text 388,752 304×30 25px
+   cand3 frame 716,694 304×88
+    text5 text 716,694 304×48 44px
+    text6 text 716,752 304×30 25px
+  ctaBar frame 0,822 1080×127
+   ctaIcon image 256,861 62×49 contain
+   ctaText text 344,848 481×75 62px
+  steps frame 0,949 1080×238
+   step1 frame 60,987 960×42
+    image1 image 60,987 42×42 contain
+    text7 text 122,987 898×42 34px
+   step2 frame 60,1051 960×42
+    image2 image 60,1051 42×42 contain
+    text8 text 122,1051 898×42 34px
+   step3 frame 60,1115 960×42
+    image3 image 60,1115 42×42 contain
+    text9 text 122,1115 898×42 34px
+  tailSpace spacer 0,1187 1080×92
+  footer text 0,1279 1080×71 26px
+wide 1200×1000
+ root frame 0,0 1200×1000
+  headline text 0,0 1200×194 66px 2L
+  photoBand image 0,194 1200×209 cover crop 69%h
+  candidates frame 0,403 1200×144
+   cand1 frame 51,437 352×76
+    text1 text 51,437 352×41 37px
+    text2 text 51,486 352×26 21px
+   cand2 frame 424,437 352×76
+    text3 text 424,437 352×41 37px
+    text4 text 424,486 352×26 21px
+   cand3 frame 797,437 352×76
+    text5 text 797,437 352×41 37px
+    text6 text 797,486 352×26 21px
+  ctaBar frame 0,546 1200×108
+   ctaIcon image 358,580 53×42 contain
+   ctaText text 433,568 409×64 53px
+  steps frame 0,655 1200×203
+   step1 frame 51,687 1098×36
+    image1 image 51,687 36×36 contain
+    text7 text 104,687 1045×36 29px
+   step2 frame 51,742 1098×36
+    image2 image 51,742 36×36 contain
+    text8 text 104,742 1045×36 29px
+   step3 frame 51,796 1098×36
+    image3 image 51,796 36×36 contain
+    text9 text 104,796 1045×36 29px
+  tailSpace spacer 0,858 1200×81
+  footer text 0,939 1200×61 22px
+sky 300×600
+ root frame 0,0 300×600
+  headline text 0,0 300×123 25px 3L
+  photoBand image 0,123 300×150 cover crop 11%h
+  candidates frame 0,273 300×83
+   cand1 frame 11,300 88×29
+    text1 text 11,300 88×14 12px
+    text2 text 11,316 88×12 10px
+   cand2 frame 106,300 88×29
+    text3 text 106,300 88×14 12px
+    text4 text 106,316 88×12 10px
+   cand3 frame 201,300 88×29
+    text5 text 201,300 88×14 12px
+    text6 text 201,316 88×12 10px
+  ctaBar frame 0,355 300×36
+   ctaIcon image 70,366 17×14 contain
+   ctaText text 95,362 135×21 17px
+  steps frame 0,391 300×128
+   step1 frame 17,417 266×12
+    image1 image 17,417 12×12 contain
+    text7 text 34,417 249×12 10px
+   step2 frame 17,450 266×12
+    image2 image 17,450 12×12 contain
+    text8 text 34,450 249×12 10px
+   step3 frame 17,483 266×12
+    image3 image 17,483 12×12 contain
+    text9 text 34,483 249×12 10px
+  tailSpace spacer 0,519 300×60
+  footer text 0,579 300×21 8px

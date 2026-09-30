@@ -24,6 +24,14 @@ impl Text<'_> {
         p
     }
 
+    /// The same layout as `fit` came from, in the text's own colors: a
+    /// counting text drawn with the number of the moment.
+    pub fn redraw(&self, fit: &Fit, width: f32) -> Paragraph {
+        let mut p = self.build(fit.font_size, fit.line_limit, None, true);
+        p.layout(width);
+        p
+    }
+
     /// How much `fit` shrank the font; outlines shrink with it.
     pub fn shrink(&self, fit: &Fit) -> f32 {
         fit.font_size / self.font_size

@@ -26,3 +26,12 @@ vocab-final-3	52e6d64+dirty	claude-opus-5[1m]	0.511	10	151	9	11528	2	10898	7314	
 wrap-1	2df8775+dirty	claude-opus-5[1m]	0.396	7	98	6	8460	1	7969	4926	16153	66747	portrait 24, wide 22, sky 11	0
 wrap-2	2df8775+dirty	claude-opus-5[1m]	0.581	9	145	8	18168	2	13380	4547	18200	125560	portrait 22, wide 20, sky 10	0
 wrap-3	2df8775+dirty	claude-opus-5[1m]	0.452	13	106	12	14036	1	8668	4567	15318	160311	portrait 24, wide 20, sky 11	0
+motion-before-1	4d73129	claude-opus-5[1m]	0.414	9	106	7	10694	1	8044	3948	16541	91898	portrait 26, wide 22, sky 14	0
+motion-before-2	4d73129	claude-opus-5[1m]	0.327	8	89	7	7281	2	7023	3547	11118	77793	portrait 22, wide 19, sky 11	0
+motion-before-3	4d73129	claude-opus-5[1m]	0.499	7	156	6	13474	1	12041	5502	15796	77049	portrait 23, wide 20, sky 12	0
+motion-after-1	4d73129+dirty	claude-opus-5[1m]	0.318	7	77	6	9224	1	5823	2640	14175	58316	portrait 24, wide 20, sky 11	0
+motion-after-2	4d73129+dirty	claude-opus-5[1m]	0.418	8	114	7	12544	1	9465	4114	13738	85994	portrait 24, wide 20, sky 11	0
+motion-after-3	4d73129+dirty	claude-opus-5[1m]	0.799	15	219	14	22093	1	17024	9440	24546	253047	portrait 26, wide 20, sky 11	0
+motion-after-4	4d73129+dirty	claude-opus-5[1m]	0.521	16	133	15	16054	1	9771	5029	17046	209634	portrait 25, wide 21, sky 8	0
+motion-after-5	4d73129+dirty	claude-opus-5[1m]	0.360	6	126	5	8593	1	8153	5176	12608	57585	portrait 24, wide 20, sky 10	0
+motion-after-6	4d73129+dirty	claude-opus-5[1m]	0.592	12	179	11	17159	2	12015	7031	20014	180317	portrait 28, wide 24, sky 11	0

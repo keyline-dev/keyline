@@ -31,7 +31,7 @@ impl Ctx<'_> {
         else {
             return Ok(());
         };
-        let (Some((para, fit)), Some(t)) = (&p.text, Text::of(l, p.k)) else {
+        let (Some((para, fit)), Some(t)) = (&p.text, Text::drawn(l, p.k)) else {
             return Ok(());
         };
         let origin = p.text_origin();
@@ -100,6 +100,8 @@ impl Ctx<'_> {
                     Some(paint) => t
                         .repaint(fit, width, &knock(paint), true)
                         .paint(canvas, origin),
+                    // Layout measured a counting text's widest number; draw this moment's.
+                    None if l.time.count.is_some() => t.redraw(fit, width).paint(canvas, origin),
                     None => para.paint(canvas, origin),
                 }
             }
@@ -107,14 +109,15 @@ impl Ctx<'_> {
         match &l.look.strokes {
             Some(ss) => {
                 for s in ss.as_slice() {
-                    let paint = glyph_stroke(s.width.max() * p.k * t.shrink(fit), s, r);
+                    let paint =
+                        glyph_stroke(s.width.max() * p.k * t.shrink(fit), s, r, l.time.drawn);
                     outline_glyphs(canvas, &t, fit, width, origin, &paint);
                 }
             }
             None => {
                 if let Some(o) = outline {
                     let s = Stroke::solid(o.width, o.color);
-                    let paint = glyph_stroke(o.width * p.k * t.shrink(fit), &s, r);
+                    let paint = glyph_stroke(o.width * p.k * t.shrink(fit), &s, r, l.time.drawn);
                     outline_glyphs(canvas, &t, fit, width, origin, &paint);
                 }
             }
@@ -123,9 +126,13 @@ impl Ctx<'_> {
     }
 }
 
-/// A round-joined stroke paint for glyph outlines.
-fn glyph_stroke(width: f32, s: &Stroke, r: skia_safe::Rect) -> Paint {
+/// A round-joined stroke paint for glyph outlines, `drawn` of their length
+/// drawn: the letters write themselves one after another.
+fn glyph_stroke(width: f32, s: &Stroke, r: skia_safe::Rect, drawn: Option<f32>) -> Paint {
     let mut paint = Paint::default();
+    if let Some(trim) = drawn.and_then(|d| skia_safe::PathEffect::trim(0.0, d, None)) {
+        paint.set_path_effect(trim);
+    }
     paint.set_anti_alias(true);
     paint.set_style(PaintStyle::Stroke);
     paint.set_stroke_join(skia_safe::PaintJoin::Round);

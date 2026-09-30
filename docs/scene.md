@@ -64,9 +64,10 @@ A layer's final values are built in this order; each step wins over the one befo
 | `tokens` | object | none | Named values, used as `"$name"` ([Tokens](#tokens)) |
 | `styles` | object | none | Named sets of layer fields ([Styles](#styles)) |
 | `components` | object | none | Named layer trees ([Components](#components)) |
-| `assets` | object | none | Images, SVGs and video clips added by `asset_add`, by id: `{sha256, width, height}` |
+| `assets` | object | none | Images, SVGs, video clips and sounds added by `asset_add`, by id: `{sha256, width, height}` (a sound's width and height are 0) |
 | `layers` | list of Layer | none | The layer tree, bottom to top |
 | `duration`, `fps`, `loop` | | a still | [Scene timing](#scene-timing) |
+| `audio` | Soundtrack | none | Music under the video ([Soundtrack](#soundtrack)) |
 
 ### Sizes
 
@@ -593,6 +594,10 @@ A scene with a `duration`, or made of [shots](#shots-and-transitions), moves. On
 | `opacity`, `scale`, `rotate`, `blur` | list of numbers, or `{from, to}` | | Values spread over `duration`; a missing end is the layer's own value |
 | `translate`, `skew` | the same, with `[x, y]` pairs | | GSAP's `x` and `y` read as `translate` |
 | `color` | the same, with Colors | | The layer's own color |
+| `draw` | list of 0–1, or `{from, to}` | 1 | The share of the layer's strokes drawn ([Drawing strokes](#drawing-strokes)); GSAP's `drawSVG` and After Effects' `trimPath` read as this |
+| `count` | list of numbers, or `{from, to}` | 0 | The number a text's `{n}` shows ([Counting](#counting)) |
+| `decimals` | 0–6 | 0 | With `count`: digits after the decimal point |
+| `separator` | string | none | With `count`: put between thousands, e.g. `","`; with `"."` the decimal mark is a comma |
 | `times` | list of 0–1 | evenly spaced | Where each listed value falls, of `duration` |
 | `delay` | Seconds | 0 | When it starts |
 | `duration` | Seconds | 1 | One play |
@@ -601,6 +606,27 @@ A scene with a `duration`, or made of [shots](#shots-and-transitions), moves. On
 | `yoyo` | boolean | false | Every other play runs backwards |
 
 A number may be `"random(lo, hi)"`, as in GSAP: each target (each layer, or each piece of split text) gets its own value, seeded from its id, the same on every render. Values hold before a track starts and after it ends. Layout fields (`width`, `fontSize`, `text`, `padding`…) can't animate; to make something grow, animate `scale`.
+
+### Drawing strokes
+
+`draw` draws a share of a layer's strokes, like After Effects' trim paths: a progress ring, a line or underline drawing itself, line art signing itself.
+
+```json
+{"type": "ellipse", "width": 120, "height": 120, "stroke": {"width": 10, "color": "#0AE448", "cap": "round"}, "animate": {"draw": [0, 0.72], "duration": 1.2, "ease": "power2.out"}}
+{"type": "path", "d": "M0 40 C 40 0, 80 80, 120 40", "stroke": "#000", "animate": {"draw": {"from": 0}, "duration": 2}}
+```
+
+It works on every stroke: paths, shapes, lines, ellipses and text outlines. A line draws from its start to its end, an ellipse clockwise from the top, a path from its first point, and text letter by letter; dashes and end markers follow the drawn part. Stills at a `time` show the share drawn then; at rest, all of it is drawn.
+
+### Counting
+
+`count` puts a number that counts into a text layer, wherever its text says `{n}`:
+
+```json
+{"type": "text", "text": "{n}+ teams", "animate": {"count": [0, 1250], "separator": ",", "duration": 1.5, "ease": "power2.out"}}
+```
+
+The text is measured with its widest value (usually the last), so its box holds still and nothing around it moves while the number changes; digits use the font's tabular figures when it has them. At rest, and in `scene_describe`, the text shows that value. A text that counts needs `{n}` in it.
 
 ### Easing
 
@@ -640,6 +666,24 @@ GSAP's names: `none`, `power1` … `power4`, `sine`, `expo`, `circ`, `back`, `el
 ```
 
 Frames clip their children, animated ones included: give a frame `clipsContent: false` when its children move beyond its edges.
+
+### Soundtrack
+
+`audio` puts music (or any sound) under an MP4 or WebM, mixed with the clips' own sound. It starts with the video and is cut to its length.
+
+```json
+{"asset": "song", "volume": 0.8, "trimStart": 12, "fadeIn": 0.5, "fadeOut": 1.5}
+```
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `asset` | asset id | required | An MP3, M4A or WAV added with `asset_add`, or a video clip whose sound plays |
+| `volume` | number | 1 | Loudness; 1 is as recorded |
+| `trimStart` | Seconds | 0 | Where in the sound to begin |
+| `fadeIn` | Seconds | 0 | Rise from silence at the start |
+| `fadeOut` | Seconds | 0 | Fall to silence at the video's end |
+
+Set it with `layer_update`'s `{target: {scene: true}, set: {audio: …}}`; `music`, `soundtrack` or an asset id alone read as it, and `null` removes it. A sound shorter than the video ends in silence. Animated PNG and GIF have no sound; `render`'s `muted` leaves it out of video.
 
 ### Shots and transitions
 
@@ -691,7 +735,8 @@ A change that breaks any of these rules is refused whole, with a one-line error 
 - Values whose unit was likely mistaken: a `lineHeight` above 4 (px, not × `fontSize`), a motion `duration` of 100 or more that's longer than the scene (ms, not seconds).
 - Layout fields on a frame that isn't a stack or grid (`padding` without `flexDirection`), and `margin` without `place`.
 - An unknown token, style, component, asset, parent frame or `media` key; a duplicate layer id.
-- Shots that aren't top level, have no positive `duration`, or whose transition is longer than a shot it joins; `split` on anything but text.
+- Shots that aren't top level, have no positive `duration`, or whose transition is longer than a shot it joins; `split` on anything but text; `count` on a layer whose text has no `{n}`; `draw` or `count` on split text.
+- An `audio` asset without sound, or a negative `volume`, `trimStart`, `fadeIn` or `fadeOut`; a sound used as an image or video.
 
 | Limit | Value |
 |---|---|

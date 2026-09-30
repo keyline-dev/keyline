@@ -81,6 +81,11 @@ impl Server {
                 Ok(())
             })
             .await?;
+        if let (Some(c), 0.0) = (clip, width) {
+            // A sound file: no picture to measure.
+            let secs = (c.duration * 10.0).round() / 10.0;
+            return Ok(format!("{id} sound {secs}s v{}", scene.version));
+        }
         let length = clip.map_or_else(String::new, |c| {
             format!(
                 " {}s {}fps{}",
@@ -109,8 +114,8 @@ impl Server {
             Some((w, h, svg)) => (w, h, svg, None),
             None => {
                 let file = self.store.assets_dir().join(&sha256);
-                let (w, h, clip) =
-                    crate::video::probe::probe(&file)?.ok_or("not a PNG, JPEG, SVG or video")?;
+                let (w, h, clip) = crate::video::probe::probe(&file)?
+                    .ok_or("not a PNG, JPEG, SVG, video or sound (MP3, M4A, WAV)")?;
                 (w, h, false, Some(clip))
             }
         };
@@ -245,7 +250,10 @@ impl Server {
                         };
                         // What the file holds, so the agent needn't open it (a
                         // model sees only an animation's first frame).
-                        let facts = facts(&scene, &size, format, used_fps, bytes.len());
+                        let heard = sound
+                            && matches!(format, Format::Mp4 | Format::Webm)
+                            && !crate::video::audio::sources(&scene, &assets).is_empty();
+                        let facts = facts(&scene, &size, format, used_fps, bytes.len(), heard);
                         anyhow::Ok((
                             text_report(&scene, &size),
                             size.id,
@@ -414,6 +422,7 @@ fn blank(a: SceneCreateArgs) -> Result<Scene, String> {
         duration: a.duration,
         fps: a.fps.unwrap_or(30.0),
         looping: a.looping,
+        audio: None,
         layers: Vec::new(),
         version: 0,
     };
@@ -425,7 +434,14 @@ fn blank(a: SceneCreateArgs) -> Result<Scene, String> {
 /// (a path may hold spaces): `1080×1350, 212 KB`, and for a
 /// moving format its length, frames and rate, and for GIF and APNG whether
 /// it loops (video players decide that themselves).
-fn facts(scene: &Scene, size: &Size, format: Format, fps: f32, bytes: usize) -> String {
+fn facts(
+    scene: &Scene,
+    size: &Size,
+    format: Format,
+    fps: f32,
+    bytes: usize,
+    sound: bool,
+) -> String {
     let mut out = format!("{}×{}", size.width.round(), size.height.round());
     let moving = matches!(
         format,
@@ -440,6 +456,9 @@ fn facts(scene: &Scene, size: &Size, format: Format, fps: f32, bytes: usize) -> 
             } else {
                 ", plays once"
             });
+        }
+        if sound {
+            out.push_str(", with sound");
         }
     }
     let _ = write!(out, ", {} KB", bytes.div_ceil(1024));

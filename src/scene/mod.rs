@@ -100,6 +100,10 @@ pub struct Scene {
     /// (false: it plays once).
     #[serde(rename = "loop", default, skip_serializing_if = "is_false")]
     pub looping: bool,
+    /// A soundtrack for mp4 and webm, cut to the video's length and mixed
+    /// with the clips' own sound.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audio: Option<Soundtrack>,
     /// Top-level layers, drawn bottom to top.
     #[serde(default)]
     pub layers: Vec<Layer>,
@@ -144,9 +148,29 @@ pub struct Asset {
     /// Whether the asset is an SVG, rasterized at draw size.
     #[serde(default, skip_serializing_if = "is_false")]
     pub svg: bool,
-    /// For a video clip: its length and frame rate.
+    /// For a video clip or a sound: its length and frame rate (0 for a sound).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub clip: Option<Clip>,
+}
+
+/// A scene's soundtrack: a sound asset (or a clip's sound) from its start.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Soundtrack {
+    /// The asset whose sound plays: an MP3, M4A or WAV, or a video clip.
+    pub asset: String,
+    /// Loudness, 1 as recorded (1).
+    #[serde(default = "one", skip_serializing_if = "is_one")]
+    pub volume: f32,
+    /// Seconds into the sound where it starts (0).
+    #[serde(default, skip_serializing_if = "defaults::is_zero")]
+    pub trim_start: f32,
+    /// Seconds it takes to rise from silence at the start (0).
+    #[serde(default, skip_serializing_if = "defaults::is_zero")]
+    pub fade_in: f32,
+    /// Seconds it takes to fall to silence at the video's end (0).
+    #[serde(default, skip_serializing_if = "defaults::is_zero")]
+    pub fade_out: f32,
 }
 
 /// A video clip's timing.

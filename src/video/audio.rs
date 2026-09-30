@@ -1,6 +1,8 @@
-//! The sound track of a video: each clip's own sound, timed with the clip
-//! and mixed. A clip in a shot is heard only during its shot.
+//! The sound track of a video: the scene's soundtrack and each clip's own
+//! sound, timed with the clip and mixed. A clip in a shot is heard only
+//! during its shot.
 
+use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
 use crate::anim::shots;
@@ -21,16 +23,40 @@ pub struct Source {
     pub speed: f32,
     /// Whether it repeats.
     pub looping: bool,
+    /// Loudness, 1 as recorded.
+    pub volume: f32,
+    /// Seconds rising from silence at its start.
+    pub fade_in: f32,
+    /// Seconds falling to silence before `until`.
+    pub fade_out: f32,
 }
 
-/// The clips in `scene` with sound that isn't turned off, in layer order.
+/// The scene's soundtrack, then the clips in `scene` with sound that isn't
+/// turned off, in layer order.
 pub fn sources(scene: &Scene, assets_dir: &Path) -> Vec<Source> {
     let length = shots::length(scene).unwrap_or(0.0);
+    let mut found: Vec<Source> = scene
+        .audio
+        .iter()
+        .filter_map(|m| {
+            let a = scene.assets.get(&m.asset)?;
+            Some(Source {
+                file: assets_dir.join(&a.sha256),
+                start: m.trim_start,
+                offset: 0.0,
+                until: length,
+                speed: 1.0,
+                looping: false,
+                volume: m.volume,
+                fade_in: m.fade_in,
+                fade_out: m.fade_out,
+            })
+        })
+        .collect();
     let windows: Vec<(usize, f32, f32)> = shots::timeline(scene)
         .into_iter()
         .map(|(i, start, dur, _)| (i, start, start + dur))
         .collect();
-    let mut found = Vec::new();
     for (i, l) in scene.layers.iter().enumerate() {
         let (base, until) = windows
             .iter()
@@ -58,6 +84,9 @@ pub fn sources(scene: &Scene, assets_dir: &Path) -> Vec<Source> {
                     until,
                     speed: *speed,
                     looping: *looping,
+                    volume: 1.0,
+                    fade_in: 0.0,
+                    fade_out: 0.0,
                 });
             }
         });
@@ -111,9 +140,20 @@ fn one(s: &Source, n: usize) -> (Vec<String>, String) {
         ""
     };
     let start = s.start;
+    let mut shape = String::new();
+    if s.volume != 1.0 {
+        let _ = write!(shape, ",volume={}", s.volume);
+    }
+    if s.fade_in > 0.0 {
+        let _ = write!(shape, ",afade=t=in:d={}", s.fade_in);
+    }
+    if s.fade_out > 0.0 {
+        let from = (played - s.fade_out).max(0.0);
+        let _ = write!(shape, ",afade=t=out:st={from}:d={}", s.fade_out);
+    }
     let filter = format!(
         "[{n}:a]atrim=start={start},asetpts=PTS-STARTPTS{looped},atrim=0:{played},\
-         asetpts=PTS-STARTPTS,{tempo},adelay={delay_ms}:all=1,apad[a{n}]"
+         asetpts=PTS-STARTPTS{shape},{tempo},adelay={delay_ms}:all=1,apad[a{n}]"
     );
     (input, filter)
 }
@@ -165,6 +205,53 @@ mod tests {
     }
 
     #[test]
+    fn the_soundtrack_plays_first_cut_to_the_video_with_its_fades() {
+        let sound = json!({"sha256": "m", "width": 0, "height": 0,
+            "clip": {"duration": 60, "fps": 0, "audio": true}});
+        let scene: Scene = serde_json::from_value(json!({"width": 10, "height": 10,
+            "duration": 4, "sizes": [{"id": "a", "width": 10, "height": 10}],
+            "assets": {"m": sound},
+            "audio": {"asset": "m", "volume": 0.5, "trimStart": 3, "fadeIn": 1, "fadeOut": 2}}))
+        .unwrap();
+        scene.validate().unwrap();
+        let s = sources(&scene, "/a".as_ref());
+        assert_eq!(s.len(), 1, "{s:?}");
+        let (input, filter) = ffmpeg_args(&s);
+        assert_eq!(input, ["-i", "/a/m"]);
+        assert_eq!(
+            filter,
+            "[1:a]atrim=start=3,asetpts=PTS-STARTPTS,atrim=0:4,asetpts=PTS-STARTPTS,volume=0.5,\
+             afade=t=in:d=1,afade=t=out:st=2:d=2,atempo=1,adelay=0:all=1,apad[a1];\
+             [a1]amix=inputs=1:duration=longest:normalize=0[a]"
+        );
+    }
+
+    #[test]
+    fn a_soundtrack_must_be_a_sound() {
+        let scene: Scene = serde_json::from_value(json!({"width": 10, "height": 10,
+            "sizes": [{"id": "a", "width": 10, "height": 10}],
+            "assets": {"p": {"sha256": "p", "width": 10, "height": 10}},
+            "audio": {"asset": "p"}}))
+        .unwrap();
+        let e = scene.validate().unwrap_err();
+        assert!(e.starts_with("audio: p isn't a sound"), "{e}");
+    }
+
+    #[test]
+    fn a_sound_is_not_a_picture() {
+        let sound = json!({"sha256": "m", "width": 0, "height": 0,
+            "clip": {"duration": 60, "fps": 0, "audio": true}});
+        for kind in ["image", "video"] {
+            let scene: Scene = serde_json::from_value(json!({"width": 10, "height": 10,
+                "sizes": [{"id": "a", "width": 10, "height": 10}], "assets": {"m": sound},
+                "layers": [{"id": "l", "type": kind, "asset": "m"}]}))
+            .unwrap();
+            let e = scene.validate().unwrap_err();
+            assert_eq!(e, "l: m is a sound; play it as the scene's audio", "{kind}");
+        }
+    }
+
+    #[test]
     fn the_track_is_trimmed_sped_and_delayed_to_its_clip() {
         let s = Source {
             file: "/a/clip".into(),
@@ -173,6 +260,9 @@ mod tests {
             until: 4.0,
             speed: 2.0,
             looping: false,
+            volume: 1.0,
+            fade_in: 0.0,
+            fade_out: 0.0,
         };
         let later = Source {
             offset: 3.0,

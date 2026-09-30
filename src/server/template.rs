@@ -36,6 +36,7 @@ const FIELDS: &[&str] = &[
     "duration",
     "fps",
     "loop",
+    "audio",
     "layers",
 ];
 
@@ -146,6 +147,10 @@ impl Server {
             duration: a.duration.or(number(take("duration"))),
             fps: a.fps.or(number(take("fps"))).unwrap_or(30.0),
             looping: a.looping || take("loop").as_bool().unwrap_or(false),
+            audio: match take("audio") {
+                Value::Null => None,
+                v => Some(serde_json::from_value(v).map_err(|e| format!("template: audio: {e}"))?),
+            },
             layers: Vec::new(),
             version: 0,
         };

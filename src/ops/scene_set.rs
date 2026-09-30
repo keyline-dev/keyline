@@ -1,5 +1,6 @@
 //! `layer_update` on the scene itself: `{target: {scene: true}, set: {…}}`
-//! changes its background, sizes, master size or timing after creation.
+//! changes its background, sizes, master size, timing or soundtrack after
+//! creation.
 
 use serde_json::{Map, Value};
 
@@ -30,9 +31,17 @@ pub(super) fn set_scene(scene: &mut Scene, set: &Map<String, Value>) -> Result<(
             "fps" if null => scene.fps = crate::scene::thirty(),
             "fps" => scene.fps = read(k, v)?,
             "loop" => scene.looping = !null && read::<bool>(k, v)?,
+            // A soundtrack by its other names, or by its asset alone.
+            "audio" | "music" | "soundtrack" if null => scene.audio = None,
+            "audio" | "music" | "soundtrack" => {
+                scene.audio = Some(match v {
+                    Value::String(asset) => read(k, &serde_json::json!({"asset": asset}))?,
+                    _ => read(k, v)?,
+                });
+            }
             other => {
                 return Err(format!(
-                    "the scene takes background, sizes, width, height, duration, fps and loop, not {other}"
+                    "the scene takes background, sizes, width, height, duration, fps, loop and audio, not {other}"
                 ));
             }
         }

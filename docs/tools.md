@@ -13,7 +13,7 @@ keyline-mcp exposes six tools. This page lists each tool's inputs and the exact 
 | Tool | Does |
 |---|---|
 | [`scene_create`](#scene_create) | Starts a scene: sizes and background, or a template with its variables set |
-| [`asset_add`](#asset_add) | Adds an image or video clip from a URL, a local path or base64 |
+| [`asset_add`](#asset_add) | Adds an image, video clip or sound from a URL, a local path or base64 |
 | [`layer_add`](#layer_add) | Adds layers, and shared styles, tokens and components |
 | [`layer_update`](#layer_update) | Changes, deletes or detaches layers, styles and components; changes tokens |
 | [`scene_describe`](#scene_describe) | Checks the design at every size, or lists every layer's box |
@@ -121,18 +121,19 @@ video off: no ffmpeg (install it or pass --ffmpeg); apng, gif work
 | Input | Type | Default | Meaning |
 |---|---|---|---|
 | `sceneId` | string, required | | The scene |
-| `url` | string | | Public http(s) URL of a PNG, JPEG, SVG or video clip, or a `data:` URL (an inline SVG) |
+| `url` | string | | Public http(s) URL of a PNG, JPEG, SVG, video clip or sound, or a `data:` URL (an inline SVG) |
 | `path` | string | | Or a local file in an allowed folder; offered only with [`--allow-read`](#command-line-flags), and its description names the folders |
 | `base64` | string | | Or a still image's bytes, base64. They pass through the model, so keep this for small files |
 | `id` | string | generated | The id layers use to refer to it; an existing id is replaced |
 
-Give exactly one of `url`, `path` or `base64`. Video clips (MP4, MOV, WebM…) need [ffmpeg](#ffmpeg) and can't come as base64. SVGs are rasterized at their drawn size, so they stay sharp.
+Give exactly one of `url`, `path` or `base64`. Video clips (MP4, MOV, WebM…) and sounds (MP3, M4A, WAV…, for a [soundtrack](scene.md#soundtrack)) need [ffmpeg](#ffmpeg) and can't come as base64. SVGs are rasterized at their drawn size, so they stay sharp.
 
-Reply: the asset's id, its intrinsic size and the scene version; for a clip, also its length, frame rate and `sound` when it has any.
+Reply: the asset's id, its intrinsic size and the scene version; for a clip, also its length, frame rate and `sound` when it has any; for a sound, `sound` and its length.
 
 ```text
 photo 864×530 v1
 beach 1920×1080 12.5s 30fps sound v2
+song sound 184.3s v3
 ```
 
 ## layer_add
@@ -177,7 +178,7 @@ Each op has a `target` and exactly one action:
 | `{"style": "title"}` | A named style; `set` creates or changes it, so every layer using it follows |
 | `{"component": "card"}` | A component's tree; every instance follows |
 | `{"component": "card", "role": "name"}` | One layer inside a component's tree |
-| `{"scene": true}` | The scene itself; `set` takes `background`, `sizes`, `width`, `height`, `duration`, `fps`, `loop` |
+| `{"scene": true}` | The scene itself; `set` takes `background`, `sizes`, `width`, `height`, `duration`, `fps`, `loop`, `audio` ([soundtrack](scene.md#soundtrack)) |
 
 | Action | Does |
 |---|---|
@@ -222,7 +223,7 @@ instagram-portrait 1080×1350
 | `maxKB` | number | | File-size cap: JPEG and WebP lower their quality, APNG and GIF their frame rate, until the file fits |
 | `preview` | boolean | false | Also returns one small image of all sizes side by side |
 | `time` | number | | Seconds into a moving scene: a still at that moment |
-| `muted` | boolean | false | `true` leaves every clip's sound out of `mp4` and `webm` (a clip's own `muted` leaves out one) |
+| `muted` | boolean | false | `true` leaves all sound out of `mp4` and `webm`: the soundtrack and every clip's (a clip's own `muted` leaves out one) |
 | `rows` | array of objects | | [Variants](#templates-and-variants): one render per row of token values |
 
 Reply: per size, the size id, the file's path ([Output files](#output-files)) and, in parentheses, what the file holds, then its [drawn-text lines](#drawn-text-lines):
@@ -230,9 +231,10 @@ Reply: per size, the size id, the file's path ([Output files](#output-files)) an
 ```text
 wide /…/renders/s1a2b3c4d5/wide-v3.png (1200×628, 212 KB)
 wide /…/renders/s1a2b3c4d5/wide-v3.gif (1200×628, 2s, 60 frames at 30 fps, plays once, 1840 KB)
+wide /…/renders/s1a2b3c4d5/wide-v3.mp4 (1200×628, 2s, 60 frames at 30 fps, with sound, 610 KB)
 ```
 
-A moving format gives its length, frame count and frame rate; GIF and APNG also say whether they loop (`loops`) or stop on their last frame (`plays once`), from the scene's `loop`. An agent opening an animated file sees only its first frame, so these facts are how it checks one. With `maxKB`, `quality N` follows when the quality was lowered (a lowered frame rate shows in the facts), or `!too-big` when even the lowest setting doesn't fit. With `rows`, each line starts with `r<row>`. With `preview`, the reply also carries the preview as an image.
+A moving format gives its length, frame count and frame rate; GIF and APNG also say whether they loop (`loops`) or stop on their last frame (`plays once`), from the scene's `loop`; MP4 and WebM say `with sound` when they carry any. An agent opening an animated file sees only its first frame, so these facts are how it checks one. With `maxKB`, `quality N` follows when the quality was lowered (a lowered frame rate shows in the facts), or `!too-big` when even the lowest setting doesn't fit. With `rows`, each line starts with `r<row>`. With `preview`, the reply also carries the preview as an image.
 
 ## Templates and variants
 
@@ -255,7 +257,7 @@ A template is a scene file ([its format](scene.md#template-files)) that `scene_c
 | `mp4` | H.264 video, plays everywhere. Needs [ffmpeg](#ffmpeg) |
 | `webm` | VP9 video. Needs [ffmpeg](#ffmpeg) |
 
-The animated and video formats need a scene that moves (a `duration`, or shots); `time` can't be combined with them. Frames are drawn in memory, several at once, and APNG and GIF frames store only the part that changed. MP4 encodes on the GPU when ffmpeg has a hardware encoder that works on the machine (VideoToolbox on macOS; NVENC, Quick Sync or AMF elsewhere), else with `libx264`; `--encoder` picks one. The clips' own sound comes along, AAC in MP4 and Opus in WebM, unless `muted` is `true`.
+The animated and video formats need a scene that moves (a `duration`, or shots); `time` can't be combined with them. Frames are drawn in memory, several at once, and APNG and GIF frames store only the part that changed. MP4 encodes on the GPU when ffmpeg has a hardware encoder that works on the machine (VideoToolbox on macOS; NVENC, Quick Sync or AMF elsewhere), else with `libx264`; `--encoder` picks one. The scene's [soundtrack](scene.md#soundtrack) and the clips' own sound come along, mixed, AAC in MP4 and Opus in WebM, unless `muted` is `true`.
 
 ## Server configuration
 
@@ -316,7 +318,7 @@ Inter is bundled. A `fontFamily` that isn't installed is fetched from [Google Fo
 
 ### ffmpeg
 
-Video clips and MP4 and WebM output need [ffmpeg](https://ffmpeg.org) (`brew install ffmpeg`, `apt install ffmpeg`), run as a separate program. It's looked up on every call that needs it (`--ffmpeg`, else the PATH), so it can be installed without a restart. Without it, those calls are refused with how to install it, `scene_create` says `video off` up front, and everything else works, APNG and GIF included.
+Video clips, sounds, and MP4 and WebM output need [ffmpeg](https://ffmpeg.org) (`brew install ffmpeg`, `apt install ffmpeg`), run as a separate program. It's looked up on every call that needs it (`--ffmpeg`, else the PATH), so it can be installed without a restart. Without it, those calls are refused with how to install it, `scene_create` says `video off` up front, and everything else works, APNG and GIF included.
 
 ## Security
 
@@ -330,7 +332,7 @@ Video clips and MP4 and WebM output need [ffmpeg](https://ffmpeg.org) (`brew ins
 | What | Limit |
 |---|---|
 | An image, by any source | 50 MB |
-| A video clip, by `path` | 500 MB |
+| A video clip or sound, by `path` | 500 MB |
 | A template file | 50 MB |
 | `preview` | 384 px tall |
 

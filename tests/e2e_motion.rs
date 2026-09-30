@@ -1,7 +1,8 @@
 //! End-to-end: motion through MCP — a scene with a duration, split text
 //! flying in with `random()` starts, staggered entrances and a looping
 //! spin — rendered as an animated PNG and as stills at chosen moments, and
-//! left out of the tools with `--no-motion`.
+//! left out of the tools with `--no-motion`. Self-drawing strokes and a
+//! counting number, checked frame by frame in the animated PNG.
 
 // Test support: a panic is how a test reports failure.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -161,4 +162,108 @@ async fn no_motion_leaves_time_out_of_the_tools() {
     );
     with.stop().await;
     without.stop().await;
+}
+
+/// Every frame of an animated PNG as whole RGBA images: each stored frame
+/// holds only the box that changed, drawn over the frame before.
+fn apng_frames(bytes: &[u8]) -> (usize, Vec<Vec<u8>>) {
+    let mut reader = png::Decoder::new(std::io::Cursor::new(bytes))
+        .read_info()
+        .unwrap();
+    let w = reader.info().width as usize;
+    let mut canvas = vec![0u8; w * reader.info().height as usize * 4];
+    let mut frames = Vec::new();
+    let mut buf = vec![0u8; reader.output_buffer_size().unwrap()];
+    while let Ok(out) = reader.next_frame(&mut buf) {
+        let fc = *reader.info().frame_control().unwrap();
+        let (x, y) = (fc.x_offset as usize, fc.y_offset as usize);
+        for row in 0..out.height as usize {
+            let src = &buf[row * out.line_size..][..out.width as usize * 4];
+            canvas[((y + row) * w + x) * 4..][..src.len()].copy_from_slice(src);
+        }
+        frames.push(canvas.clone());
+    }
+    (w, frames)
+}
+
+/// Dark pixels in an RGBA frame: ink on a white background.
+fn ink(frame: &[u8]) -> usize {
+    frame.chunks(4).filter(|p| p[0] < 128).count()
+}
+
+#[tokio::test]
+async fn strokes_draw_themselves_frame_by_frame() {
+    let mcp = Mcp::start("motion-draw").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"sizes": ["200x100"], "duration": 1, "fps": 10}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    let reply = mcp
+        .ok("layer_add", json!({"sceneId": id, "layers": [
+            {"id": "rule", "type": "line", "x": 20, "y": 50, "width": 160, "height": 0,
+             "stroke": {"width": 8, "color": "#000000"}, "animate": {"drawSVG": [0, 1], "duration": 0.9, "ease": "none"}}]}))
+        .await;
+    assert!(reply.starts_with("added rule v1 ok"), "{reply}");
+    let reply = mcp
+        .ok("render", json!({"sceneId": id, "format": "apng"}))
+        .await;
+    let (w, frames) =
+        apng_frames(&std::fs::read(reply.split_whitespace().nth(1).unwrap()).unwrap());
+    assert_eq!(frames.len(), 10, "{reply}");
+    let dark = |f: &[u8], x: usize| f[(50 * w + x) * 4] < 128;
+    assert_eq!(ink(&frames[0]), 0, "nothing drawn at the start");
+    assert!(
+        dark(&frames[5], 60) && !dark(&frames[5], 150),
+        "half drawn, left to right"
+    );
+    assert!(dark(&frames[9], 175), "all drawn at the end");
+    let inks: Vec<usize> = frames.iter().map(|f| ink(f)).collect();
+    assert!(inks.windows(2).all(|p| p[0] <= p[1]), "{inks:?}");
+    mcp.stop().await;
+}
+
+#[tokio::test]
+async fn a_number_counts_up_frame_by_frame_in_a_box_that_holds_still() {
+    let mcp = Mcp::start("motion-count").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"sizes": ["300x100"], "duration": 1, "fps": 10}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    mcp.ok("layer_add", json!({"sceneId": id, "layers": [
+        {"id": "stat", "type": "text", "text": "{n}+", "fontSize": 40, "color": "#000000", "x": 20, "y": 20,
+         "animate": {"count": [0, 1250], "separator": ",", "duration": 0.9, "ease": "none"}}]}))
+        .await;
+    // Measured with its final value: the box is the width of "1,250+".
+    let described = mcp
+        .ok("scene_describe", json!({"sceneId": id, "full": true}))
+        .await;
+    let reply = mcp
+        .ok("render", json!({"sceneId": id, "format": "apng"}))
+        .await;
+    let (_, frames) = apng_frames(&std::fs::read(file_path(&reply)).unwrap());
+    let inks: Vec<usize> = frames.iter().map(|f| ink(f)).collect();
+    assert!(inks[9] > inks[0] * 2, "\"0+\", then \"1,250+\": {inks:?}");
+    let again = mcp
+        .ok("scene_describe", json!({"sceneId": id, "full": true}))
+        .await;
+    assert_eq!(described, again);
+    assert!(described.contains("stat text 20,20 "), "{described}");
+    mcp.stop().await;
+}
+
+/// The file a render reply names.
+fn file_path(reply: &str) -> &str {
+    reply.split_whitespace().nth(1).unwrap()
 }

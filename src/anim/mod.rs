@@ -3,6 +3,7 @@
 //! fields that don't change layout move, so a scene at any moment lays out
 //! exactly as it does at rest.
 
+pub mod count;
 pub mod ease;
 pub mod motion;
 pub mod shots;
@@ -44,6 +45,14 @@ pub struct LayerTime {
     /// end, for the renderer to move each piece. Never stored.
     #[serde(skip)]
     pub moment: Option<(f32, f32)>,
+    /// Set when drawing a moment: the share of its strokes drawn, 0–1, from
+    /// a `draw` track. Never stored.
+    #[serde(skip)]
+    pub drawn: Option<f32>,
+    /// Set when drawing a moment: the number its text's `{n}` shows, from a
+    /// `count` track. Never stored.
+    #[serde(skip)]
+    pub count: Option<f32>,
 }
 
 /// How split text is cut into pieces.
@@ -173,6 +182,13 @@ fn set_tracks(l: &mut Layer, track: &Track, t: f32, seed: u32) {
         track.value("skew", Val::Pair(l.look.skew), t, seed),
         l.look.skew,
     );
+    if let Some(Val::Num(d)) = track.value("draw", Val::Num(l.time.drawn.unwrap_or(1.0)), t, seed) {
+        l.time.drawn = Some(d.clamp(0.0, 1.0));
+    }
+    if let Some(Val::Num(n)) = track.value("count", Val::Num(l.time.count.unwrap_or(0.0)), t, seed)
+    {
+        l.time.count = Some(n);
+    }
     set_color(&mut l.kind, track, t, seed);
 }
 
