@@ -262,25 +262,28 @@ pub(super) fn motion_cut(p: &Placed, shown: Rect, clip: &super::Clip) -> Option<
             b.right() - v.right(),
             b.bottom() - v.bottom(),
         ];
+        // A frame sizing to it is its edge, though: it counts there.
+        let counts = |i: usize| gaps[i] > 0.5 || clip.hug[i];
         let px = (0..4)
-            .filter(|&i| gaps[i] > 0.5)
+            .filter(|&i| counts(i))
             .map(|i| past[i])
             .fold(0.0, f32::max);
-        if px <= 0.5 || worst.as_ref().is_some_and(|(w, _)| px <= *w) {
+        // A pixel or two of a moment's overshoot doesn't show.
+        if px <= 2.0 || worst.as_ref().is_some_and(|(w, _)| px <= *w) {
             continue;
         }
         // The edges it fills at rest aren't said either.
         let (mut l, mut tp, mut r, mut bt) = (b.x, b.y, b.right(), b.bottom());
-        if gaps[0] <= 0.5 {
+        if !counts(0) {
             l = l.max(v.x);
         }
-        if gaps[1] <= 0.5 {
+        if !counts(1) {
             tp = tp.max(v.y);
         }
-        if gaps[2] <= 0.5 {
+        if !counts(2) {
             r = r.min(v.right());
         }
-        if gaps[3] <= 0.5 {
+        if !counts(3) {
             bt = bt.min(v.bottom());
         }
         let b = Rect {

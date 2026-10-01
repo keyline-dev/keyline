@@ -91,10 +91,14 @@ fn sound(p: &Placed) -> Result<(), String> {
         if let (true, Some(m)) = (fit.truncated, *max_lines)
             && fit.lines >= m
         {
-            // Lines it would take uncut, from the height it needs.
-            let per_line =
-                (p.text.as_ref().map_or(0.0, |(para, _)| para.height()) / m as f32).max(1.0);
-            let need = (fit.need_height / per_line).round().max(m as f32 + 1.0);
+            // The lines it would take uncut, across its box (not the
+            // narrower width `balance` chose for the cut lines).
+            let width = p.rect.w;
+            let need = Text::of(p.layer, p.k).map_or(m + 1, |t| {
+                let mut whole = t.paragraph_at(width);
+                crate::text::wrap(&mut whole, width);
+                whole.line_number().max(m + 1)
+            });
             return Err(format!("{id} {need}L > maxLines {m}"));
         }
         if fit.overflow || fit.truncated {

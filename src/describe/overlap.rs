@@ -168,17 +168,17 @@ pub(super) fn covers<'s>(
             let hit = match above {
                 Over::Paint(other, r) => share(*ink, *r).map(|s| ((*other).to_owned(), s)),
                 Over::Outline(other, stroke) => {
-                    let area = skia_safe::Path::rect(
-                        skia_safe::Rect::from_xywh(ink.x, ink.y, ink.w, ink.h),
-                        None,
-                    );
-                    skia_safe::op(stroke, &area, skia_safe::PathOp::Intersect)
-                        .map(|hit| *hit.bounds())
-                        .filter(|b| b.width() > 1.0 && b.height() > 1.0)
-                        .map(|b| {
-                            let s = b.width() * b.height() / (ink.w * ink.h).max(1.0);
-                            ((*other).to_owned(), s)
+                    // The share of the ink box the stroke takes, sampled:
+                    // a diagonal crossing covers far less than its box.
+                    const GRID: usize = 24;
+                    let hits = (0..GRID * GRID)
+                        .filter(|i| {
+                            let x = ink.x + ink.w * ((i % GRID) as f32 + 0.5) / GRID as f32;
+                            let y = ink.y + ink.h * ((i / GRID) as f32 + 0.5) / GRID as f32;
+                            stroke.contains((x, y))
                         })
+                        .count();
+                    (hits > 0).then(|| ((*other).to_owned(), hits as f32 / (GRID * GRID) as f32))
                 }
                 Over::Text(other, _, boxes) => boxes
                     .iter()

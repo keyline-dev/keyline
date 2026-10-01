@@ -1,0 +1,91 @@
+wide photoband image 0,183 1200×306 cover crop 55%h warn crop cuts the area around its focus (focus 50%,42%): height 398 shows half
+
+
+assets check 40×40, mail 56×44, photo 1600×900
+portrait 1080×1350
+ root frame 0,0 1080×1350
+  headline text 0,0 1080×258 76px 2L
+  photoband image 0,258 1080×380 cover crop 37%h
+  candidates frame 0,638 1080×159
+   cand1 frame 36,676 323×83
+    text1 text 36,676 323×46 40px
+    text2 text 36,728 323×31 26px
+   cand2 frame 379,676 323×83
+    text3 text 379,676 323×46 40px
+    text4 text 379,728 323×31 26px
+   cand3 frame 721,676 323×83
+    text5 text 721,676 323×46 40px
+    text6 text 721,728 323×31 26px
+  ctabar frame 0,797 1080×116
+   mailicon image 286,833 56×44 contain
+   ctatext text 368,821 426×68 56px
+  steps frame 0,913 1080×250
+   frame1 frame 56,953 968×42
+    image1 image 56,954 40×40 contain
+    text7 text 116,953 908×42 34px
+   frame2 frame 56,1017 968×42
+    image2 image 56,1018 40×40 contain
+    text8 text 116,1017 908×42 34px
+   frame3 frame 56,1081 968×42
+    image3 image 56,1082 40×40 contain
+    text9 text 116,1081 908×42 34px
+  spacer1 spacer 0,1163 1080×122
+  footer text 0,1285 1080×65 24px
+wide 1200×1000
+ root frame 0,0 1200×1000
+  headline text 0,0 1200×183 58px 2L
+  photoband image 0,183 1200×306 cover crop 55%h warn crop cuts the area around its focus (focus 50%,42%): height 398 shows half
+  candidates frame 0,489 1200×136
+   cand1 frame 31,522 368×71
+    text1 text 31,522 368×39 34px
+    text2 text 31,566 368×27 22px
+   cand2 frame 416,522 368×71
+    text3 text 416,522 368×39 34px
+    text4 text 416,566 368×27 22px
+   cand3 frame 801,522 368×71
+    text5 text 801,522 368×39 34px
+    text6 text 801,566 368×27 22px
+  ctabar frame 0,625 1200×99
+   mailicon image 384,656 48×37 contain
+   ctatext text 454,645 362×58 48px
+  steps frame 0,724 1200×196
+   frame1 frame 48,752 1105×36
+    image1 image 48,753 34×34 contain
+    text7 text 99,752 1054×36 29px
+   frame2 frame 48,804 1105×36
+    image2 image 48,805 34×34 contain
+    text8 text 99,804 1054×36 29px
+   frame3 frame 48,855 1105×36
+    image3 image 48,856 34×34 contain
+    text9 text 99,855 1054×36 29px
+  spacer1 spacer 0,920 1200×25
+  footer text 0,944 1200×56 20px
+sky 300×600
+ root frame 0,0 300×600
+  headline text 0,0 300×167 31px 4L
+  photoband image 0,167 300×118 cover crop 30%h
+  candidates frame 0,285 300×87
+   cand1 frame 8,299 91×38
+    text1 text 8,299 91×20 17px
+    text2 text 8,321 91×16 13px
+   cand2 frame 104,299 91×58
+    text3 text 104,299 91×40 17px 2L
+    text4 text 104,341 91×16 13px
+   cand3 frame 200,299 91×58
+    text5 text 200,299 91×40 17px 2L
+    text6 text 200,341 91×16 13px
+  ctabar frame 0,372 300×50
+   mailicon image 43,387 25×19 contain
+   ctatext text 77,382 180×29 24px
+  steps frame 0,422 300×102
+   frame1 frame 14,438 272×17
+    image1 image 14,438 17×17 contain
+    text7 text 39,438 247×16 13px
+   frame2 frame 14,465 272×17
+    image2 image 14,465 17×17 contain
+    text8 text 39,465 247×16 13px
+   frame3 frame 14,492 272×17
+    image3 image 14,492 17×17 contain
+    text9 text 39,492 247×16 13px
+  spacer1 spacer 0,525 300×35
+  footer text 0,559 300×41 12px 2L

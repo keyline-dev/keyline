@@ -164,6 +164,7 @@ fn check(
                     h: size.height,
                 },
                 by: ["canvas"; 4],
+                hug: [false; 4],
                 quiet: false,
                 cut: false,
             };
@@ -241,6 +242,9 @@ struct Clip<'a> {
     /// Who draws each edge of `rect`, left, top, right, bottom: the canvas
     /// or the clipping frame that's tightest there, named in `!clipped`.
     by: [&'a str; 4],
+    /// Whether each edge belongs to a frame that sizes to its content: a
+    /// child filling it fills it by being its content, not to run past it.
+    hug: [bool; 4],
     /// Inside a stack already reported `!overflow`: its children falling
     /// outside it are that one problem, not one each.
     quiet: bool,
@@ -250,10 +254,11 @@ struct Clip<'a> {
 }
 
 impl<'a> Clip<'a> {
-    /// This area inside a clipping frame `by` drawn at `r`.
-    fn within(self, r: Rect, by: &'a str) -> Self {
+    /// This area inside a clipping frame `by` drawn at `r`, sizing to its
+    /// content across and down as `hugs` says.
+    fn within(self, r: Rect, by: &'a str, hugs: (bool, bool)) -> Self {
         let v = self.rect;
-        let mut edges = self.by;
+        let (mut edges, mut hug) = (self.by, self.hug);
         for (i, tighter) in [
             r.x > v.x,
             r.y > v.y,
@@ -265,6 +270,7 @@ impl<'a> Clip<'a> {
         {
             if tighter {
                 edges[i] = by;
+                hug[i] = if i % 2 == 0 { hugs.0 } else { hugs.1 };
             }
         }
         Clip {
@@ -274,6 +280,7 @@ impl<'a> Clip<'a> {
                 ..r
             }),
             by: edges,
+            hug,
             ..self
         }
     }
@@ -533,7 +540,7 @@ fn line(
     }
     lines.push(out);
     let inner = match &l.kind {
-        Kind::Frame { clip: true, .. } => clip.within(shown, &l.id),
+        Kind::Frame { clip: true, .. } => clip.within(shown, &l.id, hugged),
         _ => clip,
     };
     for c in &p.children {

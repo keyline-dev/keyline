@@ -605,7 +605,7 @@ fn a_cut_only_while_it_moves_says_when() {
     };
     // Whole at rest, its pop overshoots the frame that clips it.
     let d = card(
-        json!({"id": "ticket", "type": "rect", "x": 4, "y": 4, "width": 292, "height": 112, "fill": "#000000",
+        json!({"id": "ticket", "type": "rect", "x": 1, "y": 1, "width": 298, "height": 118, "fill": "#000000",
         "enter": {"effect": "pop", "delay": 2.1, "duration": 0.6}}),
     );
     assert!(
@@ -628,4 +628,79 @@ fn a_cut_only_while_it_moves_says_when() {
         ),
         "wide photo image 20,20 300×120 cover crop 60%h warn crop cuts the image's middle (focus 50%,50%): height 150 shows half\n"
     );
+}
+
+#[test]
+fn a_first_fit_counts_the_lines_a_balanced_text_needs_uncut() {
+    // Builder B's council headline (ES row, facebook-feed), Inter for
+    // Archivo: `textWrap: balance` narrows a cut text's lines, and its
+    // uncut count is taken across the box, not at that narrower width.
+    let head = |id: &str, text: &str, max_lines: Option<u32>| {
+        let mut t = json!({"id": id, "type": "text", "text": text, "width": "fill", "fontSize": 56,
+            "fontWeight": 800, "lineHeight": 1.08, "letterSpacing": -1, "textWrap": "balance"});
+        if let Some(m) = max_lines {
+            t["maxLines"] = json!(m);
+        }
+        t
+    };
+    let long = "Un Distrito 4 que funciona para las familias.";
+    let s = scene(
+        json!([{"id": "head", "type": "firstFit", "width": 360, "children": [
+        head("long", long, Some(3)), head("short", "Las familias primero.", Some(3))]}]),
+    );
+    let r = text_report(&s, &s.sizes[0]);
+    // What the long headline takes uncut, alone in the same box.
+    let alone = scene(
+        json!([{"id": "box", "type": "frame", "width": 360, "flexDirection": "column",
+        "children": [head("long", long, None)]}]),
+    );
+    let lines = text_report(&alone, &alone.sizes[0])
+        .lines()
+        .find(|l| l.starts_with(" long "))
+        .map_or(0, |l| l.matches(" / ").count() + 1);
+    assert!(lines > 3, "it needs more than 3 lines: {lines}");
+    assert!(
+        r.contains(&format!(" head → short (long: {lines}L > maxLines 3)")),
+        "{r}"
+    );
+}
+
+#[test]
+fn a_pulse_cut_by_the_frame_that_sizes_to_it_says_when() {
+    // The button fills the row that hugs it; the row clips, so the pulse
+    // is cut on every side.
+    let s = scene(
+        json!([{"id": "buy", "type": "frame", "x": 20, "y": 20, "flexDirection": "row", "children": [
+        {"id": "cta", "type": "frame", "width": 244, "height": 80, "fill": "#D0202E",
+         "animate": {"scale": [1, 1.07, 1], "delay": 1, "duration": 0.7}}]}]),
+    );
+    let d = describe(&s, Some("wide"), false, None).unwrap();
+    assert!(
+        d.contains("cta frame")
+            && d.contains("!clipped by buy: ")
+            && d.contains(" during scale 1–1.7s"),
+        "{d}"
+    );
+}
+
+#[test]
+fn a_stroke_crossing_text_covers_only_what_it_crosses() {
+    // A rotated 5 px blob outline crossing the end of a 40 px line covers a
+    // sliver of it, not the box around where the two meet.
+    let mut s = scene(json!([
+        {"id": "label", "type": "text", "text": "KINDLEPAW RESCUE", "x": 350, "y": 330, "fontSize": 40},
+        {"id": "blobLine", "type": "path", "shape": "blob-3", "x": 300, "y": 300, "width": 700, "height": 700,
+         "rotate": 5, "fill": [], "stroke": {"width": 5, "color": "#D0202E"}}
+    ]));
+    s.sizes.truncate(1);
+    (s.sizes[0].width, s.sizes[0].height) = (1080.0, 1350.0);
+    (s.width, s.height) = (1080.0, 1350.0);
+    let d = describe(&s, None, false, None).unwrap();
+    let pct: f32 = d
+        .split("!covered by blobLine ")
+        .nth(1)
+        .and_then(|r| r.split('%').next())
+        .and_then(|n| n.parse().ok())
+        .unwrap_or(100.0);
+    assert!(pct < 20.0, "{d}");
 }
