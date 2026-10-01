@@ -103,7 +103,7 @@ async fn one_master_adapts_to_every_size_without_at() {
     let problems = mcp.ok("scene_describe", json!({"sceneId": id})).await;
     assert_eq!(
         problems,
-        "sky photo image 20,71 260×409 cover crop 64%w warn crop cuts the image's middle (focus 50%,50%): a wider box keeps more\n"
+        "sky photo image 20,71 260×409 cover crop 64%w warn crop cuts the image's middle (focus 50%,50%): maxHeight 584 shows half\n"
     );
     mcp.stop().await;
 }

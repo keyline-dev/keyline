@@ -50,3 +50,6 @@ crop-3	5fd2966+dirty	claude-opus-5[1m]	0.473	10	144	9	16205	1	10096	4039	15854	1
 replies-1	b183484+dirty	claude-opus-5[1m]	0.579	10	162	9	18645	1	13042	5403	18421	133947	portrait 26, wide 22, sky 10	0	5873
 replies-2	b183484+dirty	claude-opus-5[1m]	0.530	11	142	10	17305	2	11133	4386	17487	150431	portrait 26, wide 24, sky 13	0	6448
 replies-3	b183484+dirty	claude-opus-5[1m]	0.444	13	112	12	12858	2	8544	4161	15030	157150	portrait 28, wide 24, sky 12	0	6649
+cropfix-1	e5df797+dirty	claude-opus-5[1m]	0.403	8	108	7	10758	1	8381	3197	15499	73409	portrait 22, wide 20, sky 10	0	2207
+cropfix-2	e5df797+dirty	claude-opus-5[1m]	0.558	10	166	9	12474	2	12515	6956	17627	135747	portrait 24, wide 22, sky 11	0	3346
+cropfix-3	e5df797+dirty	claude-opus-5[1m]	0.475	13	120	12	12856	3	9235	4366	15932	166909	portrait 26, wide 22, sky 11	0	5704

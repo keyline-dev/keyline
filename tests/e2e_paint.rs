@@ -171,7 +171,7 @@ async fn a_band_too_short_for_its_photo_is_an_advisory() {
         )
         .await;
     assert!(
-        reply.contains("wide photo-band image 0,235 1200×238 cover crop 65%h warn crop cuts the image's middle (focus 50%,50%): a taller box keeps more"),
+        reply.contains("wide photo-band image 0,235 1200×238 cover crop 65%h warn crop cuts the image's middle (focus 50%,50%): a box 338 tall shows half"),
         "{reply}"
     );
     // A taller band keeps most of it: the edit is clean.

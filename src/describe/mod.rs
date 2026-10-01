@@ -489,7 +489,8 @@ fn line(
                     let _ = write!(out, " upscaled {up:.1}x");
                 }
                 if fit == Fit::Cover && crop.is_none() {
-                    crop_warning(&mut out, (cw, ch), kind.focus().unwrap_or([0.5, 0.5]));
+                    let focus = kind.focus().unwrap_or([0.5, 0.5]);
+                    crop_warning(&mut out, p, (a.width, a.height), focus);
                 }
             }
         }
@@ -587,14 +588,25 @@ fn text_cut(p: &Placed, visible: Rect) -> Option<Rect> {
 /// `warn crop` when a cover crop hides more than half the image on an
 /// axis: with the focus at the center (the default), the box then can't
 /// hold the image's middle half, so a subject there is cut, e.g. a house
-/// in a band too short for it.
-fn crop_warning(out: &mut String, (cw, ch): (f32, f32), focus: [f32; 2]) {
-    let (share, bigger) = if ch >= cw {
-        (ch, "taller")
+/// in a band too short for it. (The focus lands at its own share of the
+/// box, like CSS `object-position`, whatever the crop.) The fix names the
+/// height that shows half, px at this size: a taller box for a crop
+/// top and bottom, a shorter one for a crop at the sides. For a layer
+/// whose height a stack or its parent gives, the `minHeight` (or
+/// `maxHeight`) to set, master px.
+fn crop_warning(out: &mut String, p: &Placed, image: (f32, f32), focus: [f32; 2]) {
+    let r = p.rect;
+    let (iw, ih) = image;
+    // Cover scales the image to fill the box; the other axis is cropped.
+    let s = (r.w / iw).max(r.h / ih);
+    let (drawn_w, drawn_h) = (iw * s, ih * s);
+    let vertical = drawn_h - r.h >= drawn_w - r.w;
+    let (shown, drawn) = if vertical {
+        (r.h, drawn_h)
     } else {
-        (cw, "wider")
+        (r.w, drawn_w)
     };
-    if share <= 0.505 {
+    if shown / drawn >= 0.495 {
         return;
     }
     let what = if focus == [0.5, 0.5] {
@@ -602,9 +614,33 @@ fn crop_warning(out: &mut String, (cw, ch): (f32, f32), focus: [f32; 2]) {
     } else {
         "the area around its focus"
     };
+    let l = p.layer;
+    let given = |len: Option<crate::scene::Length>| {
+        matches!(
+            len,
+            Some(crate::scene::Length::Fill | crate::scene::Length::Pct(_))
+        ) || l.grow.is_some_and(|g| g > 0.0)
+    };
+    // Taller shows more of a tall crop; a wide crop's box is usually as
+    // wide as it can be, so shorter shows more of it.
+    let fix = if vertical {
+        let px = (drawn / 2.0).ceil();
+        if given(l.height) {
+            format!("minHeight {} shows half", (px / p.k).ceil())
+        } else {
+            format!("a box {px} tall shows half")
+        }
+    } else {
+        let px = (2.0 * r.w * ih / iw).floor();
+        if given(l.height) {
+            format!("maxHeight {} shows half", (px / p.k).floor())
+        } else {
+            format!("a box at most {px} tall shows half")
+        }
+    };
     let _ = write!(
         out,
-        " warn crop cuts {what} (focus {}%,{}%): a {bigger} box keeps more",
+        " warn crop cuts {what} (focus {}%,{}%): {fix}",
         (focus[0] * 100.0).round(),
         (focus[1] * 100.0).round()
     );

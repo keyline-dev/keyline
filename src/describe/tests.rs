@@ -434,13 +434,13 @@ fn a_cover_crop_that_hides_over_half_the_image_is_an_advisory() {
     // A 1200×800 photo in a 1200×238 band: 70% of its height hidden.
     assert_eq!(
         band(238, json!({})),
-        "wide band image 0,0 1200×238 cover crop 70%h warn crop cuts the image's middle (focus 50%,50%): a taller box keeps more\n"
+        "wide band image 0,0 1200×238 cover crop 70%h warn crop cuts the image's middle (focus 50%,50%): a box 400 tall shows half\n"
     );
     // Less than half hidden (crop 48%h): the subject fits.
     assert_eq!(band(420, json!({})), "");
     assert!(
         band(238, json!({"focus": [0.3, 0.2]}))
-            .contains("warn crop cuts the area around its focus (focus 30%,20%): a taller box"),
+            .contains("warn crop cuts the area around its focus (focus 30%,20%): a box 400 tall"),
     );
     // Contain never crops; a crop picks its part on purpose.
     assert_eq!(band(238, json!({"fit": "contain"})), "");
@@ -454,14 +454,14 @@ fn a_cover_crop_that_hides_over_half_the_image_is_an_advisory() {
 }
 
 #[test]
-fn a_crop_across_says_a_wider_box() {
+fn a_crop_at_the_sides_names_the_height_that_shows_half() {
     let s = scene(
         json!([{"id": "strip", "type": "image", "asset": "img", "width": 100, "height": 400}]),
     );
     let w = describe(&s, Some("wide"), false, None).unwrap();
     assert!(
         w.contains(
-            "crop 75%w warn crop cuts the image's middle (focus 50%,50%): a wider box keeps more"
+            "crop 75%w warn crop cuts the image's middle (focus 50%,50%): a box at most 200 tall shows half"
         ),
         "{w}"
     );
@@ -589,4 +589,21 @@ fn a_shrunk_text_says_which_side_bound_it() {
         "{r}"
     );
     assert!(r.contains(" low ") && r.contains("(max 40, height)"), "{r}");
+}
+
+#[test]
+fn a_photo_sized_by_its_stack_is_told_its_min_height() {
+    // A column gives the photo what its fixed siblings leave: 100 px of a
+    // 400×400 photo 400 wide. The fix is a minHeight, in master px (the
+    // half-scale size shows half at 100 px, a minHeight of 200).
+    let s = scene(
+        json!([{"id": "col", "type": "frame", "width": 400, "height": 200, "flexDirection": "column", "children": [
+        {"id": "photo", "type": "image", "asset": "img", "width": "fill", "height": "fill"},
+        {"id": "copy", "type": "rect", "width": "fill", "height": 100, "fill": "#000000"}]}]),
+    );
+    let w = warnings(&s, None).unwrap();
+    assert!(
+        w.contains("wide photo image 0,0 400×100 cover crop 75%h warn crop cuts the image's middle (focus 50%,50%): minHeight 200 shows half"),
+        "{w}"
+    );
 }

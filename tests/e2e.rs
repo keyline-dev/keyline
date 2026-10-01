@@ -41,8 +41,8 @@ fn golden_check_tolerates_glyph_edges_but_not_changed_content() {
 
 /// The reference ad's advisories: its photo band cropped past half in the
 /// wide and sky sizes.
-const REFERENCE_CROPS: &str = "wide photo image 0,187 1200×244 cover crop 64%h warn crop cuts the image's middle (focus 50%,50%): a taller box keeps more\n\
-sky photo image 0,62 300×351 cover crop 52%w warn crop cuts the image's middle (focus 50%,50%): a wider box keeps more\n";
+const REFERENCE_CROPS: &str = "wide photo image 0,187 1200×244 cover crop 64%h warn crop cuts the image's middle (focus 50%,50%): a box 338 tall shows half\n\
+sky photo image 0,62 300×351 cover crop 52%w warn crop cuts the image's middle (focus 50%,50%): a box at most 337 tall shows half\n";
 
 #[tokio::test]
 async fn reference_ad_renders_all_sizes_without_defects() {
