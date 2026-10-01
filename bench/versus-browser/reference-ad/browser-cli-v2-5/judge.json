@@ -1,0 +1,112 @@
+{
+  "correct": true,
+  "costUsd": 0.12137,
+  "defects": 2,
+  "likenessChrome": 14.45369545618693,
+  "likenessKeyline": 14.887967745463053,
+  "model": "claude-opus-5",
+  "sizes": {
+    "portrait": {
+      "bandsFullWidth": true,
+      "columnsEven": true,
+      "cutOrOverflowing": [],
+      "items": {
+        "1": {
+          "present": true,
+          "readable": true
+        },
+        "2": {
+          "present": true,
+          "readable": true
+        },
+        "3": {
+          "present": true,
+          "readable": true
+        },
+        "4": {
+          "present": true,
+          "readable": true
+        },
+        "5": {
+          "present": true,
+          "readable": true
+        },
+        "6": {
+          "present": true,
+          "readable": true
+        }
+      },
+      "overlapping": [],
+      "photoDistorted": false,
+      "smallestTextLegible": true
+    },
+    "sky": {
+      "bandsFullWidth": true,
+      "columnsEven": true,
+      "cutOrOverflowing": [],
+      "items": {
+        "1": {
+          "present": true,
+          "readable": true
+        },
+        "2": {
+          "present": true,
+          "readable": true
+        },
+        "3": {
+          "present": true,
+          "readable": true
+        },
+        "4": {
+          "present": true,
+          "readable": true
+        },
+        "5": {
+          "present": true,
+          "readable": true
+        },
+        "6": {
+          "present": true,
+          "readable": false
+        }
+      },
+      "overlapping": [],
+      "photoDistorted": false,
+      "smallestTextLegible": false
+    },
+    "wide": {
+      "bandsFullWidth": true,
+      "columnsEven": true,
+      "cutOrOverflowing": [],
+      "items": {
+        "1": {
+          "present": true,
+          "readable": true
+        },
+        "2": {
+          "present": true,
+          "readable": true
+        },
+        "3": {
+          "present": true,
+          "readable": true
+        },
+        "4": {
+          "present": true,
+          "readable": true
+        },
+        "5": {
+          "present": true,
+          "readable": true
+        },
+        "6": {
+          "present": true,
+          "readable": true
+        }
+      },
+      "overlapping": [],
+      "photoDistorted": false,
+      "smallestTextLegible": true
+    }
+  }
+}

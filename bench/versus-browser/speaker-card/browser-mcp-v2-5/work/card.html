@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face{
+  font-family:"Inter";
+  src:url("Inter.ttf") format("truetype");
+  font-weight:100 900;
+  font-style:normal;
+  font-display:block;
+}
+:root{
+  --bg:#0F1226;
+  --accent:#7C5CFF;
+  --ink:#FFFFFF;
+  --muted:rgba(255,255,255,.66);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{background:#000;}
+body{
+  font-family:"Inter",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:geometricPrecision;
+}
+
+/* ---------- card shell ---------- */
+.card{
+  position:relative;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--ink);
+  display:flex;
+  flex-direction:column;
+}
+/* ambient glow */
+.card::before,.card::after{
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+}
+.card::before{
+  width:120%;aspect-ratio:1;
+  left:-45%;top:-55%;
+  background:radial-gradient(circle,rgba(124,92,255,.30) 0%,rgba(124,92,255,0) 62%);
+}
+.card::after{
+  width:95%;aspect-ratio:1;
+  right:-40%;bottom:-48%;
+  background:radial-gradient(circle,rgba(124,92,255,.20) 0%,rgba(124,92,255,0) 64%);
+}
+.inner{
+  position:relative;
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  height:100%;
+}
+
+/* ---------- header ---------- */
+.header{
+  display:flex;
+  align-items:center;
+  gap:var(--hdr-gap);
+  flex:0 0 auto;
+}
+.header img{
+  display:block;
+  height:var(--logo-h);
+  width:auto;
+}
+.rule{
+  width:2px;
+  height:calc(var(--logo-h) * .72);
+  background:rgba(255,255,255,.26);
+  flex:0 0 auto;
+}
+.event{
+  font-weight:700;
+  font-size:var(--event-fs);
+  letter-spacing:.14em;
+  line-height:1;
+  white-space:nowrap;
+}
+
+/* ---------- portrait ---------- */
+.portrait{
+  flex:0 0 auto;
+  width:var(--pf);
+  height:var(--pf);
+  border-radius:50%;
+  overflow:hidden;
+  background:#1a1f3d;
+  box-shadow:0 0 0 var(--ring) rgba(124,92,255,.95),
+             0 0 0 calc(var(--ring) + 2px) rgba(15,18,38,1);
+}
+.portrait img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:50% 42%;
+  display:block;
+}
+
+/* ---------- speaker ---------- */
+.name{
+  font-weight:700;
+  font-size:var(--name-fs);
+  line-height:1.08;
+  letter-spacing:-.02em;
+}
+.role{
+  font-weight:500;
+  font-size:var(--role-fs);
+  line-height:1.3;
+  color:var(--muted);
+  margin-top:var(--role-mt);
+}
+.kicker{
+  font-weight:700;
+  font-size:var(--kicker-fs);
+  letter-spacing:.2em;
+  color:var(--accent);
+  line-height:1;
+}
+.title{
+  font-weight:700;
+  font-size:var(--title-fs);
+  line-height:1.1;
+  letter-spacing:-.025em;
+  text-wrap:balance;
+}
+.title em{font-style:normal;color:var(--accent);}
+
+/* ---------- footer ---------- */
+.meta{
+  font-weight:500;
+  font-size:var(--meta-fs);
+  line-height:1.3;
+  color:var(--muted);
+}
+.meta b{color:#fff;font-weight:600;}
+.cta{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--accent);
+  color:#fff;
+  font-weight:700;
+  font-size:var(--cta-fs);
+  line-height:1;
+  letter-spacing:.01em;
+  height:var(--cta-h);
+  padding:0 calc(var(--cta-h) * .62);
+  border-radius:999px;
+  white-space:nowrap;
+  flex:0 0 auto;
+  box-shadow:0 10px 36px rgba(124,92,255,.38);
+}
+.footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:40px;
+  flex:0 0 auto;
+}
+
+/* ================= SQUARE 1080x1080 ================= */
+body.square .card{
+  width:1080px;height:1080px;
+  --logo-h:46px; --hdr-gap:22px; --event-fs:23px;
+  --pf:236px; --ring:5px;
+  --name-fs:54px; --role-fs:26px; --role-mt:12px;
+  --kicker-fs:19px;
+  --title-fs:70px;
+  --meta-fs:25px; --cta-fs:24px; --cta-h:68px;
+}
+body.square .inner{padding:74px 76px 72px;}
+body.square .speaker{
+  display:flex;align-items:center;gap:38px;
+  margin-top:66px;
+}
+body.square .kicker{margin-top:62px;}
+body.square .title{margin-top:22px;}
+body.square .footer{margin-top:auto;padding-top:56px;}
+
+/* ================= LANDSCAPE 1920x1080 ================= */
+body.landscape .card{
+  width:1920px;height:1080px;
+  --logo-h:48px; --hdr-gap:24px; --event-fs:24px;
+  --pf:400px; --ring:6px;
+  --name-fs:48px; --role-fs:25px; --role-mt:10px;
+  --kicker-fs:19px;
+  --title-fs:76px;
+  --meta-fs:25px; --cta-fs:24px; --cta-h:70px;
+}
+body.landscape .inner{padding:72px 88px 72px;}
+body.landscape .body{
+  display:flex;
+  align-items:center;
+  gap:92px;
+  flex:1 1 auto;
+  min-height:0;
+  padding:34px 0;
+}
+body.landscape .col{
+  flex:1 1 auto;
+  min-width:0;
+}
+body.landscape .aside{
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  width:480px;
+}
+body.landscape .aside .name{margin-top:38px;font-size:41px;}
+body.landscape .aside .role{font-size:23px;}
+body.landscape .title{margin-top:18px;}
+body.landscape .footer{flex:0 0 auto;}
+
+/* ================= STORY 1080x1920 ================= */
+body.story .card{
+  width:1080px;height:1920px;
+  --logo-h:52px; --hdr-gap:24px; --event-fs:26px;
+  --pf:440px; --ring:7px;
+  --name-fs:62px; --role-fs:30px; --role-mt:14px;
+  --kicker-fs:22px;
+  --title-fs:80px;
+  --meta-fs:29px; --cta-fs:28px; --cta-h:84px;
+}
+body.story .inner{padding:110px 86px 120px;}
+body.story .header{justify-content:center;}
+body.story .stack{
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  margin-top:108px;
+}
+body.story .stack .name{margin-top:50px;}
+body.story .kicker{margin-top:118px;text-align:center;}
+body.story .title{margin-top:28px;text-align:center;}
+body.story .footer{
+  margin-top:auto;
+  padding-top:90px;
+  flex-direction:column;
+  gap:46px;
+}
+body.story .meta{text-align:center;font-size:30px;}
+</style>
+</head>
+<body>
+<div class="card" id="card"></div>
+
+<script>
+const LOGO  = '<img src="logo.svg" alt="">';
+const EVENT = '<div class="event">FIELDNOTES CONF 2026</div>';
+const HEAD  = `<div class="header">${LOGO}<div class="rule"></div>${EVENT}</div>`;
+const PORT  = '<div class="portrait"><img src="portrait.png" alt=""></div>';
+const NAME  = '<div class="name">Maya Okonkwo&#8209;Lindqvist</div>';
+const ROLE  = '<div class="role">Principal Engineer, Northwind Labs</div>';
+const KICK  = '<div class="kicker">KEYNOTE</div>';
+const TITLE = '<h1 class="title">Shipping at the speed of trust: what ten years of on&#8209;call taught us about resilient systems</h1>';
+const META  = '<div class="meta"><b>November 14, 2026</b> &middot; Harbor Hall, Lisbon</div>';
+const CTA   = '<div class="cta">Get tickets</div>';
+
+const fmt = new URLSearchParams(location.search).get('f') || 'square';
+document.body.className = fmt;
+
+const layouts = {
+  square: `<div class="inner">
+    ${HEAD}
+    <div class="speaker">${PORT}<div>${NAME}${ROLE}</div></div>
+    ${KICK}${TITLE}
+    <div class="footer">${META}${CTA}</div>
+  </div>`,
+
+  landscape: `<div class="inner">
+    ${HEAD}
+    <div class="body">
+      <div class="col">${KICK}${TITLE}</div>
+      <div class="aside">${PORT}${NAME}${ROLE}</div>
+    </div>
+    <div class="footer">${META}${CTA}</div>
+  </div>`,
+
+  story: `<div class="inner">
+    ${HEAD}
+    <div class="stack">${PORT}${NAME}${ROLE}</div>
+    ${KICK}${TITLE}
+    <div class="footer">${META}${CTA}</div>
+  </div>`
+};
+document.getElementById('card').innerHTML = layouts[fmt];
+</script>
+</body>
+</html>

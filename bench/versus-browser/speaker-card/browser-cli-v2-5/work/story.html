@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Maya Okonkwo-Lindqvist — FIELDNOTES CONF 2026</title>
+<link rel="stylesheet" href="card.css">
+<style>body.story { 
+      --logo-w: 172px; --event-size: 22px; --rule-h: 36px; --brand-gap: 22px;
+      --avatar: 340px; --ring: 5px; --sp-gap: 34px;
+      --name-size: 56px; --role-size: 28px; --role-gap: 12px;
+      --eyebrow-size: 19px; --eyebrow-gap: 26px;
+      --title-size: 76px;
+      --meta-size: 29px; --cta-size: 28px; --cta-pad: 26px 52px; }</style>
+</head>
+<body class="story">
+  <div class="card">
+    <div class="inner">
+      
+      <header class="brand">
+        <img src="logo.svg" alt="Fieldnotes Conf logo">
+        <span class="rule"></span>
+        <span class="event">FIELDNOTES CONF 2026</span>
+      </header>
+      <div class="spacer"></div>
+      
+      <section class="speaker">
+        <div class="avatar"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+        <div class="who">
+          <div class="name">Maya Okonkwo-Lindqvist</div>
+          <div class="role">Principal Engineer, Northwind Labs</div>
+        </div>
+      </section>
+      <div class="spacer"></div>
+      
+      <section class="titlewrap">
+        <div class="eyebrow"><span>Keynote</span></div>
+        <h1 class="title" id="title">Shipping at the speed of trust: what ten years of on-call taught us about resilient systems</h1>
+      </section>
+      <div class="spacer"></div>
+      <div class="hr"></div>
+      <div class="foot" style="margin-top:46px"><div class="meta">November&nbsp;14,&nbsp;2026<span class="dot">&middot;</span>Harbor&nbsp;Hall,&nbsp;Lisbon</div><a class="cta">Get tickets<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12.5 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </div>
+
+<script>
+// Shrink the talk title until it fits its container, so it never overflows.
+function fitTitle() {
+  var wrap = document.querySelector('.titlewrap');
+  var el = document.getElementById('title');
+  if (!wrap || !el) return;
+  var avail = wrap.clientHeight
+    - document.querySelector('.eyebrow').offsetHeight
+    - parseFloat(getComputedStyle(document.querySelector('.eyebrow')).marginBottom)
+    - parseFloat(getComputedStyle(wrap).paddingTop)
+    - parseFloat(getComputedStyle(wrap).paddingBottom);
+  var size = parseFloat(getComputedStyle(el).fontSize);
+  var guard = 0;
+  while (el.scrollHeight > avail + 0.5 && size > 14 && guard++ < 400) {
+    size -= 1;
+    el.style.fontSize = size + 'px';
+  }
+  el.dataset.fitted = size;
+}
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(function () {
+  return new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); });
+}).then(function () {
+  fitTitle();
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () { document.body.classList.add('ready'); });
+  });
+});
+</script>
+</body>
+</html>

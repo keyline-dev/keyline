@@ -1,0 +1,72 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  glow ellipse 320,0 760×760
+  glow2 ellipse 0,460 620×620
+  shell frame 0,0 1080×1080
+   header frame 80,80 920×48
+    logoImg image 80,80 160×48 contain
+    sep rect 262,89 2×30
+    eventName text 286,91 319×27 22px
+   topspace spacer 80,172 920×10
+   body frame 80,226 920×551
+    persona frame 80,226 920×329
+     portraitImg image 80,226 224×224 cover
+     names frame 80,472 500×83
+      speakerName text 80,472 500×48 40px
+      speakerRole text 80,528 500×27 22px
+    talkTitle text 80,591 920×186 54px 3L
+   bottomspace spacer 80,821 920×27
+   rule rect 80,892 920×1
+   footer frame 80,937 920×63 → row
+    dateVenue text 80,955 425×27 22px
+    cta frame 808,937 192×63
+     ctaLabel text 846,955 116×27 22px
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  glow ellipse 1160,0 760×760
+  glow2 ellipse 0,460 620×620
+  shell frame 0,0 1920×1080
+   header frame 84,84 1752×48
+    logoImg image 84,84 160×48 contain
+    sep rect 266,93 2×30
+    eventName text 290,95 319×27 22px
+   topspace spacer 84,176 1752×0
+   body frame 84,220 1752×580
+    persona frame 84,296 560×428
+     portraitImg image 84,296 320×320 cover
+     names frame 84,638 525×86
+      speakerName text 84,638 525×51 42px
+      speakerRole text 84,697 525×27 22px
+    talkTitle text 708,393 1128×234 68px 3L
+   bottomspace spacer 84,844 1752×0
+   rule rect 84,888 1752×1
+   footer frame 84,933 1752×63 → row
+    dateVenue text 84,951 425×27 22px
+    cta frame 1644,933 192×63
+     ctaLabel text 1682,951 116×27 22px
+story 1080×1920
+ root frame 0,0 1080×1920
+  glow ellipse 320,0 760×760
+  glow2 ellipse 0,1300 620×620
+  shell frame 0,0 1080×1920
+   header frame 92,92 896×57
+    logoImg image 92,92 190×57 contain
+    sep rect 304,106 2×30
+    eventName text 328,105 367×31 26px
+   topspace spacer 92,201 896×220
+   body frame 92,473 896×833
+    persona frame 92,473 896×469
+     portraitImg image 92,473 340×340 cover
+     names frame 92,835 675×107
+      speakerName text 92,835 675×65 54px
+      speakerRole text 92,908 675×34 28px
+    talkTitle text 92,986 896×320 70px 4L
+   bottomspace spacer 92,1358 896×294
+   rule rect 92,1704 896×1
+   footer frame 92,1757 896×71 → row
+    dateVenue text 92,1757 541×34 28px
+    cta frame 763,1757 225×71
+     ctaLabel text 807,1777 137×31 26px

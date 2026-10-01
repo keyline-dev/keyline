@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Maya Okonkwo-Lindqvist — FIELDNOTES CONF 2026</title>
+<link rel="stylesheet" href="card.css">
+<style>body.landscape { 
+      --logo-w: 180px; --event-size: 23px; --rule-h: 38px; --brand-gap: 24px;
+      --avatar: 300px; --ring: 5px;
+      --eyebrow-size: 17px; --eyebrow-gap: 24px;
+      --title-size: 76px;
+      --meta-size: 26px; --cta-size: 24px; --cta-pad: 21px 40px; }</style>
+</head>
+<body class="landscape">
+  <div class="card">
+    <div class="inner">
+      <div class="left">
+        
+      <header class="brand">
+        <img src="logo.svg" alt="Fieldnotes Conf logo">
+        <span class="rule"></span>
+        <span class="event">FIELDNOTES CONF 2026</span>
+      </header>
+        
+      <section class="titlewrap">
+        <div class="eyebrow"><span>Keynote</span></div>
+        <h1 class="title" id="title">Shipping at the speed of trust: what ten years of on-call taught us about resilient systems</h1>
+      </section>
+        <div class="hr"></div>
+        <div class="foot" style="margin-top:38px"><div class="meta">November&nbsp;14,&nbsp;2026<span class="dot">&middot;</span>Harbor&nbsp;Hall,&nbsp;Lisbon</div><a class="cta">Get tickets<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12.5 6l6 6-6 6"/></svg></a></div>
+      </div>
+      <div class="right">
+        <div class="avatar"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+        <div class="who">
+          <div class="name">Maya Okonkwo-Lindqvist</div>
+          <div class="role">Principal Engineer, Northwind Labs</div>
+        </div>
+        <div class="badge">Keynote Speaker</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// Shrink the talk title until it fits its container, so it never overflows.
+function fitTitle() {
+  var wrap = document.querySelector('.titlewrap');
+  var el = document.getElementById('title');
+  if (!wrap || !el) return;
+  var avail = wrap.clientHeight
+    - document.querySelector('.eyebrow').offsetHeight
+    - parseFloat(getComputedStyle(document.querySelector('.eyebrow')).marginBottom)
+    - parseFloat(getComputedStyle(wrap).paddingTop)
+    - parseFloat(getComputedStyle(wrap).paddingBottom);
+  var size = parseFloat(getComputedStyle(el).fontSize);
+  var guard = 0;
+  while (el.scrollHeight > avail + 0.5 && size > 14 && guard++ < 400) {
+    size -= 1;
+    el.style.fontSize = size + 'px';
+  }
+  el.dataset.fitted = size;
+}
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(function () {
+  return new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); });
+}).then(function () {
+  fitTitle();
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () { document.body.classList.add('ready'); });
+  });
+});
+</script>
+</body>
+</html>

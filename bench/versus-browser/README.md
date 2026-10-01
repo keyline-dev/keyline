@@ -62,7 +62,59 @@ cargo test --release --test versus_browser judge_runs -- --ignored --nocapture
 
 The same protocol (prompts, tasks, judge, tooling unchanged; only the version label) rerun on keyline `43d4acd`. The `commit` column says `f386138`, the commit that bumped the label; its `src/` is identical to `43d4acd`.
 
-**In progress:** blocks 1–4 ran (24 runs, all judged); the runner stopped before block 5 because another change landed in the working tree's `src/` and rebuilt the binary. All 24 runs used the binary built from `43d4acd` at 14:06 (the next release build was at 15:27, after block 4); `reference-ad/*-v2-4` say `+dirty` only because `src/` changed while they were being saved. No results table or claim until all five blocks have run.
+30 counted runs, 5 per arm and task in five interleaved blocks, on 2026-10-01. Blocks 1–4 ran 14:07–15:28; the runner then stopped because uncommitted changes appeared in the working tree's `src/`, and block 5 ran 15:54–16:14 once `src/` was identical to `43d4acd` again and the binary was rebuilt from it. Blocks 1–4 used the 14:06 build from `43d4acd`, block 5 a 15:54 rebuild of the same source (the commit column says `5447e97`, a commit that only added runs). `reference-ad/*-v2-4` say `+dirty` only because `src/` changed while they were being saved. Every run ended normally; there were no timeouts and no infrastructure reruns.
+
+### Results
+
+Medians (min–max) over all 30 runs. Ratios are browser ÷ keyline: the ratio of the medians, then the range between the extremes.
+
+#### reference-ad
+
+| Arm | Correct | Total tokens | Cost | Cold cost | Turns | Time (s) | Images seen | Fixed overhead | Peak context | Measured with JS |
+|---|---|---|---|---|---|---|---|---|---|---|
+| keyline | 4/5 | 169k (115k–185k) | $0.47 ($0.37–0.71) | $1.01 | 10 (9–12) | 128 (102–288) | 1 (1–4) | 5.2k | 19k | – |
+| browser-cli | 5/5 | 308k (172k–634k) | $0.83 ($0.57–1.23) | $1.83 | 19 (14–32) | 225 (158–317) | 8 (6–8) | 3.6k | 34k | 5/5 |
+| browser-mcp | 5/5 | 1,056k (618k–1,485k) | $1.17 ($0.80–1.56) | $5.55 | 43 (29–53) | 225 (175–274) | 6 (4–8) | 9.3k | 38k | 5/5 |
+
+| Browser ÷ keyline | Total tokens | Cost |
+|---|---|---|
+| browser-cli | 1.8× (0.9–5.5×) | 1.8× (0.8–3.3×) |
+| browser-mcp | 6.3× (3.3–12.9×) | 2.5× (1.1–4.2×) |
+
+#### speaker-card
+
+| Arm | Correct | Total tokens | Cost | Cold cost | Turns | Time (s) | Images seen | Fixed overhead | Peak context | Measured with JS |
+|---|---|---|---|---|---|---|---|---|---|---|
+| keyline | 5/5 | 199k (93k–290k) | $0.51 ($0.31–0.69) | $1.18 | 13 (8–16) | 121 (92–187) | 4 (2–6) | 5.2k | 21k | – |
+| browser-cli | 5/5 | 536k (237k–574k) | $1.03 ($0.61–1.19) | $3.02 | 24 (17–28) | 222 (141–311) | 7 (5–8) | 3.6k | 39k | 5/5 |
+| browser-mcp | 5/5 | 1,087k (571k–1,824k) | $1.25 ($1.14–1.82) | $5.69 | 39 (26–56) | 255 (176–270) | 8 (7–11) | 9.3k | 47k | 5/5 |
+
+| Browser ÷ keyline | Total tokens | Cost |
+|---|---|---|
+| browser-cli | 2.7× (0.8–6.1×) | 2.0× (0.9–3.8×) |
+| browser-mcp | 5.5× (2.0–19.5×) | 2.4× (1.7–5.8×) |
+
+Every run is in `results.tsv`, likeness scores included, and the medians over correct runs only are printed by `judge_runs`. On reference-ad they are 170k tokens for keyline's 4 correct runs against 308k for browser-cli.
+
+### Reading it
+
+- **The stronger browser arm is browser-cli,** with the lower median total tokens on both tasks, so it's the comparison. browser-mcp's tool definitions add 9.3k tokens to every request, and it took about twice as many turns.
+- **reference-ad:** keyline used fewer tokens (1.8×) but was correct less often (4/5 against 5/5). The run that failed, `keyline-v2-1`, left the wide size's photo band cropped to 53% of its height, and the judge marked the photo cut off. `keyline-v2-5` has the same 53% crop and keyline's `warn crop` too, and the judge passed it. The agent acted on neither warning.
+- **speaker-card:** keyline used 2.7× fewer tokens, and all three arms were correct 5/5.
+- **The ranges overlap:** browser-cli's cheapest run on each task used fewer tokens than keyline's most expensive one.
+- **Elsewhere:** keyline was faster on median time on both tasks (128 s against 225 s, and 121 s against 222 s) and looked at fewer images. Every browser run measured its page with JavaScript.
+
+### What the rules allow
+
+reference-ad allows no token claim, because the browser arm was correct more often. speaker-card allows one by name, rounded down to one significant figure:
+
+> On a speaker-card task, keyline used 2× fewer tokens than a headless-browser agent (median of 5 runs, Claude Opus 5, October 2026).
+
+There is no general "X× fewer tokens" claim, since that would need keyline to win on both tasks with correctness at least as high.
+
+### Owner's blind review
+
+`export_review` wrote 15 anonymised sets per task to `review/<task>/` (the PNGs are gitignored copies). Fill in `review.tsv`, without opening `key.tsv`, then run `judge_runs`, which prints how often owner and judge agree.
 
 ## Prompt version vs1 (stopped, superseded by vs2)
 

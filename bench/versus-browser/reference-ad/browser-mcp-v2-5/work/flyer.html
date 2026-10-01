@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face{
+  font-family:'Inter';
+  src:url('Inter.ttf') format('truetype');
+  font-weight:100 900;
+  font-display:block;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#fff}
+body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+
+/* all interior dimensions are expressed in MASTER units * var(--s) */
+#flyer{
+  position:relative;
+  overflow:hidden;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  border:calc(6px * var(--s)) solid #1B2A5C;
+}
+.pad{padding-left:calc(64px * var(--s));padding-right:calc(64px * var(--s))}
+
+/* 1. headline */
+.head{
+  padding-top:calc(48px * var(--s));
+  padding-bottom:calc(36px * var(--s));
+}
+.head,.cands,.cta,.steps,.foot{flex-shrink:0}
+h1{
+  color:#1B2A5C;
+  font-size:calc(76px * var(--s));
+  line-height:1.08;
+  font-weight:800;
+  letter-spacing:calc(-1.5px * var(--s));
+}
+h1 .r{color:#D0202E}
+.kicker{
+  color:#D0202E;
+  font-size:calc(26px * var(--s));
+  font-weight:700;
+  letter-spacing:calc(4px * var(--s));
+  text-transform:uppercase;
+  margin-bottom:calc(18px * var(--s));
+}
+
+/* 2. photo band */
+.photoband{
+  width:100%;
+  flex:1 1 auto;
+  flex-shrink:1;
+  min-height:calc(190px * var(--s));
+  max-height:calc(1050px * var(--s));
+  overflow:hidden;
+  background:#1B2A5C;
+}
+.photoband img{width:100%;height:100%;object-fit:cover;object-position:50% 66%;display:block}
+
+/* 3. candidates */
+.cands{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:calc(28px * var(--s));
+  padding-top:calc(32px * var(--s));
+  padding-bottom:calc(32px * var(--s));
+}
+.cand{text-align:center;border-top:calc(5px * var(--s)) solid #D0202E;padding-top:calc(16px * var(--s))}
+.cand .nm{
+  color:#1B2A5C;font-weight:800;
+  font-size:calc(38px * var(--s));
+  line-height:1.12;
+  letter-spacing:calc(-0.5px * var(--s));
+}
+.cand .rl{
+  color:#5A6480;font-weight:600;
+  font-size:calc(25px * var(--s));
+  margin-top:calc(6px * var(--s));
+  text-transform:uppercase;
+  letter-spacing:calc(1.5px * var(--s));
+}
+
+/* 4. CTA bar */
+.cta{
+  width:100%;
+  background:#D0202E;
+  display:flex;align-items:center;justify-content:center;
+  gap:calc(26px * var(--s));
+  padding:calc(30px * var(--s)) calc(20px * var(--s));
+}
+.cta img{width:calc(56px * var(--s));height:calc(44px * var(--s));display:block}
+.cta span{
+  color:#fff;font-weight:800;
+  font-size:calc(54px * var(--s));
+  letter-spacing:calc(3px * var(--s));
+  line-height:1;
+  white-space:nowrap;
+}
+
+/* 5. steps */
+.steps{
+  padding-top:calc(28px * var(--s));
+  padding-bottom:calc(24px * var(--s));
+  display:flex;flex-direction:column;
+  gap:calc(16px * var(--s));
+}
+.step{display:flex;align-items:center;gap:calc(20px * var(--s))}
+.step img{width:calc(40px * var(--s));height:calc(40px * var(--s));flex:0 0 auto;display:block}
+.step span{
+  color:#1B2A5C;font-weight:600;
+  font-size:calc(31px * var(--s));
+  line-height:1.2;
+}
+
+/* 6. footer */
+.foot{
+  border-top:calc(3px * var(--s)) solid #D9DCE4;
+  padding-top:calc(18px * var(--s));
+  padding-bottom:calc(24px * var(--s));
+  color:#5A6480;
+  font-size:calc(23px * var(--s));
+  font-weight:600;
+  text-align:center;
+  letter-spacing:calc(0.3px * var(--s));
+  white-space:nowrap;
+}
+</style>
+</head>
+<body>
+<div id="flyer">
+  <div class="head pad">
+    <div class="kicker">Election 2026</div>
+    <h1>Proven <span class="r">RESULTS</span> for <span class="r">WILLOWMERE</span> Families</h1>
+  </div>
+
+  <div class="photoband"><img src="photo.png" alt=""></div>
+
+  <div class="cands pad">
+    <div class="cand"><div class="nm">Dana Levi</div><div class="rl">Mayor</div></div>
+    <div class="cand"><div class="nm">Omar Haddad</div><div class="rl">Council</div></div>
+    <div class="cand"><div class="nm">Ruth Cohen</div><div class="rl">Council</div></div>
+  </div>
+
+  <div class="cta">
+    <img src="mail.svg" alt=""><span>VOTE BY MAIL</span>
+  </div>
+
+  <div class="steps pad">
+    <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October&nbsp;20</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Mail it back by November&nbsp;3</span></div>
+  </div>
+
+  <div class="foot pad">Paid for by Willowmere Forward · willowmereforward.org</div>
+</div>
+<script>
+const q = new URLSearchParams(location.search);
+const W = +q.get('w')||1080, H = +q.get('h')||1350, S = +q.get('s')||1;
+const f = document.getElementById('flyer');
+f.style.setProperty('--s', S);
+f.style.width = W+'px';
+f.style.height = H+'px';
+document.body.style.width = W+'px';
+document.body.style.height = H+'px';
+document.documentElement.style.width = W+'px';
+</script>
+</body>
+</html>
