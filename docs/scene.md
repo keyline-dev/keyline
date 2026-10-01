@@ -293,23 +293,23 @@ A frame with `flexDirection` is a stack, like CSS flexbox (`display: "flex"` alo
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `flexDirection` | `row`, `column`, `row-reverse`, `column-reverse`, or a list | required | Direction; a list is tried in order: `["row", "column"]` is a row where it fits, else a column |
+| `flexDirection` | `row`, `column`, `row-reverse`, `column-reverse`, or a list | required | Direction; a list is tried in order: `["row", "column"]` is a row where it fits, else a column. A reversed stack starts at its far edge, as in CSS: the plain one mirrored |
 | `gap` | px or `[rowGap, columnGap]` | 0 | Space between children |
 | `padding` | Sides | 0 | Space inside the frame's edges |
-| `alignItems` | `stretch`, `flex-start`, `center`, `flex-end`, `baseline` | `stretch` | Across the direction; `stretch` fills the cross axis unless a child has a size there (with `flexWrap`, each line's height, as in CSS) |
+| `alignItems` | `stretch`, `flex-start`, `center`, `flex-end`, `baseline` | `stretch` | Across the direction; `stretch` fills the cross axis unless a child has a size there (with `flexWrap`, each line's height, as in CSS); an `aspectRatio` with one side set isn't a size there, so give `alignSelf` too |
 | `justifyContent` | `flex-start`, `center`, `flex-end`, `space-between`, `space-around`, `space-evenly` | `flex-start` | Along the direction |
 | `flexWrap` | `nowrap`, `wrap` | `nowrap` | Wrap onto more lines when they don't fit |
 
 `padding`, `gap`, `justifyContent`, `alignItems` and `flexWrap` on a frame without `flexDirection` or a grid template are an error that says so.
 
-As in CSS, text and frames in a column never shrink below their content's height; a stack whose children don't fit even then is reported as `!overflow needs W×H`, the size it needs.
+As in CSS, text and frames in a column never shrink below their content's height, and text without a width wraps at a column's width rather than run past it; a stack whose children don't fit even then is reported as `!overflow needs W×H`, the size it needs.
 
 ### Stack children
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `alignSelf` | as `alignItems` | the stack's `alignItems` | This child's own alignment (`baseline` in a column is `flex-start`) |
-| `flexGrow` | number ≥ 0 | 1 for `fill`, else none | Its share of the free space when it `fill`s; above 0, it makes a child fill from its size along the stack, as CSS's flex-basis (from nothing when it has none: `width: 0, flexGrow: 1` shares a row evenly) |
+| `flexGrow` | number ≥ 0 | 1 for `fill`, else none | Its share of the free space when it `fill`s; above 0, it makes a child fill from its size along the stack, as CSS's flex-basis (from nothing when it has none: `width: 0, flexGrow: 1` shares a row evenly). A text never gets narrower than its longest word; the others share what's left |
 | `layoutPriority` | number | 0 | When a row is too narrow, lower priorities give way first, as in SwiftUI; `"low"` and `"high"` read as −1 and 1, and CSS `flexShrink: 0` as 1 |
 | `position` | `auto`, `absolute` | `auto` | `absolute` takes it out of the flow and places it like a free child |
 
@@ -323,20 +323,20 @@ A frame with a grid template is a grid, like CSS grid:
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `gridTemplateColumns` | CSS tracks | one `1fr` per area column, else one | `200px`, `1fr`, `auto`, `25%`, `repeat(3, 1fr)`; `repeat(auto-fill, minmax(160px, 1fr))` is as many equal columns as fit at 160 px or more |
+| `gridTemplateColumns` | CSS tracks | one `1fr` per area column, else one | `200px`, `1fr`, `auto`, `25%`, `repeat(3, 1fr)`; `repeat(auto-fill, minmax(160px, 1fr))` is as many equal columns as fit at 160 px or more. `fr` tracks share all the space left, even when they add up to less than 1, and never get narrower than a px width or a text's longest word in them (rows: shorter than a px height); a grid that hugs keeps their ratio around its content |
 | `gridTemplateRows` | CSS tracks | `auto` | As columns; rows beyond them are `auto` |
 | `gridTemplateAreas` | list of strings | none | Named areas, one string per row and a name per column; `.` is empty. Each name must form a rectangle |
 | `gap` | px or `[rowGap, columnGap]` | 0 | |
 | `padding` | Sides | 0 | |
 
-A size can rearrange the whole grid by changing only its templates in `media`.
+A size can rearrange the whole grid by changing only its templates in `media`. A grid whose tracks don't fit it is reported as `!overflow needs W×H`, as a stack is.
 
 ### Grid children
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `gridArea` | string | none | The named area to fill |
-| `gridRow`, `gridColumn` | `2`, `"1 / span 2"`, `"1 / 3"` or `"span 2"`, from 1 | the next free cell, row by row, one track | Where it starts and how far it spans; given one, it takes the first free cell in that row or column. An item spanning `auto` tracks grows them evenly to fit it, as in CSS |
+| `gridRow`, `gridColumn` | `2`, `"1 / span 2"`, `"1 / 3"` or `"span 2"`, from 1 | the next free cell, row by row, one track; a later child fills an earlier gap (CSS's `dense`) | Where it starts and how far it spans; given one, it takes the first free cell in that row or column. An item spanning `auto` tracks grows them evenly to fit it, as in CSS |
 
 ### Per size
 
@@ -381,7 +381,7 @@ The box decides how text fits:
 
 - **Width and height:** the font shrinks until the text fits, down to `minimumScaleFactor`, then ends with an ellipsis.
 - **Width only:** the text wraps and the box grows down. In a column, `alignItems: stretch` gives text the column's width, so it wraps.
-- **Neither:** one line, as wide as the text.
+- **Neither:** one line, as wide as the text; in a column narrower than that, it wraps at the column's width.
 
 Text that is cut is reported as `!truncated needs W×H`, with the box it needs; nothing changes silently.
 

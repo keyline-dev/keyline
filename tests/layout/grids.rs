@@ -212,3 +212,94 @@ fn an_auto_row_is_as_tall_as_its_item_at_the_items_own_width() {
         "the row holds it: grid {g:?}, copy {copy:?}"
     );
 }
+
+#[test]
+fn a_grid_whose_rows_outgrow_it_reports_the_size_it_needs() {
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "width": 200, "height": 100, "gridTemplateColumns": "1fr", "children": [
+            {"id": "a", "type": "rect", "height": 80}, {"id": "b", "type": "rect", "height": 80}]}]),
+    );
+    assert_eq!(
+        overflow(&s, &size("master", 1000.0, 500.0, 1.0), "g"),
+        Some((200.0, 160.0))
+    );
+}
+
+#[test]
+fn min_columns_fit_exactly_at_the_boundary() {
+    let grid = |w: f32| {
+        scene(json!([{"id": "g", "type": "frame", "width": w, "gap": 10,
+            "gridTemplateColumns": "repeat(auto-fill, minmax(100px, 1fr))", "children": rects(3)}]))
+    };
+    // 3 × 100 + 2 × 10 = 320 holds three; a pixel less holds two.
+    let b = boxes(&grid(320.0), &size("master", 1000.0, 500.0, 1.0));
+    check(&b, "c2", (220.0, 0.0, 100.0, 100.0));
+    let b = boxes(&grid(319.0), &size("master", 1000.0, 500.0, 1.0));
+    check(&b, "c1", (164.5, 0.0, 154.5, 100.0));
+    check(&b, "c2", (0.0, 110.0, 154.5, 100.0));
+}
+
+#[test]
+fn a_row_past_the_template_adds_auto_rows() {
+    // Row 2 is empty, so 0 tall: row 3 starts after two gaps.
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "width": 100, "gap": 10, "gridTemplateRows": "50px", "children": [
+            {"id": "a", "type": "rect", "height": 30, "gridRow": 3}]}]),
+    );
+    check(
+        &boxes(&s, &size("master", 1000.0, 500.0, 1.0)),
+        "a",
+        (0.0, 70.0, 100.0, 30.0),
+    );
+}
+
+#[test]
+fn percent_tracks_are_shares_of_the_inside_of_the_padding() {
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "width": 520, "height": 100, "padding": 10, "gridTemplateColumns": "25% 75%", "children": [
+            {"id": "a", "type": "rect", "height": 50}, {"id": "b", "type": "rect", "height": 50}]}]),
+    );
+    let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
+    check(&b, "a", (10.0, 10.0, 125.0, 50.0));
+    check(&b, "b", (135.0, 10.0, 375.0, 50.0));
+}
+
+#[test]
+fn a_hugging_grid_keeps_its_fr_ratio_around_its_content() {
+    // One fr must hold 30 (1fr) and 20 (40 in 2fr): 30, so 30 and 60.
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "gridTemplateColumns": "1fr 2fr", "children": [
+            {"id": "a", "type": "rect", "width": 30, "height": 10}, {"id": "b", "type": "rect", "width": 40, "height": 10}]}]),
+    );
+    let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
+    check(&b, "g", (0.0, 0.0, 90.0, 10.0));
+    check(&b, "b", (30.0, 0.0, 40.0, 10.0));
+}
+
+#[test]
+fn an_fr_column_never_gets_narrower_than_a_px_item_in_it() {
+    // An even split would be 150; a's 250 holds, b gets the 50 left.
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "width": 300, "gridTemplateColumns": "1fr 1fr", "children": [
+            {"id": "a", "type": "rect", "width": 250, "height": 50}, {"id": "b", "type": "rect", "height": 50}]}]),
+    );
+    let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
+    check(&b, "a", (0.0, 0.0, 250.0, 50.0));
+    check(&b, "b", (250.0, 0.0, 50.0, 50.0));
+}
+
+#[test]
+fn an_fr_column_is_never_narrower_than_its_longest_word() {
+    let word = json!({"id": "a", "type": "text", "fontSize": 40, "text": "Unbelievable"});
+    let least = keyline_mcp::text::Text::of(&serde_json::from_value(word.clone()).unwrap(), 1.0)
+        .unwrap()
+        .min_width();
+    assert!(least > 150.0, "the word must beat an even split: {least}");
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "width": 300, "gridTemplateColumns": "1fr 1fr", "children": [
+            word, {"id": "b", "type": "rect", "height": 50}]}]),
+    );
+    let b = boxes(&s, &size("master", 1000.0, 500.0, 1.0));
+    assert!((b["a"].w - least).abs() < 0.5, "{b:?}");
+    assert!((b["b"].x - least).abs() < 0.5, "{b:?}");
+}

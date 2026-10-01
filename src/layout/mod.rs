@@ -82,50 +82,72 @@ impl Placed<'_> {
     /// fixed, truncate — is centered, even when taller), shifted up by a cap
     /// trim, and across by alignment when balanced lines wrap narrower.
     pub fn text_origin(&self) -> (f32, f32) {
-        let [pt, pr, pb, pl] = measure::text_padding(self.layer, self.k);
-        let (x, y, w, h) = (
-            self.rect.x + pl,
-            self.rect.y + pt,
-            self.rect.w - pl - pr,
-            self.rect.h - pt - pb,
-        );
-        let Some((para, fit)) = &self.text else {
-            return (x, y);
+        let (dx, dy) = match &self.text {
+            Some((para, fit)) => {
+                text_offset(self.layer, self.k, (self.rect.w, self.rect.h), para, fit)
+            }
+            None => {
+                let [pt, _, _, pl] = measure::text_padding(self.layer, self.k);
+                (pl, pt)
+            }
         };
-        let (top, bottom) = if measure::text_trims(self.layer) {
-            Text::of(self.layer, self.k).map_or((0.0, 0.0), |t| t.cap_trim(para, fit.font_size))
-        } else {
-            (0.0, 0.0)
-        };
-        let visible = para.height() - top - bottom;
-        let fixed_box = matches!(
-            self.layer.text_resize(),
-            Some(Resize::Fit | Resize::Fixed | Resize::Truncate)
-        );
-        let valign = match &self.layer.kind {
-            Kind::Text { more, .. } => more.vertical_align,
-            _ => None,
-        };
-        let y0 = match valign.unwrap_or(if fixed_box {
-            VAlign::Center
-        } else {
-            VAlign::Top
-        }) {
-            VAlign::Top => y,
-            VAlign::Center => y + (h - visible) / 2.0,
-            VAlign::Bottom => y + h - visible,
-        };
-        let spare = (w - fit.wrap_width).max(0.0);
-        let dx = match self.layer.kind {
-            Kind::Text { align, .. } => match align {
-                Align::Center => spare / 2.0,
-                Align::Right => spare,
-                Align::Left | Align::Justify => 0.0,
-            },
-            _ => 0.0,
-        };
-        (x + dx, y0 - top)
+        (self.rect.x + dx, self.rect.y + dy)
     }
+}
+
+/// Where a text layer draws `para` in a box of `size`, from the box's
+/// top-left: see [`Placed::text_origin`].
+fn text_offset(layer: &Layer, k: f32, size: (f32, f32), para: &Paragraph, fit: &Fit) -> (f32, f32) {
+    let [pt, pr, pb, pl] = measure::text_padding(layer, k);
+    let (w, h) = (size.0 - pl - pr, size.1 - pt - pb);
+    let (top, bottom) = if measure::text_trims(layer) {
+        Text::of(layer, k).map_or((0.0, 0.0), |t| t.cap_trim(para, fit.font_size))
+    } else {
+        (0.0, 0.0)
+    };
+    let visible = para.height() - top - bottom;
+    let fixed_box = matches!(
+        layer.text_resize(),
+        Some(Resize::Fit | Resize::Fixed | Resize::Truncate)
+    );
+    let valign = match &layer.kind {
+        Kind::Text { more, .. } => more.vertical_align,
+        _ => None,
+    };
+    let y0 = match valign.unwrap_or(if fixed_box {
+        VAlign::Center
+    } else {
+        VAlign::Top
+    }) {
+        VAlign::Top => 0.0,
+        VAlign::Center => (h - visible) / 2.0,
+        VAlign::Bottom => h - visible,
+    };
+    let spare = (w - fit.wrap_width).max(0.0);
+    let dx = match layer.kind {
+        Kind::Text { align, .. } => match align {
+            Align::Center => spare / 2.0,
+            Align::Right => spare,
+            Align::Left | Align::Justify => 0.0,
+        },
+        _ => 0.0,
+    };
+    (pl + dx, pt + y0 - top)
+}
+
+/// Where a text layer in a box of `size` draws its first baseline, from
+/// the box's top: as drawn, so padding, cap trim and vertical alignment count.
+pub(super) fn text_baseline(layer: &Layer, k: f32, size: (f32, f32)) -> Option<f32> {
+    let t = Text::of(layer, k)?;
+    let [pt, pr, pb, pl] = measure::text_padding(layer, k);
+    let (para, fit) = t.layout((size.0 - pl - pr).max(0.0), (size.1 - pt - pb).max(0.0));
+    // The glyphs sit on the first line's baseline (the paragraph's
+    // alphabetic baseline can be a fraction of a pixel off it).
+    let base = para
+        .get_line_metrics()
+        .first()
+        .map_or_else(|| para.alphabetic_baseline(), |m| m.baseline as f32);
+    Some(text_offset(layer, k, size, &para, &fit).1 + base)
 }
 
 /// Places every layer of `scene` for one target `size`.
@@ -181,17 +203,18 @@ fn place_free<'a>(
                 new.0,
                 k,
             );
-            // Text that rewraps at its new width (a `%` or `fill` width)
-            // is placed by the height it has there, not the master's: else
-            // a centred line that wrapped to two at the master sits half a
-            // line high where it fits on one.
+            // A height from the content follows the new width (text that
+            // rewraps, an image or `aspectRatio` that keeps its shape, a
+            // column of wrapping text), unless the parent sets it: stretched
+            // or scaled. Else a centred line that wrapped to two at the
+            // master sits half a line high where it fits on one.
             let vpin: Pin = layer.constraints.v.into();
-            let by_height = vs.is_some() || matches!(vpin, Pin::Center | Pin::End);
-            let tall = match layer.height {
-                None if by_height && (w - natural.0).abs() > 0.5 => {
-                    measure(scene, layer, k, new, (Some(w), forced.1), false).1
-                }
-                _ => natural.1,
+            let by_content = matches!(layer.height, None | Some(Length::Hug))
+                && (vs.is_some() || !matches!(vpin, Pin::Stretch | Pin::Scale));
+            let tall = if by_content && (w - natural.0).abs() > 0.5 {
+                measure(scene, layer, k, new, (Some(w), forced.1), false).1
+            } else {
+                natural.1
             };
             let (y, h) = free_axis(
                 FreeAxis {
@@ -249,11 +272,17 @@ fn free_axis(a: FreeAxis, natural: f32, old: f32, new: f32, k: f32) -> (f32, f32
         _ => (a.pin, axis(a.pin, offset(a.pos, k, old), natural, old, new)),
     };
     let m = a.inset;
+    // The length `pos` was pinned for: a `%` or clamped size that differs
+    // moves the start, so the pinned edge or centre stays put.
+    let mut pinned_for = len;
     match a.len {
         Some(Length::Pct(p)) => len = p * new,
         // Placed, it fills between its margins; otherwise the rest from `pos`.
         Some(Length::Fill) if a.spot.is_some() => len = (new - 2.0 * m).max(0.0),
-        Some(Length::Fill) => len = (new - pos).max(0.0),
+        Some(Length::Fill) => {
+            len = (new - pos).max(0.0);
+            pinned_for = len;
+        }
         _ => {}
     }
     // Min and max first, so a clamped layer is placed by its real size.
@@ -262,8 +291,8 @@ fn free_axis(a: FreeAxis, natural: f32, old: f32, new: f32, k: f32) -> (f32, f32
         .min(hi.map_or(f32::MAX, |v| v * k))
         .max(lo.map_or(0.0, |v| v * k));
     match pin {
-        Pin::End => pos += len - clamped,
-        Pin::Center => pos += (len - clamped) / 2.0,
+        Pin::End => pos += pinned_for - clamped,
+        Pin::Center => pos += (pinned_for - clamped) / 2.0,
         _ => {}
     }
     len = clamped;
@@ -293,12 +322,16 @@ fn finish<'a>(
     let text = Text::of(layer, k).map(|t| {
         if !sized {
             match t.resize() {
-                // Auto-width text keeps its measured width wherever it's pinned.
+                // Auto-width text keeps its measured size wherever it's
+                // pinned: stretched or scaled, it stays centred on that axis.
                 Resize::AutoWidth => {
-                    if matches!(Pin::from(layer.constraints.h), Pin::Stretch | Pin::Scale)
-                        && layer.place.is_none()
-                    {
+                    let centred =
+                        |c: Pin| matches!(c, Pin::Stretch | Pin::Scale) && layer.place.is_none();
+                    if centred(layer.constraints.h.into()) {
                         rect.x += (rect.w - w) / 2.0;
+                    }
+                    if centred(layer.constraints.v.into()) {
+                        rect.y += (rect.h - h) / 2.0;
                     }
                     rect.w = w;
                     rect.h = h;
@@ -355,10 +388,15 @@ fn finish<'a>(
                         matches!(s.dir, Dirs::FirstFit(_)).then(|| a.dir.name().to_owned());
                     (a.items, chosen)
                 }
-                (None, Some(g)) => (
-                    grid::arrange(scene, children, g, k, (Some(inner.0), Some(inner.1))).0,
-                    None,
-                ),
+                (None, Some(g)) => {
+                    let (items, content) =
+                        grid::arrange(scene, children, g, k, (Some(inner.0), Some(inner.1)));
+                    let need = (content.0 + l + r, content.1 + t + b);
+                    if need.0 > rect.w + 0.5 || need.1 > rect.h + 0.5 {
+                        overflow = Some((need.0.max(rect.w), need.1.max(rect.h)));
+                    }
+                    (items, None)
+                }
                 (None, None) => (Vec::new(), None),
             };
             let mut placed: Vec<Placed> = items

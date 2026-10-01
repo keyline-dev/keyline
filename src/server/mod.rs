@@ -35,7 +35,7 @@ Fields are master px (a size's scale multiplies them); reply px are at each size
 Add all layers in one layer_add; give repeated text looks a style. Every edit replies ok or with problems per size: !defects (cut text with the \
 size that fits, clipping, hidden or overlapping text) to fix with layer_update, and warn advisories \
 for you to judge. It also states each size's smallest text and any upscaled photo; decide whether that suits \
-where the design will be used, and adapt a size with media. A stack's !overflow means its children don't fit: \
+where the design will be used, and adapt a size with media. A stack's or grid's !overflow means its children don't fit: \
 make one shorter at that size (media) or let it grow less. A top-level frame with width and height \"fill\" \
 already covers the canvas and clips at every size. \
 The server's checks are the verification: render once at the end, and its reply shows how wrapped, shrunk or \

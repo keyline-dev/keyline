@@ -8,12 +8,17 @@
 
 mod adaptive;
 mod at;
+mod baseline;
 mod constraints;
 mod flex;
 mod frames;
 mod grids;
 mod intrinsic;
+mod invariants;
+mod resize;
+mod reverse;
 mod scale;
+mod sharing;
 mod sizing;
 mod stacks;
 mod text;
@@ -88,16 +93,31 @@ pub(crate) fn pinned(h: &str, v: &str) -> Scene {
 /// What an adaptive layer chose at a size (a stack's direction, a
 /// `firstFit`'s child id), by layer id.
 pub(crate) fn chosen(scene: &Scene, size: &Size, id: &str) -> Option<String> {
-    fn find(placed: &[Placed], id: &str) -> Option<Option<String>> {
+    with_placed(scene, size, id, |p| p.chosen.clone()).flatten()
+}
+
+/// The size a stack reports it needs at a size (`!overflow`), by layer id.
+pub(crate) fn overflow(scene: &Scene, size: &Size, id: &str) -> Option<(f32, f32)> {
+    with_placed(scene, size, id, |p| p.overflow).flatten()
+}
+
+/// `f` of the placed layer `id` at a size; `None` when it isn't drawn.
+pub(crate) fn with_placed<T>(
+    scene: &Scene,
+    size: &Size,
+    id: &str,
+    f: impl Fn(&Placed) -> T + Copy,
+) -> Option<T> {
+    fn find<T>(placed: &[Placed], id: &str, f: impl Fn(&Placed) -> T + Copy) -> Option<T> {
         placed.iter().find_map(|p| {
             if p.layer.id == id {
-                Some(p.chosen.clone())
+                Some(f(p))
             } else {
-                find(&p.children, id)
+                find(&p.children, id, f)
             }
         })
     }
     let resolved = scene.resolved();
     let sized = resolved.for_size(size);
-    find(&layout(&sized, size), id).flatten()
+    find(&layout(&sized, size), id, f)
 }

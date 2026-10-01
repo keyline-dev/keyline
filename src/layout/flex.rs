@@ -2,29 +2,54 @@
 //! `justify` spacing, and baseline alignment.
 
 use crate::scene::{Justify, Kind, StackAlign};
-use crate::text::Text;
 
 use super::stack::Flex;
 
-/// Shares `free` among `fill` children by `grow`, up to their maximums.
-pub(super) fn grow(line: &mut [Flex], mut free: f32) {
+/// Shares `free` among `fill` children by `grow`, as CSS resolves flexible
+/// lengths: each grows from its basis, and one its share would take past
+/// its minimum or maximum is held there while the rest share again.
+pub(super) fn grow(line: &mut [Flex], free: f32) {
+    let weight = |f: &Flex| f.layer.grow.unwrap_or(1.0).max(0.0);
+    // The space the fill children share: theirs now, plus what's free.
+    let space = free + line.iter().filter(|f| f.fill).map(|f| f.main).sum::<f32>();
+    let mut open: Vec<bool> = line.iter().map(|f| f.fill && weight(f) > 0.0).collect();
     for _ in 0..line.len() {
-        let weight: f32 = line
+        let held: f32 = line
             .iter()
-            .filter(|f| f.fill && f.main < f.max_main)
-            .map(|f| f.layer.grow.unwrap_or(1.0).max(0.0))
+            .zip(&open)
+            .filter(|(f, o)| f.fill && !**o)
+            .map(|(f, _)| f.main)
             .sum();
-        if free <= 0.01 || weight <= 0.0 {
+        let (basis, total): (f32, f32) = line
+            .iter()
+            .zip(&open)
+            .filter(|(_, o)| **o)
+            .fold((0.0, 0.0), |(b, w), (f, _)| (b + f.basis, w + weight(f)));
+        if total <= 0.0 {
             return;
         }
-        let mut given = 0.0;
-        for f in line.iter_mut().filter(|f| f.fill && f.main < f.max_main) {
-            let add =
-                (free * f.layer.grow.unwrap_or(1.0).max(0.0) / weight).min(f.max_main - f.main);
-            f.main += add;
-            given += add;
+        let left = space - held - basis;
+        let want = |f: &Flex| f.basis + left * weight(f) / total;
+        let off: f32 = line
+            .iter()
+            .zip(&open)
+            .filter(|(_, o)| **o)
+            .map(|(f, _)| want(f).clamp(f.min_main, f.max_main.max(f.min_main)) - want(f))
+            .sum();
+        for (f, o) in line.iter_mut().zip(open.iter_mut()).filter(|(_, o)| **o) {
+            let w = want(f);
+            f.main = w.clamp(f.min_main, f.max_main.max(f.min_main));
+            // Held at a minimum when the shares ran short, at a maximum
+            // when they ran over; the others share again.
+            let at_min = f.main > w + 0.01;
+            let at_max = f.main < w - 0.01;
+            if (off > 0.01 && at_min) || (off < -0.01 && at_max) {
+                *o = false;
+            }
         }
-        free -= given;
+        if off.abs() <= 0.01 {
+            return;
+        }
     }
 }
 
@@ -81,7 +106,7 @@ pub(super) fn spread(justify: Justify, free: f32, n: usize) -> (f32, f32) {
 }
 
 /// For baseline-aligned rows: the lowest baseline, and each child's own
-/// (a text's first baseline; anything else sits on it by its bottom).
+/// (a text's first baseline as drawn; anything else sits on it by its bottom).
 pub(super) fn baselines<'l>(
     line: &'l [Flex],
     k: f32,
@@ -91,7 +116,7 @@ pub(super) fn baselines<'l>(
         return None;
     }
     let of = move |f: &Flex| match &f.layer.kind {
-        Kind::Text { .. } => Text::of(f.layer, k).map_or(f.cross, |t| t.first_baseline(f.main)),
+        Kind::Text { .. } => super::text_baseline(f.layer, k, (f.main, f.cross)).unwrap_or(f.cross),
         _ => f.cross,
     };
     let max = line

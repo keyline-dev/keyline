@@ -208,9 +208,10 @@ fn reverse_directions_place_the_last_child_first() {
             rect("b", json!(100), json!(20))
         ]),
     );
+    // The row starts at its right edge, as in CSS.
     let b = at_master(&s);
-    check(&b, "b", (0.0, 0.0, 100.0, 20.0));
-    check(&b, "a", (100.0, 0.0, 100.0, 20.0));
+    check(&b, "a", (400.0, 0.0, 100.0, 20.0));
+    check(&b, "b", (300.0, 0.0, 100.0, 20.0));
     let col = scene(
         json!([{"id": "f", "type": "frame", "flexDirection": "column-reverse", "gap": 5, "alignItems": "flex-start", "children": [rect("a", json!(10), json!(10)), rect("b", json!(10), json!(20))]}]),
     );

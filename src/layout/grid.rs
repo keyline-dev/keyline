@@ -2,7 +2,10 @@
 //! the next free one), tracks sized (px, %, `auto` to the content, `fr`
 //! sharing what's left), then each child stretched to its cell.
 
-use crate::scene::{Area, Dir, Grid, Layer, Length, MAX_TRACKS, Position, Scene, Track, Tracks};
+use crate::scene::{
+    Area, Dir, Grid, Kind, Layer, Length, MAX_TRACKS, Position, Scene, Track, Tracks,
+};
+use crate::text::Text;
 
 use super::measure::{Forced, clamp, measure};
 use super::stack::Item;
@@ -47,7 +50,16 @@ pub(super) fn arrange<'a>(
     let mut rows = rows_given.to_vec();
     rows.resize(n_rows, Track::Auto);
     let parent = (inner.0.unwrap_or(0.0), inner.1.unwrap_or(0.0));
-    let mut col_w = sizes(&cols, inner.0, col_gap, k, |i| {
+    // An `fr` column never gets narrower than what can't shrink in it: a
+    // px width, a text's longest word.
+    let least_w = |i: usize| {
+        flow.iter()
+            .zip(&slots)
+            .filter(|(_, s)| s.1 == i && s.3 == 1)
+            .map(|(c, _)| least_width(c, k))
+            .fold(0.0, f32::max)
+    };
+    let mut col_w = sizes(&cols, inner.0, col_gap, k, least_w, |i| {
         flow.iter()
             .zip(&slots)
             .filter(|(_, s)| s.1 == i && s.3 == 1)
@@ -64,7 +76,14 @@ pub(super) fn arrange<'a>(
     // A row is as tall as its items at the width they're drawn: their own
     // px width, else the cell's.
     let drawn_width = |c: &Layer, cell: f32| c.width.and_then(Length::px).map_or(cell, |v| v * k);
-    let mut row_h = sizes(&rows, inner.1, row_gap, k, |i| {
+    let least_h = |i: usize| {
+        flow.iter()
+            .zip(&slots)
+            .filter(|(_, s)| s.0 == i && s.2 == 1)
+            .map(|(c, _)| c.height.and_then(Length::px).map_or(0.0, |v| v * k))
+            .fold(0.0, f32::max)
+    };
+    let mut row_h = sizes(&rows, inner.1, row_gap, k, least_h, |i| {
         flow.iter()
             .zip(&slots)
             .filter(|(_, s)| s.0 == i && s.2 == 1)
@@ -196,14 +215,31 @@ fn widen(sizes: &mut [f32], tracks: &[Track], (at, n): (usize, usize), gap: f32,
     }
 }
 
+/// The narrowest a grid item can be: its px width, or a text's longest
+/// word and padding; anything else can shrink to nothing.
+fn least_width(c: &Layer, k: f32) -> f32 {
+    if let Some(v) = c.width.and_then(Length::px) {
+        return v * k;
+    }
+    match &c.kind {
+        Kind::Text { .. } => Text::of(c, k).map_or(0.0, |t| {
+            let [_, r, _, l] = super::measure::text_padding(c, k);
+            t.min_width() + l + r
+        }),
+        _ => 0.0,
+    }
+}
+
 /// Track sizes on one axis: px and % first, `auto` to its content, then
-/// `fr` tracks share what's left of `avail`. Hugging (`avail` unknown), an
-/// `fr` track sizes like `auto`.
+/// `fr` tracks share what's left of `avail`, none below its `least`, as in
+/// CSS (`1fr` is `minmax(auto, 1fr)`). Hugging (`avail` unknown), `fr`
+/// tracks are as big as their content needs, in their ratio.
 fn sizes(
     tracks: &[Track],
     avail: Option<f32>,
     gap: f32,
     k: f32,
+    least: impl Fn(usize) -> f32,
     content: impl Fn(usize) -> f32,
 ) -> Vec<f32> {
     let mut out: Vec<f32> = tracks
@@ -220,12 +256,50 @@ fn sizes(
         .iter()
         .map(|t| if let Track::Fr(f) = t { *f } else { 0.0 })
         .sum();
-    if let Some(a) = avail.filter(|_| fr > 0.0) {
-        let used: f32 = out.iter().sum::<f32>() + gap * tracks.len().saturating_sub(1) as f32;
-        let left = (a - used).max(0.0);
-        for (o, t) in out.iter_mut().zip(tracks) {
-            if let Track::Fr(f) = t {
-                *o = left * f / fr;
+    let share = |t: &Track| if let Track::Fr(f) = t { *f } else { 0.0 };
+    match avail {
+        _ if fr <= 0.0 => {}
+        Some(a) => {
+            let used: f32 = out.iter().sum::<f32>() + gap * tracks.len().saturating_sub(1) as f32;
+            let left = (a - used).max(0.0);
+            // Share what's left; a track held at its least leaves the rest
+            // to share again.
+            let mut open: Vec<bool> = tracks.iter().map(|t| share(t) > 0.0).collect();
+            for _ in 0..tracks.len() {
+                let held: f32 = (0..tracks.len())
+                    .filter(|&i| share(&tracks[i]) > 0.0 && !open[i])
+                    .map(|i| out[i])
+                    .sum();
+                let parts: f32 = (0..tracks.len())
+                    .filter(|&i| open[i])
+                    .map(|i| share(&tracks[i]))
+                    .sum();
+                let unit = (left - held).max(0.0) / parts.max(f32::MIN_POSITIVE);
+                let mut again = false;
+                let now: Vec<usize> = (0..tracks.len()).filter(|&i| open[i]).collect();
+                for i in now {
+                    out[i] = unit * share(&tracks[i]);
+                    if least(i) > out[i] + 0.01 {
+                        out[i] = least(i);
+                        open[i] = false;
+                        again = true;
+                    }
+                }
+                if !again {
+                    break;
+                }
+            }
+        }
+        // Each `fr` holds its content at the same size per fr.
+        None => {
+            let unit = (0..tracks.len())
+                .filter(|&i| share(&tracks[i]) > 0.0)
+                .map(|i| out[i] / share(&tracks[i]))
+                .fold(0.0, f32::max);
+            for (o, t) in out.iter_mut().zip(tracks) {
+                if share(t) > 0.0 {
+                    *o = unit * share(t);
+                }
             }
         }
     }
@@ -247,12 +321,28 @@ mod tests {
             Track::Pct(0.1),
         ];
         // 1000 - 100 - 50 (auto) - 100 (10%) - 4 × 10 gaps = 710, split 1:2.
-        let s = sizes(&t, Some(1000.0), 10.0, 1.0, |_| 50.0);
+        let s = sizes(&t, Some(1000.0), 10.0, 1.0, |_| 0.0, |_| 50.0);
         assert_eq!(s, [100.0, 710.0 / 3.0, 50.0, 1420.0 / 3.0, 100.0]);
-        // Hugging: fr and % size to the content.
+        // Hugging: % sizes to its content; fr keeps its ratio around it
+        // (1fr holds 1, 2fr holds 3: 1.5 per fr).
         assert_eq!(
-            sizes(&t, None, 10.0, 2.0, |i| i as f32),
-            [200.0, 1.0, 2.0, 3.0, 4.0]
+            sizes(&t, None, 10.0, 2.0, |_| 0.0, |i| i as f32),
+            [200.0, 1.5, 2.0, 3.0, 4.0]
         );
+    }
+
+    #[test]
+    fn an_fr_track_never_shrinks_below_its_least_and_the_rest_share_again() {
+        let t = [Track::Fr(1.0), Track::Fr(1.0), Track::Fr(2.0)];
+        // 400 is 100, 100, 200; the first needs 160, so 240 is left for 1:2.
+        let s = sizes(
+            &t,
+            Some(400.0),
+            0.0,
+            1.0,
+            |i| if i == 0 { 160.0 } else { 0.0 },
+            |_| 0.0,
+        );
+        assert_eq!(s, [160.0, 80.0, 160.0]);
     }
 }

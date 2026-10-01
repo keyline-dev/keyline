@@ -36,6 +36,8 @@ pub(super) struct Flex<'a> {
     pub(super) layer: &'a Layer,
     pub(super) index: usize,
     pub(super) main: f32,
+    /// Where a `fill` child grows from: its size along the stack, else 0.
+    pub(super) basis: f32,
     pub(super) cross: f32,
     pub(super) cross_forced: Option<f32>,
     pub(super) fill: bool,
@@ -115,9 +117,6 @@ fn arrange<'a>(
             )
         })
         .collect();
-    if dir.is_reverse() {
-        flow.reverse();
-    }
     let lines = wrap_lines(&flow, stack.wrap, inner_main, gap);
     let mut fits = true;
     let mut items = Vec::with_capacity(flow.len());
@@ -145,10 +144,22 @@ fn arrange<'a>(
                 f.cross = measure(scene, f.layer, k, parent, (Some(f.main), None), true).1;
             }
         }
+        // How far down the line its children reach: baseline-aligned ones
+        // sit lower than their own height when a neighbour's baseline is.
+        let reach =
+            line.iter()
+                .map(|f| f.cross)
+                .fold(0.0, f32::max)
+                .max(baselines(line, k, row).map_or(0.0, |(max, of)| {
+                    line.iter()
+                        .filter(|f| f.align == StackAlign::Baseline)
+                        .map(|f| max - of(f) + f.cross)
+                        .fold(0.0, f32::max)
+                }));
         // A single line spans the stack's inside; wrapped lines hug.
         let line_cross = match inner_cross {
             Some(c) if n_lines == 1 => c,
-            _ => line.iter().map(|f| f.cross).fold(0.0, f32::max),
+            _ => reach,
         };
         for f in line.iter_mut() {
             if f.align == StackAlign::Stretch && f.cross_forced.is_none() {
@@ -187,14 +198,25 @@ fn arrange<'a>(
             ));
             at += f.main + gap + extra;
         }
-        let line_extent = line.iter().map(|f| f.cross).fold(0.0, f32::max);
-        content_cross = cross_at + line_extent;
+        content_cross = cross_at + reach;
         cross_at = content_cross + line_gap;
     }
     if let Some(c) = inner_cross
         && content_cross > c + 0.5
     {
         fits = false;
+    }
+    // Reversed, the stack starts at its far edge, as in CSS: the plain
+    // layout, mirrored along it.
+    if dir.is_reverse() {
+        let m = inner_main.unwrap_or(content_main);
+        for (_, it) in &mut items {
+            if row {
+                it.pos.0 = m - it.pos.0 - it.size.0;
+            } else {
+                it.pos.1 = m - it.pos.1 - it.size.1;
+            }
+        }
     }
     // Draw in the children's own order, whatever the direction.
     items.sort_by_key(|(i, _)| *i);
@@ -291,7 +313,16 @@ fn flex_item<'a>(
     } else {
         (cross_forced, main_forced)
     };
-    let natural = measure(scene, c, k, parent, forced, true);
+    let mut natural = measure(scene, c, k, parent, forced, true);
+    // Text with no width of its own across a column it doesn't fill
+    // (`alignItems: center`) wraps at the column's width rather than run
+    // past it, as CSS's fit-content does.
+    if let (false, Kind::Text { .. }, None, Some(m)) = (row, &c.kind, cross_forced, inner_cross)
+        && matches!(len_cross, None | Some(Length::Hug))
+        && natural.0 > m + 0.5
+    {
+        natural = measure(scene, c, k, parent, (Some(m), main_forced), true);
+    }
     let (nat_main, cross) = if row { natural } else { (natural.1, natural.0) };
     // Stretched to the line later; it mustn't set the line at 100 px.
     let cross = if stretches { 0.0 } else { cross };
@@ -322,6 +353,11 @@ fn flex_item<'a>(
             main_forced.unwrap_or(0.0).max(min_main)
         } else {
             nat_main.max(min_main)
+        },
+        basis: if fill {
+            main_forced.unwrap_or(0.0)
+        } else {
+            nat_main
         },
         cross,
         cross_forced,

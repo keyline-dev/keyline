@@ -47,6 +47,18 @@ fn auto_width_text_stays_centered_when_stretched() {
 }
 
 #[test]
+fn auto_width_text_stays_centered_when_stretched_down() {
+    let s = scene(json!([text(
+        "t",
+        json!({"x": 100, "y": 50, "constraints": {"vertical": "stretch"}})
+    )]));
+    let a = boxes(&s, &size("s", 1000.0, 500.0, 1.0))["t"];
+    let b = boxes(&s, &size("s", 1000.0, 700.0, 1.0))["t"];
+    assert_eq!(b.h, a.h);
+    assert!((b.y - (a.y + 100.0)).abs() < 0.01, "{a:?} {b:?}");
+}
+
+#[test]
 fn auto_height_text_wraps_at_its_width_and_grows_down() {
     let one = scene(json!([text("t", json!({"width": 800}))]));
     let many = scene(json!([text(

@@ -252,3 +252,31 @@ async fn a_grid_collage_rearranges_per_aspect_with_one_at() {
     }
     mcp.stop().await;
 }
+
+#[tokio::test]
+async fn a_grid_whose_rows_outgrow_it_is_reported_in_the_edit_reply() {
+    let mcp = Mcp::start("grid-overflow").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 1000, "height": 500, "sizes": [{"id": "s", "width": 1000, "height": 500}]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    let reply = mcp
+        .ok(
+            "layer_add",
+            json!({"sceneId": id, "layers": [
+                {"id": "grid", "type": "frame", "width": 400, "height": 200, "gridTemplateColumns": "1fr", "children": [
+                    {"id": "a", "type": "rect", "height": 150}, {"id": "b", "type": "rect", "height": 150}]}]}),
+        )
+        .await;
+    assert!(
+        reply.contains("grid") && reply.contains("!overflow needs 400×300"),
+        "{reply}"
+    );
+    mcp.stop().await;
+}
