@@ -61,7 +61,7 @@ pub(super) fn motion(out: &mut String, l: &crate::scene::Layer, shot: Option<(f3
 /// where they reach past the box (tall caps at a tight `lineHeight` in a
 /// frame that clips). `None` when all of it shows. Ink gets a pixel of
 /// slack for antialiasing.
-pub(super) fn text_cut(p: &Placed, visible: Rect) -> Option<Rect> {
+pub(super) fn text_cut(p: &Placed, m: &skia_safe::Matrix, visible: Rect) -> Option<Rect> {
     if !matches!(p.layer.kind, Kind::Text { .. }) {
         return None;
     }
@@ -81,6 +81,7 @@ pub(super) fn text_cut(p: &Placed, visible: Rect) -> Option<Rect> {
             h: r.bottom().max(i.bottom()) - y,
         }
     });
+    let shown = super::overlap::mapped(m, shown);
     (!contains(visible, shown)).then_some(shown)
 }
 

@@ -162,8 +162,9 @@ fn check(
                     w: size.width,
                     h: size.height,
                 },
-                by: "canvas",
+                by: ["canvas"; 4],
                 quiet: false,
+                cut: false,
             };
             let mut lines = Vec::new();
             // After the first shot, only the shot is new: the layers around it
@@ -234,10 +235,65 @@ struct Checks<'s, 'i> {
 #[derive(Clone, Copy)]
 struct Clip<'a> {
     rect: Rect,
-    by: &'a str,
+    /// Who draws each edge of `rect`, left, top, right, bottom: the canvas
+    /// or the clipping frame that's tightest there, named in `!clipped`.
+    by: [&'a str; 4],
     /// Inside a stack already reported `!overflow`: its children falling
     /// outside it are that one problem, not one each.
     quiet: bool,
+    /// Inside a content-sized frame already reported `!clipped`: what it
+    /// cuts of its children is that one problem.
+    cut: bool,
+}
+
+impl<'a> Clip<'a> {
+    /// This area inside a clipping frame `by` drawn at `r`.
+    fn within(self, r: Rect, by: &'a str) -> Self {
+        let v = self.rect;
+        let mut edges = self.by;
+        for (i, tighter) in [
+            r.x > v.x,
+            r.y > v.y,
+            r.right() < v.right(),
+            r.bottom() < v.bottom(),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if tighter {
+                edges[i] = by;
+            }
+        }
+        Clip {
+            rect: intersect(r, v).unwrap_or(Rect {
+                w: 0.0,
+                h: 0.0,
+                ..r
+            }),
+            by: edges,
+            ..self
+        }
+    }
+
+    /// `!clipped by <who>: <side> <px>…` for a box `r` that reaches past
+    /// this area, named by the edge that cuts the most, or `None`.
+    fn cut(&self, r: Rect) -> Option<String> {
+        let v = self.rect;
+        let sides = [
+            ("left", v.x - r.x),
+            ("top", v.y - r.y),
+            ("right", r.right() - v.right()),
+            ("bottom", r.bottom() - v.bottom()),
+        ];
+        let worst = (0..4)
+            .filter(|&i| sides[i].1 > 0.5)
+            .max_by(|&a, &b| sides[a].1.total_cmp(&sides[b].1))?;
+        let mut out = format!(" !clipped by {}:", self.by[worst]);
+        for (side, px) in sides.iter().filter(|(_, px)| *px > 0.5) {
+            let _ = write!(out, " {side} {}px", px.ceil());
+        }
+        Some(out)
+    }
 }
 
 /// `opacity` is the product of the ancestors' opacities, `m` their visual
@@ -267,8 +323,6 @@ fn line(
         n(r.w),
         n(r.h)
     );
-    // ponytail: checks below use the unrotated box; fine for the small tilts
-    // designs use, wrong for large angles.
     if l.rotation != 0.0 {
         let _ = write!(out, " rot {}°", n(l.rotation));
     }
@@ -333,7 +387,10 @@ fn line(
                     n(para.min_intrinsic_width().ceil())
                 );
             }
-            if checks.safe.is_some_and(|safe| !contains(safe, r)) {
+            // What the platform's bars would cover: the letters, where
+            // they're drawn (rotated, scaled or moved, the box around them).
+            let letters = overlap::mapped(m, ink(p).unwrap_or(r));
+            if checks.safe.is_some_and(|safe| !contains(safe, letters)) {
                 out.push_str(" !unsafe");
             }
             if let Some(others) = checks.overlaps.get(l.id.as_str()).filter(|_| !clip.quiet) {
@@ -417,24 +474,41 @@ fn line(
         }
         _ => r,
     };
-    // Pushed out of an overflowing stack: reported once, on the stack. A
-    // spacer draws nothing, so an empty one hides nothing.
-    if clip.quiet {
+    // Checked where it's drawn: the box around it rotated, scaled or moved.
+    let shown = overlap::mapped(m, shown);
+    // A frame that sizes to its content, cut: its content is lost, and the
+    // cut is reported here once, not on each child it takes.
+    let hugged = sized_by_content(p);
+    let cut_here = (!clip.quiet && !clip.cut)
+        .then(|| {
+            let mut r = shown;
+            // Only the sides its content sizes count: a fixed or filling
+            // side may run off the canvas on purpose (a full-bleed band).
+            if !hugged.0 {
+                (r.x, r.w) = (visible.x.max(r.x), r.w.min(visible.w));
+            }
+            if !hugged.1 {
+                (r.y, r.h) = (visible.y.max(r.y), r.h.min(visible.h));
+            }
+            (hugged.0 || hugged.1).then(|| clip.cut(r)).flatten()
+        })
+        .flatten();
+    // Pushed out of an overflowing stack, or cut with a frame reported
+    // above: reported once, there. A spacer draws nothing, so an empty one
+    // hides nothing.
+    if clip.quiet || clip.cut {
     } else if intersect(shown, visible).is_none() && !matches!(l.kind, Kind::Spacer { .. }) {
         out.push_str(" !hidden");
-    } else if let Some(r) = text_cut(p, visible) {
-        let _ = write!(out, " !clipped by {}:", clip.by);
-        let cut = [
-            ("left", visible.x - r.x),
-            ("top", visible.y - r.y),
-            ("right", r.right() - visible.right()),
-            ("bottom", r.bottom() - visible.bottom()),
-        ];
-        for (side, px) in cut.iter().filter(|(_, px)| *px > 0.5) {
-            let _ = write!(out, " {side} {}px", px.ceil());
+    } else if let Some(r) = text_cut(p, m, visible) {
+        if let Some(cut) = clip.cut(r) {
+            out.push_str(&cut);
         }
-    } else if clip.by != "canvas" && shadow_cut(p, visible) {
-        let _ = write!(out, " warn shadow clipped by {}", clip.by);
+    } else if let Some(cut) = &cut_here {
+        out.push_str(cut);
+    } else if let Some(by) = clip.by.iter().find(|b| **b != "canvas")
+        && shadow_cut(p, visible)
+    {
+        let _ = write!(out, " warn shadow clipped by {by}");
     }
     // An unnamed text's words, when there's something to fix or judge.
     if (out.contains(" !") || out.contains(" warn "))
@@ -445,25 +519,30 @@ fn line(
     }
     lines.push(out);
     let inner = match &l.kind {
-        Kind::Frame { clip: true, .. } => Clip {
-            rect: intersect(r, visible).unwrap_or(Rect {
-                w: 0.0,
-                h: 0.0,
-                ..r
-            }),
-            by: &l.id,
-            quiet: clip.quiet,
-        },
+        Kind::Frame { clip: true, .. } => clip.within(shown, &l.id),
         _ => clip,
     };
     for c in &p.children {
         let pushed = p.overflow.is_some() && c.layer.position != Position::Absolute;
         let own = Clip {
             quiet: inner.quiet || pushed,
+            cut: inner.cut || cut_here.is_some(),
             ..inner
         };
         line(lines, checks, c, own, depth + 1, (opacity, m));
     }
+}
+
+/// Whether a frame with children sizes to them, across and down: no
+/// width (or height) of its own, or `hug`.
+fn sized_by_content(p: &Placed) -> (bool, bool) {
+    let Kind::Frame { children, .. } = &p.layer.kind else {
+        return (false, false);
+    };
+    let hug = |len: Option<crate::scene::Length>| {
+        !children.is_empty() && matches!(len, None | Some(crate::scene::Length::Hug))
+    };
+    (hug(p.layer.width), hug(p.layer.height))
 }
 
 fn intersect(a: Rect, b: Rect) -> Option<Rect> {

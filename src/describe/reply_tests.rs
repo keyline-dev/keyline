@@ -460,3 +460,93 @@ fn a_text_fill_that_hides_its_color_is_hinted() {
     );
     assert!(hint(json!({"color": "#2E7D5B", "fill": "#2E7D5B"})).is_empty());
 }
+
+#[test]
+fn a_column_taller_than_the_canvas_says_so_once_on_itself() {
+    let col = |hero: f32, height: serde_json::Value| {
+        let mut c = json!({"id": "col", "type": "frame", "width": "fill", "flexDirection": "column", "children": [
+            {"id": "hero", "type": "rect", "width": "fill", "height": hero, "fill": "#333333"},
+            {"id": "card", "type": "frame", "width": "fill", "flexDirection": "column", "fill": "#EEEEEE", "children": [
+                {"id": "line", "type": "text", "text": "The card's line", "fontSize": 30}]}]});
+        if !height.is_null() {
+            c["height"] = height;
+        }
+        describe(&scene(json!([c])), Some("wide"), false, None).unwrap()
+    };
+    assert_eq!(col(150.0, json!(null)), "ok", "it fits");
+    // Sized by its content, 16 px taller than the canvas: said on the
+    // column, with what to cut, not on the text inside it.
+    let d = col(180.0, json!(null));
+    assert!(
+        d.starts_with("wide col frame 0,0 400×216 !clipped by canvas: bottom 16px"),
+        "{d}"
+    );
+    assert!(
+        !d.contains("line text"),
+        "the text inside is that one problem: {d}"
+    );
+    // A column with its own height may run off the canvas on purpose; the
+    // card sizing to its content inside it is what loses its content.
+    assert_eq!(
+        col(180.0, json!(260)),
+        "wide card frame 0,180 400×36 !clipped by canvas: bottom 16px\n"
+    );
+}
+
+#[test]
+fn a_clipped_text_names_the_edge_that_cuts_it() {
+    // The frame clips, but it reaches past the canvas: the canvas cuts the text.
+    let s = scene(
+        json!([{"id": "band", "type": "frame", "y": 100, "width": 400, "height": 200, "children": [
+        {"id": "t", "type": "text", "text": "Low", "y": 80, "fontSize": 40}]}]),
+    );
+    let d = describe(&s, Some("wide"), false, None).unwrap();
+    assert!(
+        d.contains("t text") && d.contains("!clipped by canvas: bottom "),
+        "{d}"
+    );
+    // Inside the canvas, its frame is what cuts it.
+    let s = scene(
+        json!([{"id": "band", "type": "frame", "y": 10, "width": 400, "height": 40, "children": [
+        {"id": "t", "type": "text", "text": "Low", "y": 20, "fontSize": 40}]}]),
+    );
+    let d = describe(&s, Some("wide"), false, None).unwrap();
+    assert!(d.contains("!clipped by band: bottom "), "{d}");
+}
+
+#[test]
+fn a_rotated_layer_is_checked_where_it_is_drawn() {
+    // Upright, the sticker fits by 10 px; turned 30° its corners leave the canvas.
+    let sticker = |rotate: f32| {
+        let s = scene(
+            json!([{"id": "sale", "type": "text", "text": "SALE NOW", "x": 230, "y": 10, "fontSize": 30, "rotate": rotate}]),
+        );
+        describe(&s, Some("wide"), false, None).unwrap()
+    };
+    assert_eq!(sticker(0.0), "ok");
+    assert!(
+        sticker(30.0).contains("sale text") && sticker(30.0).contains("!clipped by canvas: "),
+        "{}",
+        sticker(30.0)
+    );
+}
+
+#[test]
+fn a_tilted_line_near_the_safe_area_is_checked_as_drawn() {
+    // A long line just above a story's bottom bar: tilted, one end dips in.
+    let line = |rotate: f32| {
+        let mut s = scene(
+            json!([{"id": "cta", "type": "text", "text": "Adopt today at the shelter",
+            "x": 20, "y": 150, "fontSize": 30, "rotate": rotate}]),
+        );
+        s.sizes.truncate(1);
+        s.sizes[0].safe = [0.0, 0.0, 15.0, 0.0];
+        describe(&s, None, false, None).unwrap()
+    };
+    assert_eq!(line(0.0), "ok");
+    assert!(
+        line(-4.0).contains("cta text") && line(-4.0).contains("!unsafe"),
+        "{}",
+        line(-4.0)
+    );
+}
