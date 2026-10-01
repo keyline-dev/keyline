@@ -36,7 +36,9 @@ use crate::scene::{Fit, Kind, Position, Scene};
 use contrast::contrast;
 use overlap::{ink, overlaps};
 
-pub use facts::{facts, fonts_line, halftone_hints, image_dpi, scale_hints, text_report};
+pub use facts::{
+    facts, facts_for, fonts_line, halftone_hints, image_dpi, scale_hints, text_report,
+};
 
 /// `assets` enables the contrast check, which renders each size without its
 /// text and samples what lies behind every text. `None` skips it.
@@ -56,6 +58,26 @@ pub fn describe(
         ],
         None => scene.sizes.iter().collect(),
     };
+    Ok(check(scene, &sizes, full, assets))
+}
+
+/// Problem lines for some of the sizes (a render of only those), or `None`
+/// when they're clean; `all` in a grouped line means all of these.
+pub fn warnings_for(
+    scene: &Scene,
+    sizes: &[&crate::scene::Size],
+    assets: Option<&Path>,
+) -> Option<String> {
+    Some(check(scene, sizes, false, assets)).filter(|w| w != "ok")
+}
+
+/// [`describe`] for these sizes.
+fn check(
+    scene: &Scene,
+    sizes: &[&crate::scene::Size],
+    full: bool,
+    assets: Option<&Path>,
+) -> String {
     let mut out = String::new();
     let mut problems = Vec::new();
     // The intrinsic sizes, so the agent can place images without cropping.
@@ -76,9 +98,9 @@ pub fn describe(
             .collect();
         let _ = writeln!(out, "assets {}", list.join(", "));
     }
-    for &size in &sizes {
+    for &size in sizes {
         let sized = &*scene.for_size(size);
-        for (view, t, first) in views(sized) {
+        for (view, t, first) in views(sized, &unplayed(scene, size)) {
             let scene = &view;
             let placed = layout(scene, size);
             // A backdrop that fails to render (e.g. an asset missing from the
@@ -159,7 +181,7 @@ pub fn describe(
     if out.is_empty() {
         out.push_str("ok");
     }
-    Ok(out)
+    out
 }
 
 /// The lines with a problem, and above them a `firstFit` that skipped
@@ -283,15 +305,17 @@ fn named(l: &crate::scene::Layer) -> Option<String> {
 
 /// The scene as checked: whole, or once per shot with only that shot
 /// shown, each with a moment it's fully on screen (its transition in done)
-/// and whether it's the first view.
-fn views(scene: &Scene) -> Vec<(Scene, f32, bool)> {
+/// and whether it's the first view. Shots in `unplayed` (hidden at this
+/// size by `media`) aren't checked.
+fn views(scene: &Scene, unplayed: &[usize]) -> Vec<(Scene, f32, bool)> {
     let shots = crate::anim::shots::timeline(scene);
     if shots.is_empty() {
         return vec![(scene.clone(), 0.0, true)];
     }
-    shots
+    let mut out: Vec<(Scene, f32, bool)> = shots
         .iter()
         .enumerate()
+        .filter(|(_, (i, ..))| !unplayed.contains(i))
         .map(|(n, &(i, start, _, into))| {
             let mut view = scene.clone();
             for &(j, ..) in &shots {
@@ -302,8 +326,34 @@ fn views(scene: &Scene) -> Vec<(Scene, f32, bool)> {
             } else {
                 start + into.map_or(0.0, crate::anim::shots::Transition::overlap)
             };
-            (view, settled, n == 0)
+            (view, settled, false)
         })
+        .collect();
+    // The layers around the shots are listed with the first view checked.
+    if let Some(first) = out.first_mut() {
+        first.2 = true;
+    }
+    out
+}
+
+/// The top-level shots `media` hides at `size` (an A4 page that shows a
+/// video's first shot only): `scene` is before `for_size`, which forgets
+/// where `hidden` came from.
+fn unplayed(scene: &Scene, size: &crate::scene::Size) -> Vec<usize> {
+    let mut keys = crate::scene::aspect_classes(size);
+    keys.push(&size.id);
+    scene
+        .layers
+        .iter()
+        .enumerate()
+        .filter(|(_, l)| l.time.shot.is_some())
+        .filter(|(_, l)| {
+            keys.iter()
+                .rev()
+                .find_map(|k| l.at.get(*k)?.get("hidden")?.as_bool())
+                .unwrap_or(false)
+        })
+        .map(|(i, _)| i)
         .collect()
 }
 

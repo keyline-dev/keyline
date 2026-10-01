@@ -639,3 +639,59 @@ fn a_squeezed_photo_is_told_the_min_height_that_stops_the_squeeze() {
     let w = band(json!({"minHeight": 200}));
     assert!(!w.contains("warn crop"), "following it fixes it: {w}");
 }
+
+#[test]
+fn facts_read_every_shot_and_skip_shots_a_size_hides() {
+    let shots = |media: serde_json::Value| {
+        let mut s2 = json!({"id": "s2", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 1}, "children": [
+            {"id": "fine", "type": "text", "text": "tickets", "fontSize": 12, "y": 20},
+            {"id": "wide-photo", "type": "image", "asset": "img", "y": 100, "width": 400, "height": 50}]});
+        if !media.is_null() {
+            s2["media"] = media;
+        }
+        scene(json!([
+            {"id": "s1", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 1}, "children": [
+                {"id": "big", "type": "text", "text": "BIG", "fontSize": 60}]},
+            s2
+        ]))
+        .resolved()
+        .into_owned()
+    };
+    // The second shot's 12 px text is the smallest, though a still shows the first.
+    let s = shots(serde_json::Value::Null);
+    assert!(
+        facts(&s).starts_with("smallest text: wide 12px (fine), small 6px (fine)"),
+        "{}",
+        facts(&s)
+    );
+    assert!(
+        warnings(&s, None)
+            .unwrap()
+            .contains("wide wide-photo image")
+    );
+    // Hidden at the small size: neither its text nor its crop counts there.
+    let s = shots(json!({"small": {"hidden": true}}));
+    assert!(
+        facts(&s).starts_with("smallest text: wide 12px (fine), small 30px (big)"),
+        "{}",
+        facts(&s)
+    );
+    let w = warnings(&s, None).unwrap();
+    assert!(
+        w.contains("wide wide-photo") && !w.contains("small wide-photo"),
+        "{w}"
+    );
+}
+
+#[test]
+fn drawn_lines_print_a_no_break_space_as_itself() {
+    let s = scene(
+        json!([{"id": "t", "type": "text", "text": "Distrito\u{a0}4 \"siga\"", "fontSize": 20, "width": 110}]),
+    );
+    let r = text_report(&s, &s.sizes[0]);
+    assert!(
+        r.contains("Distrito\u{a0}4") && !r.contains("\\u{a0}"),
+        "{r}"
+    );
+    assert!(r.contains("\\\"siga\\\""), "quotes are escaped: {r}");
+}

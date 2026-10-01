@@ -346,7 +346,9 @@ impl Server {
             Format::Apng | Format::Gif | Format::Mp4 | Format::Webm
         );
         let times = match drawn.first() {
-            Some(scene) if a.preview && moving => moments(scene),
+            Some(scene) if a.preview && moving => {
+                crate::anim::moments::moments(scene, PREVIEW_MOMENTS)
+            }
             _ => Vec::new(),
         };
         if !times.is_empty() {
@@ -571,25 +573,4 @@ fn facts(
     }
     let _ = write!(out, ", {} KB", bytes.div_ceil(1024));
     out
-}
-
-/// Moments a moving scene's preview shows: [`PREVIEW_MOMENTS`] of them,
-/// most near the start, where entrances play, and none at the very end (a
-/// loop's last frame is often its blank loop point). None for a still scene.
-fn moments(scene: &Scene) -> Vec<f32> {
-    let Some(len) = crate::anim::shots::length(scene).filter(|l| *l > 0.0) else {
-        return Vec::new();
-    };
-    // Shares of the length; the first three sit at 0.2, 0.5 and 1 s when
-    // the scene is long enough (3 s or more).
-    let shares = if len >= 3.0 {
-        [0.2 / len, 0.5 / len, 1.0 / len, 0.45, 0.7, 0.9]
-    } else {
-        [0.1, 0.25, 0.4, 0.55, 0.7, 0.9]
-    };
-    shares
-        .iter()
-        .take(PREVIEW_MOMENTS)
-        .map(|s| s * len)
-        .collect()
 }

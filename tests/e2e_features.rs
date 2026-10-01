@@ -692,12 +692,35 @@ fn render_draws_a_scene_file_and_fails_on_a_defect() {
         text.contains("r2 400x200 h text") && text.contains("!clipped"),
         "{text}"
     );
+    // Only the sizes drawn, every line of a row tagged with it, and the
+    // facts for the drawn size only.
     assert!(
-        !text
-            .lines()
-            .any(|l| l.starts_with("small ") || l.contains("r1 small") || l.contains("r2 small")),
+        !text.lines().any(|l| l.starts_with("small ")
+            || l.contains("r1 small ")
+            || l.contains("r2 small ")
+            || l.contains(", small ")
+            || l.starts_with("400x200 h ")),
         "only the sizes drawn: {text}"
     );
+    assert!(
+        text.contains("r2 smallest text: 400x200 40px (h)\n"),
+        "{text}"
+    );
+    // --check: the same checks, nothing drawn.
+    let (check_code, checked, files) = run(&[
+        "--rows",
+        rows.to_str().unwrap(),
+        "--size",
+        "400x200",
+        "--check",
+    ]);
+    assert_eq!(check_code, Some(1), "{checked}");
+    assert!(files.is_empty(), "{files:?}");
+    let checks: Vec<&str> = text
+        .lines()
+        .filter(|l| !l.contains(".png (") && !l.starts_with("fonts:"))
+        .collect();
+    assert_eq!(checked.lines().collect::<Vec<_>>(), checks, "{checked}");
     // Render flags without render are a mistake.
     let o = std::process::Command::new(env!("CARGO_BIN_EXE_keyline-mcp"))
         .args(["--out", "x"])

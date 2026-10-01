@@ -14,6 +14,12 @@ use crate::text::Text;
 /// No thresholds: 8 px may be fine print on a banner and unreadable on a
 /// billboard.
 pub fn facts(scene: &Scene) -> String {
+    facts_for(scene, &scene.sizes.iter().collect::<Vec<_>>())
+}
+
+/// [`facts`] for some of the sizes (a render of only those). Every shot
+/// counts, not only the first, which a still shows.
+pub fn facts_for(scene: &Scene, sizes: &[&Size]) -> String {
     fn walk<'a>(placed: &'a [Placed<'a>], f: &mut impl FnMut(&'a Placed<'a>)) {
         for p in placed {
             f(p);
@@ -22,24 +28,29 @@ pub fn facts(scene: &Scene) -> String {
     }
     let mut smallest = Vec::new();
     let mut upscaled = Vec::new();
-    for size in &scene.sizes {
+    for &size in sizes {
         let sized = scene.for_size(size);
-        let placed = layout(&sized, size);
-        let mut min: Option<(f32, &str)> = None;
-        walk(&placed, &mut |p| match (&p.text, &p.layer.kind) {
-            (Some((_, fit)), _) if min.is_none_or(|(px, _)| fit.font_size < px) => {
-                min = Some((fit.font_size, &p.layer.id));
-            }
-            (_, kind) if let Some((asset, fit, crop, tile_scale)) = kind.picture() => {
-                if let Some(a) = scene.assets.get(asset).filter(|a| !a.svg) {
-                    let up = image_scale(p.rect, a.width, a.height, fit, crop, tile_scale * p.k);
-                    if up > 1.005 {
-                        upscaled.push(format!("{} {} {up:.1}x", size.id, p.layer.id));
+        let mut min: Option<(f32, String)> = None;
+        for (view, ..) in super::views(&sized, &super::unplayed(scene, size)) {
+            let placed = layout(&view, size);
+            walk(&placed, &mut |p| match (&p.text, &p.layer.kind) {
+                (Some((_, fit)), _) if min.as_ref().is_none_or(|(px, _)| fit.font_size < *px) => {
+                    min = Some((fit.font_size, p.layer.id.clone()));
+                }
+                (_, kind) if let Some((asset, fit, crop, tile_scale)) = kind.picture() => {
+                    if let Some(a) = scene.assets.get(asset).filter(|a| !a.svg) {
+                        let up =
+                            image_scale(p.rect, a.width, a.height, fit, crop, tile_scale * p.k);
+                        // A layer outside the shots is in every view: once.
+                        let line = format!("{} {} {up:.1}x", size.id, p.layer.id);
+                        if up > 1.005 && !upscaled.contains(&line) {
+                            upscaled.push(line);
+                        }
                     }
                 }
-            }
-            _ => {}
-        });
+                _ => {}
+            });
+        }
         if let Some((px, id)) = min {
             smallest.push(format!("{} {}px ({id})", size.id, px_label(px)));
         }
@@ -219,11 +230,8 @@ pub fn text_report(scene: &Scene, size: &Size) -> String {
                     if shrunk {
                         let _ = write!(out, " {}", super::shrunk(max, fit));
                     }
-                    let lines: Vec<String> = t
-                        .drawn_lines(para, fit)
-                        .iter()
-                        .map(|l| format!("{l:?}"))
-                        .collect();
+                    let lines: Vec<String> =
+                        t.drawn_lines(para, fit).iter().map(|l| quote(l)).collect();
                     let _ = writeln!(out, ": {}", lines.join(" / "));
                 }
             }
@@ -232,5 +240,20 @@ pub fn text_report(scene: &Scene, size: &Size) -> String {
     }
     let mut out = String::new();
     go(&mut out, &layout(&scene.for_size(size), size));
+    out
+}
+
+/// `line` in double quotes, escaping only `"` and `\`: a no-break space
+/// or an accent prints as itself, not as `\u{a0}`.
+fn quote(line: &str) -> String {
+    let mut out = String::with_capacity(line.len() + 2);
+    out.push('"');
+    for c in line.chars() {
+        if matches!(c, '"' | '\\') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('"');
     out
 }

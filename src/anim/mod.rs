@@ -5,6 +5,7 @@
 
 pub mod count;
 pub mod ease;
+pub mod moments;
 pub mod motion;
 pub mod shots;
 pub mod track;

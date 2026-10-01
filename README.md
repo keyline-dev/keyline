@@ -231,7 +231,7 @@ Ask your agent for a design: *"Make a vote-by-mail flyer with this photo, in 108
 
 **Options:** every setting is a flag (`--allow-read`, `--no-motion`, `--data`, `--fonts`, `--renderer`, `--ffmpeg`, `--encoder`), listed in [docs/tools.md](docs/tools.md#server-configuration) and by `keyline-mcp --help`.
 
-**Without an agent:** `keyline-mcp render scene.json --out renders/` renders a scene file at every size, and exits 1 on a `!` defect, for scripts and CI; in GitHub Actions, `uses: keyline-dev/keyline@v0` does it for every scene in a repo ([docs/tools.md](docs/tools.md#rendering-without-an-agent)).
+**Without an agent:** `keyline-mcp render scene.json --out renders/` renders a scene file at every size, and exits 1 on a `!` defect, for scripts and CI (`--check` checks without drawing); in GitHub Actions, `uses: keyline-dev/keyline@v0` does it for every scene in a repo ([docs/tools.md](docs/tools.md#rendering-without-an-agent)).
 
 **GPU on a Linux server:** it needs a GPU with Vulkan drivers (NVIDIA's, or Mesa for AMD and Intel); no display is needed. In Docker, pass the GPU through (for NVIDIA: the Container Toolkit, `--gpus all`, with graphics capability). Software Vulkan drivers are skipped, since the CPU renderer is faster; without a GPU, renders use the CPU.
 

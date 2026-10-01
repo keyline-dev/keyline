@@ -29,6 +29,8 @@ pub struct RenderFile {
     pub max_kb: Option<u32>,
     /// Also write the preview sheet, `<scene>-preview.png`.
     pub preview: bool,
+    /// Print the checks only: lay out, draw and encode nothing.
+    pub check: bool,
 }
 
 /// The report `render` prints, and whether the design has a `!` defect.
@@ -76,46 +78,19 @@ impl Server {
         if r.preview {
             args["preview"] = json!(true);
         }
+        let scene = self.store.load(&id).map_err(|e| e.to_string())?;
+        let rows =
+            serde_json::from_value::<Vec<_>>(rows_of(&args)).map_err(|e| format!("rows: {e}"))?;
+        let mut text = self.checks(&scene, &id, &created, &r.sizes, &rows)?;
+        if r.check {
+            return Ok(Report {
+                defects: text.split_whitespace().any(|w| w.starts_with('!')),
+                text,
+            });
+        }
         let (blocks, files) = self.render_impl(from(args.clone())?).await?;
         let out = r.out.clone().unwrap_or_else(|| PathBuf::from("."));
         std::fs::create_dir_all(&out).map_err(|e| format!("{}: {e}", out.display()))?;
-        let mut text = String::new();
-        let scene = self.store.load(&id).map_err(|e| e.to_string())?;
-        // Problem lines start with their size: only the sizes drawn count.
-        // Facts and hints start otherwise and always count.
-        let problem = |line: &str| {
-            line.split_whitespace()
-                .next()
-                .is_some_and(|w| scene.sizes.iter().any(|s| s.id == w))
-        };
-        let drawn = |line: &str| {
-            r.sizes.is_empty()
-                || line
-                    .split_whitespace()
-                    .next()
-                    .is_some_and(|s| r.sizes.iter().any(|w| w == s))
-        };
-        if r.rows.is_none() {
-            for line in created.lines().skip(1).filter(|l| !problem(l) || drawn(l)) {
-                let _ = writeln!(text, "{line}");
-            }
-        } else {
-            for line in created.lines().skip(1).filter(|l| !problem(l)) {
-                let _ = writeln!(text, "{line}");
-            }
-            // Each row is its own design: checked as it will be drawn.
-            let rows = serde_json::from_value::<Vec<_>>(rows_of(&args))
-                .map_err(|e| format!("rows: {e}"))?;
-            for (label, variant) in super::handlers::variants(&scene, &rows)? {
-                let assets = self.store.assets_dir();
-                let Some(w) = crate::describe::warnings(&variant, Some(&assets)) else {
-                    continue;
-                };
-                for line in w.lines().filter(|l| drawn(l)) {
-                    let _ = writeln!(text, "{} {line}", label.trim_end_matches('.'));
-                }
-            }
-        }
         // Each file copied into `out`, and the reply naming the copy.
         let mut reply = blocks
             .iter()
@@ -148,6 +123,62 @@ impl Server {
             defects: text.split_whitespace().any(|w| w.starts_with('!')),
             text,
         })
+    }
+}
+
+impl Server {
+    /// What a render of `sizes` (all when empty) would be checked for:
+    /// the load's notes (fetched fonts, hints), then per row of tokens (or
+    /// the scene alone) its problem lines and its facts, for those sizes
+    /// only, a row's lines tagged `r<n>`.
+    fn checks(
+        &self,
+        scene: &crate::scene::Scene,
+        id: &str,
+        created: &str,
+        sizes: &[String],
+        rows: &[serde_json::Map<String, Value>],
+    ) -> Result<String, String> {
+        for want in sizes {
+            if !scene.sizes.iter().any(|s| s.id == *want) {
+                return Err(format!("no size {want}"));
+            }
+        }
+        let drawn: Vec<&crate::scene::Size> = scene
+            .sizes
+            .iter()
+            .filter(|s| sizes.is_empty() || sizes.contains(&s.id))
+            .collect();
+        let mut text = String::new();
+        // The load's own lines that aren't checks: fonts fetched, hints.
+        for line in created.lines().filter(|l| {
+            !l.starts_with(id)
+                && (l.starts_with("hint: ")
+                    || l.starts_with("fetched ")
+                    || l.starts_with("video off"))
+        }) {
+            let _ = writeln!(text, "{line}");
+        }
+        let assets = self.store.assets_dir();
+        for (label, variant) in super::handlers::variants(scene, rows)? {
+            let tag = label.trim_end_matches('.');
+            let tag = if tag.is_empty() {
+                String::new()
+            } else {
+                format!("{tag} ")
+            };
+            let resolved = variant.resolved();
+            if let Some(w) = crate::describe::warnings_for(&resolved, &drawn, Some(&assets)) {
+                for line in w.lines() {
+                    let _ = writeln!(text, "{tag}{line}");
+                }
+            }
+            let facts = crate::describe::facts_for(&resolved, &drawn);
+            if !facts.is_empty() {
+                let _ = writeln!(text, "{tag}{facts}");
+            }
+        }
+        Ok(text)
     }
 }
 

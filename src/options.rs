@@ -43,7 +43,9 @@ render:
   --quality <1-100>       JPEG, WebP and video quality
   --max-kb <n>            Lower a lossy file's quality until it fits
   --preview               Also write <scene>-preview.png: every size, or with
-                          an animated --format, 6 moments of each size
+                          an animated --format, key moments of each size
+  --check                 Print the problems and facts only: lay out every
+                          size (and row), draw and encode nothing
   render reads images beside the scene file, prints what the render tool
   replies, and exits 1 if the design has a ! defect. Files are named by
   size id: give each scene its own --out.
@@ -90,6 +92,8 @@ pub struct Options {
     pub max_kb: Option<u32>,
     /// `--preview`: `render` also writes its preview sheet.
     pub preview: bool,
+    /// `--check`: `render` prints its checks without drawing anything.
+    pub check: bool,
 }
 
 impl Options {
@@ -136,6 +140,7 @@ impl Options {
             match flag {
                 "-h" | "--help" => o.help = true,
                 "--preview" => o.preview = true,
+                "--check" => o.check = true,
                 // A value too, for clients that can only fill one in.
                 "--no-motion" => {
                     o.no_motion = match inline.as_deref() {
@@ -250,6 +255,7 @@ mod tests {
         );
         assert_eq!(parse(&["--max-kb=9"]).unwrap().max_kb, Some(9));
         assert!(parse(&["render", "ad.json", "--preview"]).unwrap().preview);
+        assert!(parse(&["render", "ad.json", "--check"]).unwrap().check);
     }
 
     #[test]

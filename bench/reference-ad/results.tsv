@@ -56,3 +56,6 @@ cropfix-3	e5df797+dirty	claude-opus-5[1m]	0.475	13	120	12	12856	3	9235	4366	1593
 units-1	50b2655+dirty	claude-opus-5[1m]	0.479	7	127	6	14116	1	11691	4335	14731	75125	portrait 23, wide 20, sky 10	0	1393
 units-2	50b2655+dirty	claude-opus-5[1m]	0.579	13	158	12	18519	2	11826	4533	18679	189359	portrait 24, wide 20, sky 13	0	6344
 units-3	50b2655+dirty	claude-opus-5[1m]	0.364	8	101	7	8772	2	7953	3729	12232	82668	portrait 20, wide 19, sky 16	0	2331
+r4a-1	4218f34+dirty	claude-opus-5[1m]	0.324	7	81	6	7481	1	6142	3263	13952	58832	portrait 22, wide 19, sky 12	0	3170
+r4a-2	4218f34+dirty	claude-opus-5[1m]	0.578	11	159	10	16552	1	12809	6028	18117	150402	portrait 24, wide 20, sky 10	0	5467
+r4a-3	4218f34+dirty	claude-opus-5[1m]	0.436	8	133	7	8779	1	9989	6179	14022	90070	portrait 24, wide 20, sky 11	0	3087

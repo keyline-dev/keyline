@@ -302,8 +302,12 @@ async fn a_moving_preview_shows_moments_and_a_held_last_shot_is_stated() {
         .filter_map(|c| c.as_text())
         .map(|t| t.text.clone())
         .collect();
-    // Most moments early, where entrances play; none on the last frame.
-    assert!(text.contains("preview at 0.2 0.5 1 1.3 2.1 2.7s"), "{text}");
+    // Each shot's middle, then even steps; nothing leaves and it doesn't
+    // loop, so not the last frame.
+    assert!(
+        text.contains("preview at 0.3 0.5 0.8 1.3 1.8 2.3s"),
+        "{text}"
+    );
     let image = r.content.iter().find_map(|c| c.as_image()).unwrap();
     let png =
         base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &image.data).unwrap();

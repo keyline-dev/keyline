@@ -703,7 +703,7 @@ Set it with `layer_update`'s `{target: {scene: true}, set: {audio: …}}`; `musi
 
 ### Shots and transitions
 
-A layer of `type: "shot"` is a shot: a full-size frame that plays in turn with the other shots instead of stacking. Times inside a shot (`enter`, `animate`, a clip's `delay`) count from the shot's own start. Layers that aren't shots, such as a logo or a caption bar, stay on across all of them. At rest, the first shot shows.
+A layer of `type: "shot"` is a shot: a full-size frame that plays in turn with the other shots instead of stacking. Times inside a shot (`enter`, `animate`, a clip's `delay`) count from the shot's own start. Layers that aren't shots, such as a logo or a caption bar, stay on across all of them. At rest, the first shot shows. Every shot is checked at every size; to keep one out of a size that never plays it (an A4 page of a video's first shot), hide it there: `"media": {"a4-portrait": {"hidden": true}}`. Its checks and facts then skip that size.
 
 ```json
 {"id": "s1", "type": "shot", "duration": 3, "children": ["…"]}
