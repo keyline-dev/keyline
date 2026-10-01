@@ -42,7 +42,7 @@ The agent-facing text lives in `src/server/mod.rs` (instructions and tool descri
 
 Other repos in the `keyline-dev` org:
 
-- `keyline-dev/keyline.dev`: the site. One static page; its images are keyline scenes in `scenes/`, rendered into `assets/` by `render.sh`; the logo is in `logo/`. Hosted on Cloudflare Pages from `main`.
+- `keyline-dev/keyline.dev`: the site. Static pages; its images are keyline scenes in `scenes/`, rendered into `assets/` by `render.sh`; the logo is in `logo/`. Its `/docs/`, `/benchmark/`, `llms.txt` and `sitemap.xml` are built from this repo's `README.md` Quick start, `docs/`, `bench/versus-browser/README.md` and `LICENSE` by `npm run docs` there: rerun it and commit the output whenever any of those change. Hosted on Cloudflare Pages from `main`.
 - `keyline-dev/homebrew-tap`: the Homebrew formula, bumped by the release workflow; edit it by hand only to change more than the version and checksum.
 
 Listings: the official MCP registry (from `server.json`, each release), Glama (claimed through `glama.json`), and awesome-mcp-servers. Contributions come under the agreement in `CONTRIBUTING.md`.
