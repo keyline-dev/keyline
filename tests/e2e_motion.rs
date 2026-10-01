@@ -305,7 +305,8 @@ async fn a_moving_preview_shows_moments_and_a_held_last_shot_is_stated() {
     // Each shot's middle, then even steps; nothing leaves and it doesn't
     // loop, so not the last frame.
     assert!(
-        text.contains("preview at 0.3 0.5 0.8 1.3 1.8 2.3s"),
+        text.contains("preview at 0.3 0.5 0.8 1.3 1.8 2.3s · shots 0–1 0.5–3\n")
+            || text.ends_with("preview at 0.3 0.5 0.8 1.3 1.8 2.3s · shots 0–1 0.5–3"),
         "{text}"
     );
     let image = r.content.iter().find_map(|c| c.as_image()).unwrap();
@@ -331,6 +332,12 @@ async fn a_moving_preview_shows_moments_and_a_held_last_shot_is_stated() {
     assert!(r > 150 && b < 100, "first moment: {r},{b}");
     let (r, b) = px(1980, 20);
     assert!(b > r, "last moment: {r},{b}");
+
+    // A still says which moment and shot it shows.
+    let still = mcp.ok("render", json!({"sceneId": id})).await;
+    assert!(still.contains(", at rest, shot s1, "), "{still}");
+    let still = mcp.ok("render", json!({"sceneId": id, "time": 2})).await;
+    assert!(still.contains(", at 2s, shot s2, "), "{still}");
 
     // The scene outlasts its shots: the last holds, and the reply says so.
     let reply = mcp

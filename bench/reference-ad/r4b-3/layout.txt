@@ -1,0 +1,87 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×900
+portrait 1080×1350
+ root frame 0,0 1080×1350
+  headline text 0,0 1080×248 76px 2L
+  photoBand image 0,248 1080×556 cover crop 8%h
+  cands frame 0,804 1080×145
+   cand1 frame 48,840 309×73
+    text1 text 48,840 309×40 36px
+    text2 text 48,886 309×27 22px
+   cand2 frame 385,840 309×73
+    text3 text 385,840 309×40 36px
+    text4 text 385,886 309×27 22px
+   cand3 frame 723,840 309×73
+    text5 text 723,840 309×40 36px
+    text6 text 723,886 309×27 22px
+  ctaBar frame 0,949 1080×112
+   mailIcon image 303,983 56×44 contain
+   ctaLabel text 383,975 395×60 50px
+  steps frame 0,1061 1080×232
+   frame1 frame 60,1099 960×40
+    image1 image 60,1099 40×40 contain
+    text7 text 120,1101 900×37 31px
+   frame2 frame 60,1161 960×40
+    image2 image 60,1161 40×40 contain
+    text8 text 120,1163 900×37 31px
+   frame3 frame 60,1223 960×40
+    image3 image 60,1223 40×40 contain
+    text9 text 120,1225 900×37 31px
+  footer text 0,1293 1080×57 21px
+wide 1200×1000
+ root frame 0,0 1200×1000
+  headline text 0,0 1200×170 58px 2L
+  photoBand image 0,170 1200×432 cover crop 36%h
+  cands frame 0,601 1200×103
+   cand1 frame 48,622 352×62
+    text1 text 48,622 352×34 31px
+    text2 text 48,661 352×23 19px
+   cand2 frame 424,622 352×62
+    text3 text 424,622 352×34 31px
+    text4 text 424,661 352×23 19px
+   cand3 frame 800,622 352×62
+    text5 text 800,622 352×34 31px
+    text6 text 800,661 352×23 19px
+  ctaBar frame 0,704 1200×85
+   mailIcon image 398,728 48×37 contain
+   ctaLabel text 466,721 336×51 43px
+  steps frame 0,789 1200×168
+   frame1 frame 48,811 1105×34
+    image1 image 48,811 34×34 contain
+    text7 text 99,812 1054×32 26px
+   frame2 frame 48,859 1105×34
+    image2 image 48,859 34×34 contain
+    text8 text 99,860 1054×32 26px
+   frame3 frame 48,907 1105×34
+    image3 image 48,907 34×34 contain
+    text9 text 99,908 1054×32 26px
+  footer text 0,958 1200×42 18px
+sky 300×600
+ root frame 0,0 300×600
+  headline text 0,0 300×123 29px 3L
+  photoBand image 0,123 300×152 cover crop 10%h
+  cands frame 0,276 300×145
+   cand1 frame 13,288 273×34
+    text1 text 13,288 273×17 16px
+    text2 text 13,307 273×15 12px
+   cand2 frame 13,331 273×34
+    text3 text 13,331 273×17 16px
+    text4 text 13,350 273×15 12px
+   cand3 frame 13,374 273×34
+    text5 text 13,374 273×17 16px
+    text6 text 13,393 273×15 12px
+  ctaBar frame 0,420 300×45
+   mailIcon image 57,434 23×18 contain
+   ctaLabel text 88,431 155×24 20px
+  steps frame 0,465 300×92
+   frame1 frame 17,480 266×16
+    image1 image 17,480 16×16 contain
+    text7 text 41,480 242×15 13px
+   frame2 frame 17,505 266×16
+    image2 image 17,505 16×16 contain
+    text8 text 41,506 242×15 13px
+   frame3 frame 17,530 266×16
+    image3 image 17,530 16×16 contain
+    text9 text 41,531 242×15 13px
+  footer text 0,558 300×42 12px 2L

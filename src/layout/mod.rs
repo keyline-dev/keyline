@@ -63,6 +63,9 @@ pub struct Placed<'a> {
     /// Why a `firstFit` passed over its first option, when it did:
     /// `long: headline cut at maxLines 3`.
     pub skipped: Option<String>,
+    /// For an overflowing stack, or one squeezed by its siblings: the
+    /// sibling growing past its own size that causes it.
+    pub cause: Option<String>,
     /// For a stack whose children don't fit even at their smallest: the
     /// size it needs, px.
     pub overflow: Option<(f32, f32)>,
@@ -303,6 +306,7 @@ fn finish<'a>(
         (p, fit)
     });
     let mut overflow = None;
+    let mut cause = None;
     let mut skip = None;
     let (children, chosen) = match &layer.kind {
         Kind::Frame {
@@ -316,9 +320,14 @@ fn finish<'a>(
             );
             let [t, r, b, l] = padding.sides().map(|p| p * k);
             let inner = (rect.w - l - r, rect.h - t - b);
+            let mut across = None;
             let (items, chosen) = match (stack, grid) {
                 (Some(s), _) => {
                     let a = stack::choose(scene, children, s, k, (Some(inner.0), Some(inner.1)));
+                    across = Some(matches!(
+                        a.dir,
+                        crate::scene::Dir::Row | crate::scene::Dir::RowReverse
+                    ));
                     let need = (a.content.0 + l + r, a.content.1 + t + b);
                     if need.0 > rect.w + 0.5 || need.1 > rect.h + 0.5 {
                         overflow = Some((need.0.max(rect.w), need.1.max(rect.h)));
@@ -356,6 +365,20 @@ fn finish<'a>(
                     finish(scene, it.layer, natural, r, k, true)
                 })
                 .collect();
+            // A child that grows past the size it was given squeezes its
+            // siblings: what the overflow it causes names.
+            if let Some(row) = across {
+                let inner_main = if row { inner.0 } else { inner.1 };
+                let grower = placed.iter().find_map(|c| grows_past(c, row, inner_main));
+                if let Some(why) = grower {
+                    for c in placed.iter_mut().filter(|c| c.overflow.is_some()) {
+                        c.cause.get_or_insert_with(|| why.clone());
+                    }
+                    if overflow.is_some() {
+                        cause = Some(why);
+                    }
+                }
+            }
             // Absolute children sit on the frame like free children.
             placed.extend(
                 children
@@ -421,7 +444,27 @@ fn finish<'a>(
         chosen,
         skipped: skip,
         overflow,
+        cause,
     }
+}
+
+/// `photoBox grows past its width 52%: flexGrow 1`, when a stack child
+/// with `flexGrow` and a set size along the stack (`row` or not) is drawn
+/// bigger than that size. `inner` is the stack's inner length that way.
+fn grows_past(c: &Placed, row: bool, inner: f32) -> Option<String> {
+    let l = c.layer;
+    let grow = l.grow.filter(|g| *g > 0.0)?;
+    let (field, len, got) = if row {
+        ("width", l.width?, c.rect.w)
+    } else {
+        ("height", l.height?, c.rect.h)
+    };
+    let (set, written) = match len {
+        Length::Px(v) => (v * c.k, format!("{}", v.round())),
+        Length::Pct(f) => (f * inner, format!("{}%", (f * 100.0).round())),
+        _ => return None,
+    };
+    (got > set + 0.5).then(|| format!("{} grows past its {field} {written}: flexGrow {grow}", l.id))
 }
 
 /// Applies one axis constraint when the parent goes from `old` to `new`.

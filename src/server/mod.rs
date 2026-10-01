@@ -208,8 +208,8 @@ fadeOut}}} changes the scene."
     }
 
     #[tool(
-        description = "Problems per size, or ok. Defects: !truncated|!overflow (needs W×H) !clipped !hidden !overlaps !unsafe (under \
-safeArea). Advisory: warn contrast|crop. full: one line per layer per size: id type x,y w×h, font px, lines, image crop, upscale."
+        description = "Problems per size, or ok. Defects: !truncated|!overflow (W×H) !clipped !hidden !overlaps !covered !unsafe (under \
+safeArea). Advisory: warn contrast|crop|ink. full: one line per layer per size: id type x,y w×h, px, lines, crop, upscale, motion."
     )]
     async fn scene_describe(&self, Parameters(a): Parameters<SceneDescribeArgs>) -> CallToolResult {
         let scene = self.store.load(&a.scene_id).map_err(err);
@@ -288,6 +288,7 @@ pub(crate) fn notes(raw: &Scene, scene: &Scene) -> String {
         .into_iter()
         .chain(crate::text::markup::tag_hints(raw))
         .chain(crate::describe::halftone_hints(scene))
+        .chain(crate::describe::fill_hints(scene))
     {
         out.push('\n');
         out.push_str(&hint);

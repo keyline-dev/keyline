@@ -209,9 +209,34 @@ pub fn fonts_line(scene: &Scene) -> String {
     }
 }
 
+/// A hint per text with both a `color` and a different plain `fill`: the
+/// fill paints the letters, so the color is never drawn, which is how a
+/// meant background looks (`fill` on a chip's text).
+pub fn fill_hints(scene: &Scene) -> Vec<String> {
+    let mut out = Vec::new();
+    scene.walk(&mut |l| {
+        if let Kind::Text { color, .. } = &l.kind
+            && color.0 != 0xFF00_0000
+            && let Some(crate::scene::Paint::Solid(f)) = l
+                .look
+                .fills
+                .as_ref()
+                .and_then(|f| f.as_slice().last())
+            && f.color != *color
+        {
+            out.push(format!(
+                "hint: {} fill paints the letters (its color is unused); a box behind text is a frame with a fill",
+                l.id
+            ));
+        }
+    });
+    out
+}
+
 /// For `render`: every text that wrapped, shrank or was cut, as actually
-/// drawn, so the agent can check wording and breaks without an image.
-/// Texts drawn on one line at their requested size are left out.
+/// drawn, so the agent can check wording and breaks without an image, and
+/// the option each `firstFit` drew. Texts drawn on one line at their
+/// requested size are left out.
 ///
 /// ```text
 ///  headline 68px: "Proven RESULTS for" / "WILLOWMERE Families"
@@ -220,6 +245,14 @@ pub fn fonts_line(scene: &Scene) -> String {
 pub fn text_report(scene: &Scene, size: &Size) -> String {
     fn go(out: &mut String, placed: &[Placed]) {
         for p in placed {
+            // Which option a firstFit drew, so a clean reply says it too.
+            if let (Kind::FirstFit { .. }, Some(c)) = (&p.layer.kind, &p.chosen) {
+                let _ = write!(out, " {} → {c}", p.layer.id);
+                if let Some(why) = &p.skipped {
+                    let _ = write!(out, " ({why})");
+                }
+                out.push('\n');
+            }
             if let (Some((para, fit)), Some(t), Kind::Text { font_size, .. }) =
                 (&p.text, Text::of(p.layer, p.k), &p.layer.kind)
             {

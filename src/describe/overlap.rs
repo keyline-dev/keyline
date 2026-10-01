@@ -98,3 +98,186 @@ pub(super) fn overlaps<'s>(placed: &[Placed<'s>]) -> HashMap<&'s str, Vec<&'s st
     }
     out
 }
+
+/// What a layer drawn over text can be: a layer with paint (a photo, a
+/// shape, a filled frame), or another text's highlight boxes.
+enum Over<'s> {
+    Text(&'s str, Rect, Vec<Rect>),
+    Paint(&'s str, Rect),
+}
+
+/// Texts whose ink a later-drawn layer covers by more than a pixel each
+/// way: a non-text layer with paint, or another text's highlight. Each
+/// coverer once, with the share of the text's ink box it covers, largest
+/// first: `toast 62%`, `name highlight 30%`. Text on text is `!overlaps`.
+pub(super) fn covers<'s>(
+    scene: &crate::scene::Scene,
+    placed: &[Placed<'s>],
+) -> HashMap<&'s str, Vec<(String, f32)>> {
+    fn collect<'s>(order: &mut Vec<Over<'s>>, masks: &[String], placed: &[Placed<'s>], m: &Matrix) {
+        for p in placed {
+            let own = through(m, p);
+            let l = p.layer;
+            let shown = !l.hidden && l.opacity > 0.0 && !masks.contains(&l.id);
+            if shown && let Some(ink) = ink(p).filter(|_| visible(p)) {
+                order.push(Over::Text(
+                    &l.id,
+                    mapped(&own, ink),
+                    highlight_boxes(p, &own),
+                ));
+            } else if shown && painted(p) {
+                order.push(Over::Paint(&l.id, mapped(&own, p.rect)));
+            }
+            if shown {
+                collect(order, masks, &p.children, &own);
+            }
+        }
+    }
+    let mut masks = Vec::new();
+    scene.walk(&mut |l| {
+        if let Some(crate::scene::Mask {
+            source: crate::scene::MaskSource::Layer(id),
+            ..
+        }) = &l.mask
+        {
+            masks.push(id.clone());
+        }
+    });
+    let mut order = Vec::new();
+    collect(&mut order, &masks, placed, &Matrix::new_identity());
+    let share = |ink: Rect, r: Rect| {
+        intersect(ink, r)
+            .filter(|x| x.w > 1.0 && x.h > 1.0)
+            .map(|x| x.w * x.h / (ink.w * ink.h).max(1.0))
+    };
+    let mut out: HashMap<&str, Vec<(String, f32)>> = HashMap::new();
+    for (i, below) in order.iter().enumerate() {
+        let Over::Text(id, ink, _) = below else {
+            continue;
+        };
+        let mut by: Vec<(String, f32)> = Vec::new();
+        for above in &order[i + 1..] {
+            let hit = match above {
+                Over::Paint(other, r) => share(*ink, *r).map(|s| ((*other).to_owned(), s)),
+                Over::Text(other, _, boxes) => boxes
+                    .iter()
+                    .filter_map(|b| share(*ink, *b))
+                    .reduce(f32::max)
+                    .map(|s| (format!("{other} highlight"), s)),
+            };
+            if let Some((name, s)) = hit {
+                match by.iter_mut().find(|b| b.0 == name) {
+                    Some(b) => b.1 = b.1.max(s),
+                    None => by.push((name, s)),
+                }
+            }
+        }
+        if !by.is_empty() {
+            by.sort_by(|a, b| b.1.total_cmp(&a.1));
+            out.insert(id, by);
+        }
+    }
+    out
+}
+
+/// Whether a non-text layer puts paint on the canvas: a filled frame, a
+/// shape, a photo, an icon. A frame without a fill, a spacer, or a layer
+/// whose fills are all clear draws nothing of its own.
+fn painted(p: &Placed) -> bool {
+    use crate::scene::Kind;
+    let fills = p
+        .layer
+        .look
+        .fills
+        .as_ref()
+        .map(crate::scene::OneOrMany::as_slice);
+    let clear = fills.is_some_and(|f| {
+        f.iter()
+            .all(|paint| matches!(paint, crate::scene::Paint::Solid(s) if s.color.0 >> 24 == 0))
+    });
+    match &p.layer.kind {
+        Kind::Text { .. } | Kind::Spacer { .. } | Kind::FirstFit { .. } => false,
+        Kind::Frame { .. } => fills.is_some_and(|f| !f.is_empty()) && !clear,
+        _ => !clear || p.layer.look.strokes.is_some(),
+    }
+}
+
+/// A text's highlight boxes where they're drawn, padding included.
+fn highlight_boxes(p: &Placed, m: &Matrix) -> Vec<Rect> {
+    let (Some((para, _)), Some(text)) = (&p.text, Text::of(p.layer, p.k)) else {
+        return Vec::new();
+    };
+    let (x, y) = p.text_origin();
+    text.highlights()
+        .into_iter()
+        .flat_map(|(range, h)| {
+            let pad = h.padding * p.k;
+            para.get_rects_for_range(
+                range,
+                skia_safe::textlayout::RectHeightStyle::Tight,
+                skia_safe::textlayout::RectWidthStyle::Tight,
+            )
+            .into_iter()
+            .map(move |b| {
+                let r = b.rect.with_offset((x, y)).with_outset((pad, pad * 0.5));
+                Rect {
+                    x: r.left,
+                    y: r.top,
+                    w: r.width(),
+                    h: r.height(),
+                }
+            })
+        })
+        .map(|r| mapped(m, r))
+        .collect()
+}
+
+/// Texts whose ink comes closer to a neighbour's than 15% of the smaller
+/// font size without touching, one above the other or side by side (caps
+/// that overshoot a tight `lineHeight`): the upper or left text, the gap
+/// in px and the neighbour, the closest one per text.
+pub(super) fn tight<'s>(placed: &[Placed<'s>]) -> HashMap<&'s str, (f32, &'s str)> {
+    fn collect<'s>(inks: &mut Vec<(&'s str, Rect, f32)>, placed: &[Placed<'s>], m: &Matrix) {
+        for p in placed {
+            let own = through(m, p);
+            if let (Some(r), Some((_, fit))) = (ink(p).filter(|_| visible(p)), &p.text) {
+                inks.push((&p.layer.id, mapped(&own, r), fit.font_size));
+            }
+            collect(inks, &p.children, &own);
+        }
+    }
+    let mut inks = Vec::new();
+    collect(&mut inks, placed, &Matrix::new_identity());
+    let mut out: HashMap<&str, (f32, &str)> = HashMap::new();
+    // ponytail: O(n²) over texts, as `overlaps`.
+    for (i, (a, ra, pa)) in inks.iter().enumerate() {
+        for (b, rb, pb) in &inks[i + 1..] {
+            let floor = 0.15 * pa.min(*pb);
+            let span = |a0: f32, a1: f32, b0: f32, b1: f32| a1.min(b1) - a0.max(b0);
+            // One above the other: they share some width; else side by side.
+            let (gap, first) = if span(ra.x, ra.right(), rb.x, rb.right()) > 1.0 {
+                if ra.y <= rb.y {
+                    (rb.y - ra.bottom(), true)
+                } else {
+                    (ra.y - rb.bottom(), false)
+                }
+            } else if span(ra.y, ra.bottom(), rb.y, rb.bottom()) > 1.0 {
+                if ra.x <= rb.x {
+                    (rb.x - ra.right(), true)
+                } else {
+                    (ra.x - rb.right(), false)
+                }
+            } else {
+                continue;
+            };
+            if !(0.0..floor).contains(&gap) {
+                continue;
+            }
+            let (who, other) = if first { (*a, *b) } else { (*b, *a) };
+            if out.get(who).is_none_or(|(g, _)| gap < *g) {
+                out.insert(who, (gap, other));
+            }
+        }
+    }
+    out
+}

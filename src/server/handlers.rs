@@ -193,6 +193,13 @@ impl Server {
                     tokio::task::spawn_blocking(move || {
                         // A still of a moment: the scene as it is then, at this
                         // size (slides travel this size's width).
+                        // What a still of a moving scene shows, said in its facts.
+                        let shows = matches!(
+                            format,
+                            Format::Png | Format::Jpeg | Format::Webp | Format::Pdf
+                        )
+                        .then(|| still_shows(&scene, time))
+                        .flatten();
                         let scene = match time {
                             Some(t) => Arc::new(crate::anim::at_time(&scene, t, &size)),
                             None => scene,
@@ -288,7 +295,12 @@ impl Server {
                         let heard = sound
                             && matches!(format, Format::Mp4 | Format::Webm)
                             && !crate::video::audio::sources(&scene, &assets).is_empty();
-                        let facts = facts(&scene, &size, format, used_fps, bytes.len(), heard);
+                        let mut facts = facts(&scene, &size, format, used_fps, bytes.len(), heard);
+                        if let Some(shows) = shows {
+                            // Before the size: `(1080×1920, at rest, shot s1, 212 KB)`.
+                            let at = facts.rfind(", ").unwrap_or(facts.len());
+                            facts.insert_str(at, &format!(", {shows}"));
+                        }
                         anyhow::Ok((
                             text_report(&scene, &size),
                             size.id,
@@ -358,6 +370,20 @@ impl Server {
                 .collect();
             let rows = if drawn.len() > 1 { " (row 1)" } else { "" };
             let _ = write!(text, "\npreview at {}s{rows}", at.join(" "));
+            // Which cell is which shot.
+            let shots: Vec<String> = drawn
+                .first()
+                .map(|s| crate::anim::shots::timeline(s))
+                .unwrap_or_default()
+                .iter()
+                .map(|(_, start, dur, _)| {
+                    let s = |v: f32| (v * 10.0).round() / 10.0;
+                    format!("{}–{}", s(*start), s(start + dur))
+                })
+                .collect();
+            if !shots.is_empty() {
+                let _ = write!(text, " · shots {}", shots.join(" "));
+            }
         }
         let mut content = vec![ContentBlock::text(format!("{fetched}{}", text.trim_end()))];
         if a.preview && !drawn.is_empty() {
@@ -523,6 +549,20 @@ fn blank(a: SceneCreateArgs) -> Result<Scene, String> {
     };
     scene.validate()?;
     Ok(scene)
+}
+
+/// What a still of a moving scene shows: `at rest` (or `at 2.5s`), and
+/// for a scene of shots, the shot then (`shot s1`). `None` for a scene
+/// that doesn't move.
+fn still_shows(scene: &Scene, time: Option<f32>) -> Option<String> {
+    crate::anim::shots::length(scene)?;
+    let mut out = time.map_or_else(|| "at rest".to_owned(), |t| format!("at {t}s"));
+    let shots = crate::anim::shots::timeline(scene);
+    let t = time.unwrap_or(0.0);
+    if let Some(&(i, ..)) = shots.iter().rev().find(|s| s.1 <= t).or(shots.first()) {
+        let _ = write!(out, ", shot {}", scene.layers[i].id);
+    }
+    Some(out)
 }
 
 /// A rendered file's facts for the reply, in parentheses after its path
