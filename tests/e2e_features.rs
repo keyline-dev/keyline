@@ -294,7 +294,7 @@ async fn styles_icons_shapes_masks_and_focus_work_end_to_end() {
     // No defects; the band is short for its photo, a call for the designer.
     assert!(
         reply.lines().nth(1).unwrap().ends_with(
-            "warn crop cuts the area around its focus (focus 50%,20%): a box 270 tall shows half"
+            "warn crop cuts the area around its focus (focus 50%,20%): height 270 shows half"
         ) && !reply.contains(" !"),
         "{reply}"
     );

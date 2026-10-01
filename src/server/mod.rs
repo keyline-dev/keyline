@@ -31,14 +31,15 @@ pub use cli::{RenderFile, Report};
 
 const INSTRUCTIONS: &str = "Compose images from a JSON scene and export several sizes. \
 Author once at the master size; constraints and per-size scale adapt it to every size. \
+Fields are master px (a size's scale multiplies them); reply px are at each size. \
 Add all layers in one layer_add; give repeated text looks a style. Every edit replies ok or with problems per size: !defects (cut text with the \
-size that fits, clipping, hidden or overlapping text) to fix with layer_update, and warn advisories (contrast) \
+size that fits, clipping, hidden or overlapping text) to fix with layer_update, and warn advisories \
 for you to judge. It also states each size's smallest text and any upscaled photo; decide whether that suits \
 where the design will be used, and adapt a size with media. A stack's !overflow means its children don't fit: \
 make one shorter at that size (media) or let it grow less. A top-level frame with width and height \"fill\" \
 already covers the canvas and clips at every size. \
 The server's checks are the verification: render once at the end, and its reply shows how wrapped, shrunk or \
-cut text came out. To judge the look, render with preview (one small image), not by opening the files. \
+cut text came out. To judge the look, render with preview, not by opening the files. \
 An animation's reply states its length, frames and looping; opened, it shows only its first frame. \
 Omit fields that match defaults. When done, reply in one short line.";
 

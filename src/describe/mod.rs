@@ -590,10 +590,10 @@ fn text_cut(p: &Placed, visible: Rect) -> Option<Rect> {
 /// hold the image's middle half, so a subject there is cut, e.g. a house
 /// in a band too short for it. (The focus lands at its own share of the
 /// box, like CSS `object-position`, whatever the crop.) The fix names the
-/// height that shows half, px at this size: a taller box for a crop
-/// top and bottom, a shorter one for a crop at the sides. For a layer
-/// whose height a stack or its parent gives, the `minHeight` (or
-/// `maxHeight`) to set, master px.
+/// field to write, master px: the `height` that shows half (taller for a
+/// crop top and bottom, at most this tall for one at the sides), or the
+/// `minHeight` (`maxHeight`) for a layer whose height a stack or its
+/// parent gives or squeezes.
 fn crop_warning(out: &mut String, p: &Placed, image: (f32, f32), focus: [f32; 2]) {
     let r = p.rect;
     let (iw, ih) = image;
@@ -615,27 +615,42 @@ fn crop_warning(out: &mut String, p: &Placed, image: (f32, f32), focus: [f32; 2]
         "the area around its focus"
     };
     let l = p.layer;
+    // Its height comes from its parent: `fill`, a share, `flexGrow`, or a
+    // stretch constraint that drew it at another height than it asks.
+    let fixed = l.height.and_then(crate::scene::Length::px).map(|h| h * p.k);
     let given = |len: Option<crate::scene::Length>| {
         matches!(
             len,
             Some(crate::scene::Length::Fill | crate::scene::Length::Pct(_))
         ) || l.grow.is_some_and(|g| g > 0.0)
+            || fixed.is_some_and(|h| (h - r.h).abs() > 0.5)
     };
     // Taller shows more of a tall crop; a wide crop's box is usually as
     // wide as it can be, so shorter shows more of it.
+    // A fixed height a stretch constraint shrank: setting the height
+    // again changes nothing; a minHeight stops the squeeze.
+    let squeezed = fixed.filter(|h| *h > r.h + 0.5 && l.min_height.is_none());
+    // The value to write, in master px like every field (a size's
+    // `scale` multiplies it): taller shows more of a crop top and bottom;
+    // a crop at the sides is usually as wide as it can be, so shorter
+    // shows more of it.
     let fix = if vertical {
-        let px = (drawn / 2.0).ceil();
-        if given(l.height) {
-            format!("minHeight {} shows half", (px / p.k).ceil())
-        } else {
-            format!("a box {px} tall shows half")
+        let min = ((drawn / 2.0) / p.k).ceil();
+        match squeezed {
+            Some(h) => format!(
+                "squeezed from {} to {}: minHeight {min} shows half",
+                n(h),
+                n(r.h)
+            ),
+            None if given(l.height) => format!("minHeight {min} shows half"),
+            None => format!("height {min} shows half"),
         }
     } else {
-        let px = (2.0 * r.w * ih / iw).floor();
+        let max = ((2.0 * r.w * ih / iw) / p.k).floor();
         if given(l.height) {
-            format!("maxHeight {} shows half", (px / p.k).floor())
+            format!("maxHeight {max} shows half")
         } else {
-            format!("a box at most {px} tall shows half")
+            format!("height at most {max} shows half")
         }
     };
     let _ = write!(

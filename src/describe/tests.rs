@@ -434,13 +434,13 @@ fn a_cover_crop_that_hides_over_half_the_image_is_an_advisory() {
     // A 1200×800 photo in a 1200×238 band: 70% of its height hidden.
     assert_eq!(
         band(238, json!({})),
-        "wide band image 0,0 1200×238 cover crop 70%h warn crop cuts the image's middle (focus 50%,50%): a box 400 tall shows half\n"
+        "wide band image 0,0 1200×238 cover crop 70%h warn crop cuts the image's middle (focus 50%,50%): height 400 shows half\n"
     );
     // Less than half hidden (crop 48%h): the subject fits.
     assert_eq!(band(420, json!({})), "");
     assert!(
         band(238, json!({"focus": [0.3, 0.2]}))
-            .contains("warn crop cuts the area around its focus (focus 30%,20%): a box 400 tall"),
+            .contains("warn crop cuts the area around its focus (focus 30%,20%): height 400"),
     );
     // Contain never crops; a crop picks its part on purpose.
     assert_eq!(band(238, json!({"fit": "contain"})), "");
@@ -461,7 +461,7 @@ fn a_crop_at_the_sides_names_the_height_that_shows_half() {
     let w = describe(&s, Some("wide"), false, None).unwrap();
     assert!(
         w.contains(
-            "crop 75%w warn crop cuts the image's middle (focus 50%,50%): a box at most 200 tall shows half"
+            "crop 75%w warn crop cuts the image's middle (focus 50%,50%): height at most 200 shows half"
         ),
         "{w}"
     );
@@ -606,4 +606,36 @@ fn a_photo_sized_by_its_stack_is_told_its_min_height() {
         w.contains("wide photo image 0,0 400×100 cover crop 75%h warn crop cuts the image's middle (focus 50%,50%): minHeight 200 shows half"),
         "{w}"
     );
+}
+
+#[test]
+fn the_crop_fix_is_the_field_value_in_master_px() {
+    // A 400×400 photo in a band 100 tall: at the half-scale size the box
+    // is 50 tall, yet the height to write is 200 at both sizes.
+    let s = scene(
+        json!([{"id": "band", "type": "image", "asset": "img", "width": 400, "height": 100}]),
+    );
+    let w = warnings(&s, None).unwrap();
+    assert!(w.contains("wide band image 0,0 400×100 cover crop 75%h warn crop cuts the image's middle (focus 50%,50%): height 200 shows half"), "{w}");
+    assert!(w.contains("small band image 0,0 200×50 cover crop 75%h warn crop cuts the image's middle (focus 50%,50%): height 200 shows half"), "{w}");
+}
+
+#[test]
+fn a_squeezed_photo_is_told_the_min_height_that_stops_the_squeeze() {
+    // A stretch constraint shrinks the band with a shorter size: setting
+    // its height again does nothing; a minHeight holds it.
+    let band = |extra: serde_json::Value| {
+        let mut l = json!({"id": "band", "type": "image", "asset": "img", "width": 400, "height": 200,
+            "constraints": {"horizontal": "stretch", "vertical": "stretch"}});
+        l.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        let mut s = scene(json!([l]));
+        s.sizes[0].height = 100.0;
+        describe(&s, Some("wide"), false, None).unwrap()
+    };
+    let w = band(json!({}));
+    assert!(w.contains("400×100 cover crop 75%h warn crop cuts the image's middle (focus 50%,50%): squeezed from 200 to 100: minHeight 200 shows half"), "{w}");
+    let w = band(json!({"minHeight": 200}));
+    assert!(!w.contains("warn crop"), "following it fixes it: {w}");
 }

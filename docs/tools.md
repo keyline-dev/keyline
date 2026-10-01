@@ -37,7 +37,7 @@ A mutation's first line names what it did, the ids it touched and the new versio
 
 ### Problem lines
 
-An edit's reply (`scene_create` from a template, `layer_add`, `layer_update`) ends its first line with `ok`, or is followed by one line per problem at each size. `scene_describe` gives the same lines on request. A problem line is the size id, the layer's line, and its markers:
+An edit's reply (`scene_create` from a template, `layer_add`, `layer_update`) ends its first line with `ok`, or is followed by one line per problem at each size. `scene_describe` gives the same lines on request. A problem line is the size id, the layer's line, and its markers. Its numbers are px at that size, unlike the fields, which are master px that a size's `scale` multiplies (a fix that names a field gives the field's value):
 
 ```text
 sky headline text 24,360 384×70 29px 2L !clipped by canvas: right 108px
@@ -71,7 +71,7 @@ A **layer line** is `id type x,y w×h`, in px at that size, then:
 | `!leader "<left…>" meets "<right>"` | defect | In a `leader` line, the text before the tab runs into the text after it |
 | `!unsafe` | defect | Text sits under the size's `safeArea` |
 | `warn contrast R:1 (WCAG N)` | advisory | Text contrast against what's behind it is below the WCAG level for its size. Knockout text is judged by what shows through its letters against the frame around them |
-| `warn crop cuts the image's middle (focus X%,Y%): a box N tall shows half` | advisory | A cover crop hides more than half the image on one axis, so whatever sits in its middle is cut (a house in a band too short for it). The end says the fix at this size: for a crop top and bottom, the height that shows half (`a box N tall`); for a crop at the sides, the most height that does (`a box at most N tall`). When a stack or the parent sets the height (`fill`, a share, `flexGrow`), it names the field instead, in master px: `minHeight N` or `maxHeight N`. Names "the area around its focus" when `focus` isn't the center |
+| `warn crop cuts the image's middle (focus X%,Y%): height N shows half` | advisory | A cover crop hides more than half the image on one axis, so whatever sits in its middle is cut (a house in a band too short for it). The end names the field to write and its value in master px, like every field (the size's `scale` multiplies it): `height N` for a crop top and bottom, `height at most N` for one at the sides. When the parent sets the height (`fill`, a share, `flexGrow`, a stretch constraint), `minHeight N` or `maxHeight N`; when a stretch constraint shrank a fixed height, `squeezed from A to B: minHeight N` (A and B px at that size). Names "the area around its focus" when `focus` isn't the center |
 | `warn shadow clipped by <frame>` | advisory | A frame that clips its content (`clipsContent`, on by default) cuts the layer's drop shadow; give it room (padding) or set `clipsContent: false` |
 
 Defects need fixing; advisories need judgment ([concepts](concepts.md#checks-defects-advisories-facts)). In a scene of [shots](scene.md#shots-and-transitions), every shot is checked, each with the layers around it.
