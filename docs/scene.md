@@ -562,7 +562,7 @@ An image fill works on any shape: a photo in a circle is `{"type": "ellipse", "f
   {"name": "Omar Haddad", "office": "Council"}]}
 ```
 
-- `{{prop}}` in any string of a component is filled from the instance's props, as in Mustache; a string that is only `{{prop}}` takes the value as is (a number stays a number). A prop wins over a token of the same name; any other `{{name}}` in the component is a token.
+- `{{prop}}` (or `{{ prop }}`) in any string of a component is filled from the instance's props, as in Mustache; a string that is only `{{prop}}` takes the value as is (a number stays a number). `{{n}}` stays the counting number, never a prop. A prop wins over a token of the same name; any other `{{name}}` in the component is a token.
 - The `use` layer's own fields (width, constraints, `media`…) apply to each instance's root.
 - Instances stay linked: changing the component changes every instance. Their layers are named by the `use` id, the instance number and the inner layer's id or role, e.g. `c.1.name`, in replies. To change one, target the component (`{"component": "candidate", "role": "name"}`), or `detach` the `use` layer into plain layers.
 - Components may place other components, up to 8 levels deep.

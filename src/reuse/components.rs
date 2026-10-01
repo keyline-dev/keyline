@@ -136,27 +136,31 @@ fn instances(scene: &Scene, u: &Layer, depth: usize) -> Result<Vec<Layer>, Strin
         .collect()
 }
 
-/// Fills `{{prop}}` placeholders: a string that is only a placeholder takes
-/// the prop's value as is (a number stays a number); otherwise it's spliced
-/// into the text. Unknown placeholders are left alone.
+/// Fills `{{prop}}` placeholders (spaces inside the braces allowed): a
+/// string that is only a placeholder takes the prop's value as is (a number
+/// stays a number); otherwise it's spliced into the text. Unknown
+/// placeholders are left alone, for the scene's tokens.
 fn fill(v: &mut Value, props: &Map<String, Value>) {
     match v {
         Value::String(s) => {
-            // `{{name}}`, as in Mustache and Handlebars.
-            if let Some(key) = s.strip_prefix("{{").and_then(|r| r.strip_suffix("}}"))
-                && let Some(p) = props.get(key.trim())
-            {
+            if let Some(p) = super::tokens::reference(s).and_then(|k| props.get(k)) {
                 *v = p.clone();
                 return;
             }
-            if s.contains("{{") {
-                for (k, p) in props {
-                    let text = match p {
-                        Value::String(t) => t.clone(),
-                        other => other.to_string(),
-                    };
-                    *s = s.replace(&format!("{{{{{k}}}}}"), &text);
+            let mut out = String::with_capacity(s.len());
+            let mut last = 0;
+            for (range, name) in super::tokens::placeholders(s) {
+                let Some(p) = props.get(name) else { continue };
+                out.push_str(&s[last..range.start]);
+                match p {
+                    Value::String(t) => out.push_str(t),
+                    other => out.push_str(&other.to_string()),
                 }
+                last = range.end;
+            }
+            if last > 0 {
+                out.push_str(&s[last..]);
+                *s = out;
             }
         }
         Value::Array(a) => a.iter_mut().for_each(|x| fill(x, props)),
@@ -283,8 +287,14 @@ mod tests {
 
     #[test]
     fn placeholders_keep_numbers_and_splice_into_text() {
-        let mut v = json!({"a": "{{n}}", "b": "{{n}} px", "c": "{{missing}}"});
-        fill(&mut v, &serde_json::from_value(json!({"n": 3})).unwrap());
-        assert_eq!(v, json!({"a": 3, "b": "3 px", "c": "{{missing}}"}));
+        let mut v = json!({"a": "{{gap}}", "b": "{{gap}} px", "c": "{{missing}}",
+            "d": "{{ gap }}", "e": "{{ gap }} px", "f": "{{n}} sold"});
+        fill(&mut v, &serde_json::from_value(json!({"gap": 3})).unwrap());
+        // Spaces inside the braces work alike whole or in text, and the
+        // counting `{{n}}` is left for the count.
+        assert_eq!(
+            v,
+            json!({"a": 3, "b": "3 px", "c": "{{missing}}", "d": 3, "e": "3 px", "f": "{{n}} sold"})
+        );
     }
 }
