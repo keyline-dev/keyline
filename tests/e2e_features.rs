@@ -103,6 +103,38 @@ async fn web_fonts_leaders_in_a_kerned_font_stay_in_the_gap() {
     mcp.stop().await;
 }
 
+/// Arabic is shaped, straight and on a curve: its letters join and run
+/// right to left, from a Google Fonts family (Inter has no Arabic).
+#[tokio::test]
+#[ignore = "downloads from Google Fonts; run with --ignored"]
+async fn web_fonts_arabic_joins_straight_and_curved() {
+    let mcp = Mcp::start("webfont-arabic").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"sizes": ["600x400"], "background": "#FFFFFF"}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    let line = |y: i32, curve: Option<i32>| {
+        json!({"type": "text", "x": 0, "y": y, "width": 600, "fontSize": 56,
+        "fontFamily": "Noto Naskh Arabic", "color": "#000000", "textAlign": "center",
+        "text": "مرحبا بالعالم", "curve": curve})
+    };
+    mcp.ok(
+        "layer_add",
+        json!({"sceneId": id, "layers": [line(30, None), line(200, Some(150))]}),
+    )
+    .await;
+    let reply = mcp.ok("render", json!({"sceneId": id})).await;
+    let (_, path) = common::file_of(reply.lines().next().unwrap()).unwrap();
+    check_golden("arabic.png", &std::fs::read(path).unwrap());
+    mcp.stop().await;
+}
+
 /// Two servers on one data dir (two agent sessions, or a benchmark that
 /// renders the agent's scene itself): a font one fetched after the other
 /// started is used by both, not silently replaced by Inter.

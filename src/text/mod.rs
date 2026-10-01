@@ -218,11 +218,10 @@ impl<'a> Text<'a> {
     }
 }
 
-/// True when the first letter with a strong direction is Hebrew or Arabic.
+/// True when the first letter with a strong direction is right-to-left
+/// (Hebrew, Arabic, Syriac, Thaana, N'Ko, …), as Unicode's bidi rules say.
 fn first_strong_is_rtl(s: &str) -> bool {
-    s.chars().find(|c| c.is_alphabetic()).is_some_and(
-        |c| matches!(u32::from(c), 0x0590..=0x08FF | 0xFB1D..=0xFDFF | 0xFE70..=0xFEFF),
-    )
+    unicode_bidi::get_base_direction_full(s) == unicode_bidi::Direction::Rtl
 }
 
 #[cfg(test)]
@@ -233,5 +232,9 @@ mod direction_tests {
         assert!(!super::first_strong_is_rtl("hello שלום"));
         assert!(super::first_strong_is_rtl("مرحبا"));
         assert!(!super::first_strong_is_rtl("123"));
+        // Syriac and Thaana, and a right-to-left line after a neutral one.
+        assert!(super::first_strong_is_rtl("ܫܠܡܐ"));
+        assert!(super::first_strong_is_rtl("ދިވެހި"));
+        assert!(super::first_strong_is_rtl("2026\nשלום"));
     }
 }

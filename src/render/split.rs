@@ -6,6 +6,7 @@
 use anyhow::Result;
 use skia_safe::textlayout::{RectHeightStyle, RectWidthStyle};
 use skia_safe::{Paint, canvas::SaveLayerRec};
+use unicode_segmentation::UnicodeSegmentation as _;
 
 use super::Ctx;
 use crate::anim::motion::Away;
@@ -15,14 +16,16 @@ use crate::layout::Placed;
 use crate::scene::OneOrMany;
 use crate::text::Text;
 
-/// The pieces of `display`, as UTF-16 ranges (what the paragraph measures in).
+/// The pieces of `display`, as UTF-16 ranges (what the paragraph measures
+/// in). A letter is a grapheme, so an emoji sequence, a flag or an accented
+/// letter moves as one.
 fn pieces(display: &str, split: Split) -> Vec<std::ops::Range<usize>> {
     let mut out = Vec::new();
     let mut unit = 0;
     let mut word: Option<usize> = None;
-    for c in display.chars() {
-        let len = c.len_utf16();
-        let space = c.is_whitespace();
+    for g in display.graphemes(true) {
+        let len = g.encode_utf16().count();
+        let space = g.chars().all(char::is_whitespace);
         match split {
             Split::Chars if !space => out.push(unit..unit + len),
             Split::Words if space => {
@@ -241,5 +244,9 @@ mod tests {
         assert_eq!(pieces("Hi  yo!", Split::Words), vec![0..2, 4..7]);
         // An emoji is two UTF-16 units.
         assert_eq!(pieces("a😀b", Split::Chars), vec![0..1, 1..3, 3..4]);
+        // A family (four people joined) and a flag are one letter each, and
+        // so is an e with a combining accent.
+        assert_eq!(pieces("👨‍👩‍👧‍👦🇫🇷", Split::Chars), vec![0..11, 11..15]);
+        assert_eq!(pieces("e\u{301}a", Split::Chars), vec![0..2, 2..3]);
     }
 }
