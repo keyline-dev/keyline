@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flyer</title>
+<style>
+@font-face {
+  font-family: 'Inter';
+  src: url('Inter.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+:root {
+  --s: 1;
+  --navy: #1B2A5C;
+  --red: #D0202E;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: #fff; }
+body {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+#stage {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  margin: 0;
+}
+#flyer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+/* ---- sections ---- */
+.pad { padding-left: calc(56px * var(--s)); padding-right: calc(56px * var(--s)); }
+
+.headline-wrap {
+  padding-top: calc(54px * var(--s));
+  padding-bottom: calc(40px * var(--s));
+}
+h1 {
+  color: var(--navy);
+  font-size: calc(76px * var(--s));
+  line-height: 1.06;
+  font-weight: 800;
+  letter-spacing: calc(-1.4px * var(--s));
+  text-wrap: balance;
+}
+h1 .r { color: var(--red); }
+
+.photoband {
+  width: 100%;
+  height: calc(420px * var(--s));
+  overflow: hidden;
+  background: var(--navy);
+  flex: none;
+}
+.photoband img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 42%;
+  display: block;
+}
+
+.cands {
+  display: flex;
+  gap: calc(28px * var(--s));
+  padding-top: calc(42px * var(--s));
+  padding-bottom: calc(42px * var(--s));
+}
+.cand {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(8px * var(--s));
+}
+.cand .rule {
+  width: calc(54px * var(--s));
+  height: calc(5px * var(--s));
+  background: var(--red);
+  border-radius: 999px;
+  margin-bottom: calc(6px * var(--s));
+}
+.cand .nm {
+  color: var(--navy);
+  font-weight: 800;
+  font-size: calc(36px * var(--s));
+  line-height: 1.12;
+  letter-spacing: calc(-0.5px * var(--s));
+  white-space: nowrap;
+}
+.cand .rl {
+  color: #5A6687;
+  font-weight: 600;
+  font-size: calc(25px * var(--s));
+  line-height: 1.2;
+  letter-spacing: calc(1.4px * var(--s));
+  text-transform: uppercase;
+}
+
+.cta {
+  width: 100%;
+  background: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(24px * var(--s));
+  padding: calc(30px * var(--s)) calc(24px * var(--s));
+  flex: none;
+}
+.cta img {
+  width: calc(66px * var(--s));
+  height: calc(52px * var(--s));
+  display: block;
+  flex: none;
+}
+.cta span {
+  color: #fff;
+  font-weight: 800;
+  font-size: calc(58px * var(--s));
+  line-height: 1;
+  letter-spacing: calc(2px * var(--s));
+  white-space: nowrap;
+}
+
+.steps {
+  padding-top: calc(42px * var(--s));
+  padding-bottom: calc(34px * var(--s));
+  display: flex;
+  flex-direction: column;
+  gap: calc(26px * var(--s));
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: calc(20px * var(--s));
+}
+.step img {
+  width: calc(46px * var(--s));
+  height: calc(46px * var(--s));
+  flex: none;
+  display: block;
+}
+.step span {
+  color: var(--navy);
+  font-weight: 600;
+  font-size: calc(33px * var(--s));
+  line-height: 1.25;
+  letter-spacing: calc(-0.3px * var(--s));
+}
+
+.foot {
+  margin-top: auto;
+  border-top: calc(2px * var(--s)) solid #D8DCE8;
+  padding-top: calc(22px * var(--s));
+  padding-bottom: calc(34px * var(--s));
+  color: #5A6687;
+  font-weight: 500;
+  font-size: calc(23px * var(--s));
+  line-height: 1.3;
+  text-align: center;
+}
+
+/* ---- wide variant: headline+photo side by side ---- */
+body.wide .headline-wrap { padding-bottom: calc(32px * var(--s)); }
+body.wide .photoband {
+  height: calc(300px * var(--s));
+  min-height: calc(300px * var(--s));
+  flex: 1 1 auto;
+}
+body.wide .photoband img { object-position: center 78%; }
+body.wide .steps {
+  flex-direction: row;
+  justify-content: space-between;
+  gap: calc(26px * var(--s));
+  padding-top: calc(36px * var(--s));
+}
+body.wide .step {
+  flex: 0 1 auto;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: calc(12px * var(--s));
+}
+body.wide .step span { font-size: calc(30px * var(--s)); white-space: nowrap; }
+
+/* ---- sky variant: tall narrow ---- */
+body.sky h1 { letter-spacing: calc(-1px * var(--s)); }
+body.sky .pad { padding-left: calc(48px * var(--s)); padding-right: calc(48px * var(--s)); }
+body.sky .headline-wrap { padding-top: calc(62px * var(--s)); padding-bottom: calc(40px * var(--s)); }
+body.sky .photoband {
+  height: calc(715px * var(--s));
+  flex: none;
+}
+body.sky .photoband img { object-position: center 72%; }
+body.sky .cands {
+  flex-direction: column;
+  gap: calc(34px * var(--s));
+  flex: 1 1 auto;
+  justify-content: center;
+}
+body.sky .cta { flex-direction: column; gap: calc(12px * var(--s)); }
+body.sky .steps { gap: calc(28px * var(--s)); }
+body.sky .step { align-items: flex-start; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="flyer">
+    <div class="headline-wrap pad">
+      <h1>Proven <span class="r">RESULTS</span> for <span class="r">WILLOWMERE</span> Families</h1>
+    </div>
+
+    <div class="photoband">
+      <img src="photo.png" alt="">
+    </div>
+
+    <div class="cands pad">
+      <div class="cand"><div class="rule"></div><div class="nm">Dana Levi</div><div class="rl">Mayor</div></div>
+      <div class="cand"><div class="rule"></div><div class="nm">Omar Haddad</div><div class="rl">Council</div></div>
+      <div class="cand"><div class="rule"></div><div class="nm">Ruth Cohen</div><div class="rl">Council</div></div>
+    </div>
+
+    <div class="cta">
+      <img src="mail.svg" alt="">
+      <span>VOTE BY MAIL</span>
+    </div>
+
+    <div class="steps pad">
+      <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October 20</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Mail it back by November 3</span></div>
+    </div>
+
+    <div class="foot pad">Paid for by Willowmere Forward · willowmereforward.org</div>
+  </div>
+</div>
+<script>
+function setup(w, h, s, variant) {
+  const stage = document.getElementById('stage');
+  stage.style.width = w + 'px';
+  stage.style.height = h + 'px';
+  document.documentElement.style.setProperty('--s', s);
+  document.body.className = variant || '';
+  document.body.style.width = w + 'px';
+  document.body.style.height = h + 'px';
+}
+const p = new URLSearchParams(location.search);
+if (p.get('w')) setup(+p.get('w'), +p.get('h'), +p.get('s'), p.get('v'));
+</script>
+</body>
+</html>

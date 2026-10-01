@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker Card</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  :root {
+    --bg: #0F1226;
+    --ink: #FFFFFF;
+    --accent: #7C5CFF;
+    --muted: rgba(255,255,255,0.62);
+
+    --pad: 72px;
+    --logo-h: 40px;
+    --event: 23px;
+    --avatar: 190px;
+    --ring: 6px;
+    --name: 42px;
+    --role: 23px;
+    --title: 60px;
+    --title-lh: 1.14;
+    --meta: 22px;
+    --btn: 22px;
+    --btn-pad: 20px 44px;
+    --gap-main: 54px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+    overflow: hidden;
+  }
+
+  .card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: var(--pad);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    color: var(--ink);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  /* ---- decorative background ---- */
+  .glow {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(60% 55% at 92% 4%, rgba(124,92,255,0.30) 0%, rgba(124,92,255,0) 70%),
+      radial-gradient(55% 50% at 2% 100%, rgba(124,92,255,0.18) 0%, rgba(124,92,255,0) 70%);
+  }
+  .rule {
+    position: absolute;
+    left: var(--pad); right: var(--pad);
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent) 0%, rgba(124,92,255,0.12) 55%, rgba(124,92,255,0) 100%);
+    z-index: -1;
+  }
+
+  /* ---- header ---- */
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex: 0 0 auto;
+  }
+  .brand img { height: var(--logo-h); width: auto; display: block; }
+  .brand .divider {
+    width: 2px;
+    height: calc(var(--logo-h) * 0.68);
+    background: rgba(255,255,255,0.22);
+    border-radius: 2px;
+  }
+  .brand .event {
+    font-size: var(--event);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    white-space: nowrap;
+    line-height: 1;
+    padding-top: 0.08em;
+  }
+
+  /* ---- body ---- */
+  .body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--gap-main);
+    padding: 40px 0;
+  }
+
+  .speaker {
+    display: flex;
+    align-items: center;
+    gap: 34px;
+    flex: 0 0 auto;
+  }
+  .avatar {
+    flex: 0 0 auto;
+    width: var(--avatar);
+    height: var(--avatar);
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 42%;
+    display: block;
+    box-shadow: 0 0 0 var(--ring) var(--accent), 0 0 0 calc(var(--ring) + 3px) rgba(124,92,255,0.22);
+  }
+  .who { min-width: 0; }
+  .name {
+    font-size: var(--name);
+    font-weight: 700;
+    letter-spacing: -0.018em;
+    line-height: 1.12;
+    hyphens: none;
+  }
+  /* keep the double-barrelled surname intact instead of breaking at the hyphen */
+  .name .surname { white-space: nowrap; }
+  .role {
+    margin-top: 0.42em;
+    font-size: var(--role);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--muted);
+  }
+
+  .talk { flex: 0 1 auto; min-height: 0; }
+  .eyebrow {
+    font-size: calc(var(--role) * 0.78);
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-bottom: 0.9em;
+    line-height: 1;
+  }
+  .title {
+    font-size: var(--title);
+    font-weight: 700;
+    line-height: var(--title-lh);
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+
+  /* ---- footer ---- */
+  .footer {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+    padding-top: 34px;
+    border-top: 1px solid rgba(255,255,255,0.14);
+  }
+  .meta {
+    font-size: var(--meta);
+    font-weight: 500;
+    line-height: 1.35;
+    color: rgba(255,255,255,0.80);
+  }
+  .meta .dot { color: var(--accent); padding: 0 0.14em; }
+  .btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #FFFFFF;
+    font-size: var(--btn);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    padding: var(--btn-pad);
+    border-radius: 999px;
+    white-space: nowrap;
+    text-decoration: none;
+    box-shadow: 0 10px 30px rgba(124,92,255,0.34);
+  }
+
+  /* =====================================================
+     LANDSCAPE  1920 x 1080
+     ===================================================== */
+  @media (min-aspect-ratio: 11/10) {
+    :root {
+      --pad: 84px;
+      --logo-h: 46px;
+      --event: 26px;
+      --avatar: 340px;
+      --ring: 7px;
+      --name: 42px;
+      --role: 25px;
+      --title: 78px;
+      --meta: 25px;
+      --btn: 25px;
+      --btn-pad: 23px 52px;
+      --gap-main: 88px;
+    }
+    .body {
+      flex-direction: row;
+      align-items: center;
+      padding: 40px 0;
+    }
+    .speaker {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 34px;
+      flex: 0 0 500px;
+    }
+    .talk { flex: 1 1 auto; }
+    .title { text-wrap: pretty; }
+  }
+
+  /* =====================================================
+     STORY  1080 x 1920
+     ===================================================== */
+  @media (max-aspect-ratio: 9/10) {
+    :root {
+      --pad: 88px;
+      --logo-h: 48px;
+      --event: 26px;
+      --avatar: 390px;
+      --ring: 8px;
+      --name: 58px;
+      --role: 30px;
+      --title: 80px;
+      --title-lh: 1.16;
+      --meta: 28px;
+      --btn: 28px;
+      --btn-pad: 27px 58px;
+      --gap-main: 110px;
+    }
+    .body {
+      justify-content: center;
+      gap: var(--gap-main);
+      padding: 80px 0;
+    }
+    .speaker {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 44px;
+    }
+    .footer { padding-top: 46px; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="glow"></div>
+
+    <header class="brand">
+      <img src="logo.svg" alt="Fieldnotes Conf logo">
+      <span class="divider"></span>
+      <span class="event">FIELDNOTES CONF 2026</span>
+    </header>
+
+    <div class="body">
+      <div class="speaker">
+        <img class="avatar" src="portrait.png" alt="Maya Okonkwo-Lindqvist">
+        <div class="who">
+          <div class="name">Maya <span class="surname">Okonkwo-Lindqvist</span></div>
+          <div class="role">Principal Engineer, Northwind&nbsp;Labs</div>
+        </div>
+      </div>
+
+      <div class="talk">
+        <div class="eyebrow">KEYNOTE</div>
+        <h1 class="title">Shipping at the speed of trust: what ten years of on-call taught us about resilient systems</h1>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="meta">November 14, 2026 <span class="dot">·</span> Harbor Hall, Lisbon</div>
+      <a class="btn" href="#">Get tickets</a>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,51 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  header frame 72,72 936×48
+   logoImg image 72,72 160×48 contain
+   rule frame 256,82 2×28
+   evt text 282,82 372×29 24px
+  main frame 72,176 936×832
+   who frame 72,176 936×320
+    portraitImg image 72,176 200×200 cover
+    spkName text 72,396 575×51 46px
+    spkRole text 72,467 402×29 24px
+   what frame 72,552 936×456
+    title text 72,652 936×186 54px 3L
+    dateVenue text 72,874 487×29 24px
+    btn frame 72,939 206×69
+     btnLabel text 112,959 126×29 24px
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  header frame 96,80 1728×48
+   logoImg image 96,80 160×48 contain
+   rule frame 280,90 2×28
+   evt text 306,89 397×31 26px
+  main frame 96,192 1728×808
+   who frame 96,376 575×440
+    portraitImg image 96,376 320×320 cover
+    spkName text 96,716 575×51 46px
+    spkRole text 96,787 402×29 24px
+   what frame 767,397 1057×399
+    title text 767,397 1057×213 62px 3L
+    dateVenue text 767,654 487×29 24px
+    btn frame 767,727 206×69
+     btnLabel text 807,747 126×29 24px
+story 1080×1920
+ root frame 0,0 1080×1920
+  header frame 80,96 920×48
+   logoImg image 80,96 160×48 contain
+   rule frame 264,106 2×28
+   evt text 290,105 397×31 26px
+  main frame 80,224 920×1600
+   who frame 80,224 920×473
+    portraitImg image 80,224 340×340 cover
+    spkName text 80,584 675×59 54px
+    spkRole text 80,663 469×34 28px
+   what frame 80,777 920×1047
+    title text 80,1125 920×495 86px 5L
+    dateVenue text 80,1668 565×34 28px
+    btn frame 80,1750 227×74
+     btnLabel text 120,1770 147×34 28px

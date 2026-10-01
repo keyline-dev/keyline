@@ -1,0 +1,54 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  header frame 80,80 920×48
+   logoimg image 80,80 160×48 contain
+   eventname text 262,91 327×27 22px
+  body frame 80,172 920×828
+   left frame 80,172 920×230
+    portrait image 80,172 230×230 cover
+    nameblock frame 340,241 550×92
+     name text 340,241 550×51 44px
+     role text 340,304 550×29 24px
+   right frame 80,450 920×550
+    title text 80,450 920×437 54px 3L
+    footer frame 80,935 920×65
+     datevenue text 80,953 460×29 24px
+     cta frame 798,935 202×65
+      ctatext text 836,953 126×29 24px
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  header frame 80,80 1760×48
+   logoimg image 80,80 160×48 contain
+   eventname text 262,91 327×27 22px
+  body frame 80,172 1760×828
+   left frame 80,172 560×828
+    portrait image 80,407 230×230 cover
+    nameblock frame 80,673 550×92
+     name text 80,673 550×51 44px
+     role text 80,736 550×29 24px
+   right frame 712,172 1128×828
+    title text 712,172 1128×715 70px 3L
+    footer frame 712,935 1128×65
+     datevenue text 712,952 499×31 26px
+     cta frame 1638,935 202×65
+      ctatext text 1676,953 126×29 24px
+story 1080×1920
+ root frame 0,0 1080×1920
+  header frame 80,80 920×60
+   logoimg image 80,80 200×60 contain
+   eventname text 302,94 387×33 27px
+  body frame 80,184 920×1656
+   left frame 80,184 920×534
+    portrait image 80,184 380×380 cover
+    nameblock frame 80,598 749×120
+     name text 80,598 749×69 60px
+     role text 80,679 749×39 32px
+   right frame 80,766 920×1074
+    title text 80,766 920×956 90px 5L
+    footer frame 80,1770 920×70
+     datevenue text 80,1787 575×36 30px
+     cta frame 777,1770 223×70
+      ctatext text 815,1788 147×34 28px

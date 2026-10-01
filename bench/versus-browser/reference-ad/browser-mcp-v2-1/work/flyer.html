@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face {
+  font-family: 'Inter';
+  src: url('Inter.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { background:#fff; }
+body {
+  font-family:'Inter', sans-serif;
+  width:var(--W); height:var(--H);
+  overflow:hidden;
+}
+#stage {
+  width:var(--W); height:var(--H);
+  background:#fff;
+  position:relative;
+  overflow:hidden;
+}
+/* The flyer is laid out at master width 1080 and scaled by --s.
+   Bands are full width because the inner width is W/s. */
+#flyer {
+  position:absolute; top:0; left:0;
+  width:calc(var(--W) / var(--s));
+  height:calc(var(--H) / var(--s));
+  transform:scale(var(--s));
+  transform-origin:top left;
+  display:flex;
+  flex-direction:column;
+  background:#fff;
+}
+.pad { padding-left:var(--padx); padding-right:var(--padx); }
+.sp { flex:1 1 0; min-height:0; }
+
+/* 1. Headline */
+.headline {
+  color:#1B2A5C;
+  font-weight:800;
+  font-size:var(--hl);
+  line-height:1.06;
+  letter-spacing:-0.02em;
+  padding-top:calc(52px * var(--vs));
+  padding-bottom:calc(34px * var(--vs));
+  text-wrap:balance;
+}
+.headline .r { color:#D0202E; }
+
+/* 2. Photo band */
+.photoband {
+  width:100%;
+  height:var(--photoH);
+  flex:none;
+  overflow:hidden;
+  background:#1B2A5C;
+}
+.photoband img {
+  width:100%; height:100%;
+  object-fit:cover;
+  object-position:center 62%;
+  display:block;
+}
+
+/* 3. Candidate columns */
+.cands {
+  display:flex;
+  width:100%;
+  padding-top:calc(40px * var(--vs));
+  padding-bottom:calc(40px * var(--vs));
+  gap:28px;
+}
+.cand {
+  flex:1 1 0;
+  min-width:0;
+  text-align:center;
+}
+.cand .nm {
+  color:#1B2A5C;
+  font-weight:700;
+  font-size:38px;
+  line-height:1.15;
+  white-space:nowrap;
+}
+.cand .role {
+  margin-top:10px;
+  color:#D0202E;
+  font-weight:600;
+  font-size:28px;
+  line-height:1.2;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+}
+.cand .rule {
+  width:70px; height:5px;
+  background:#1B2A5C;
+  margin:18px auto 0;
+  border-radius:3px;
+}
+
+/* 4. CTA bar */
+.cta {
+  width:100%;
+  background:#D0202E;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:26px;
+  padding:calc(30px * var(--vs)) var(--padx);
+  flex:none;
+}
+.cta img { width:72px; height:56.57px; display:block; flex:none; }
+.cta span {
+  color:#fff;
+  font-weight:800;
+  font-size:58px;
+  line-height:1;
+  letter-spacing:0.05em;
+  white-space:nowrap;
+}
+
+/* 5. Steps */
+.steps {
+  padding-top:calc(40px * var(--vs));
+  padding-bottom:calc(36px * var(--vs));
+  display:flex;
+  flex-direction:column;
+  gap:calc(26px * var(--vs));
+}
+.step {
+  display:flex;
+  align-items:center;
+  gap:22px;
+}
+.step img { width:44px; height:44px; display:block; flex:none; }
+.step span {
+  color:#1B2A5C;
+  font-weight:600;
+  font-size:34px;
+  line-height:1.25;
+}
+
+/* 6. Footer */
+.footer {
+  width:100%;
+  border-top:3px solid #E3E6EF;
+  padding-top:calc(26px * var(--vs));
+  padding-bottom:calc(36px * var(--vs));
+  color:#5A6485;
+  font-weight:500;
+  font-size:24px;
+  line-height:1.3;
+  text-align:center;
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="flyer">
+    <h1 class="headline pad">Proven <span class="r">RESULTS</span> for <span class="r">WILLOWMERE</span> Families</h1>
+
+    <div class="photoband"><img src="photo.png" alt=""></div>
+
+    <div class="sp"></div>
+
+    <div class="cands pad">
+      <div class="cand"><div class="nm">Dana Levi</div><div class="role">Mayor</div><div class="rule"></div></div>
+      <div class="cand"><div class="nm">Omar Haddad</div><div class="role">Council</div><div class="rule"></div></div>
+      <div class="cand"><div class="nm">Ruth Cohen</div><div class="role">Council</div><div class="rule"></div></div>
+    </div>
+
+    <div class="cta">
+      <img src="mail.svg" alt="">
+      <span>VOTE BY MAIL</span>
+    </div>
+
+    <div class="sp"></div>
+
+    <div class="steps pad">
+      <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October 20</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Mail it back by November 3</span></div>
+    </div>
+
+    <div class="sp"></div>
+
+    <div class="footer pad">Paid for by Willowmere Forward · willowmereforward.org</div>
+  </div>
+</div>
+<script>
+const P = new URLSearchParams(location.search);
+const CFG = {
+  portrait: { W:1080, H:1350, s:1,    padx:56, hl:76, photoH:330, vs:1 },
+  wide:     { W:1200, H:1000, s:0.85, padx:60, hl:76, photoH:342, vs:0.75 },
+  sky:      { W:300,  H:600,  s:0.28, padx:56, hl:76, photoH:700, vs:2 }
+};
+const c = Object.assign({}, CFG[P.get('v') || 'portrait']);
+for (const [k,v] of P) { if (k!=='v') c[k] = parseFloat(v); }
+const r = document.documentElement.style;
+r.setProperty('--W', c.W+'px');
+r.setProperty('--H', c.H+'px');
+r.setProperty('--s', c.s);
+r.setProperty('--padx', c.padx+'px');
+r.setProperty('--hl', c.hl+'px');
+r.setProperty('--photoH', c.photoH+'px');
+r.setProperty('--vs', c.vs);
+window.measure = () => {
+  const f = document.getElementById('flyer');
+  const out = { inner:[f.clientWidth, f.clientHeight], scrollH:f.scrollHeight, items:[] };
+  const nat = [...f.children].reduce((a,e)=>a+e.getBoundingClientRect().height/c.s,0);
+  out.natural = Math.round(nat);
+  const fr = f.getBoundingClientRect();
+  document.querySelectorAll('.headline,.cand .nm,.cand .role,.cta span,.step span,.footer').forEach(e=>{
+    const b = e.getBoundingClientRect();
+    out.items.push([e.className||e.tagName, Math.round(b.left), Math.round(b.top), Math.round(b.right), Math.round(b.bottom), e.scrollWidth>e.clientWidth+1?'OVERFLOW-X':'', Math.round(e.textContent.length)]);
+  });
+  out.spacers = [...document.querySelectorAll('.sp')].map(e=>Math.round(e.getBoundingClientRect().height/c.s));
+  out.lastBottom = Math.round(document.querySelector('.footer').getBoundingClientRect().bottom);
+  return out;
+};
+</script>
+</body>
+</html>

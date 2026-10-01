@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker card</title>
+<style>
+@font-face {
+  font-family: 'Inter';
+  src: url('Inter.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+:root{
+  --bg:#0F1226;
+  --accent:#7C5CFF;
+  --text:#FFFFFF;
+  --muted:rgba(255,255,255,.66);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+html,body{background:#000;}
+body{
+  font-family:'Inter',sans-serif;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:geometricPrecision;
+}
+
+.card{
+  position:relative;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+}
+
+/* decorative glow */
+.card::before{
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  background:radial-gradient(closest-side, rgba(124,92,255,.38), rgba(124,92,255,0));
+  pointer-events:none;
+}
+.card::after{
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  background:radial-gradient(closest-side, rgba(124,92,255,.16), rgba(124,92,255,0));
+  pointer-events:none;
+}
+
+/* ---------- shared pieces ---------- */
+.brand{
+  display:flex;
+  align-items:center;
+  flex:0 0 auto;
+}
+.brand img{display:block;}
+.brand .rule{
+  width:1px;
+  background:rgba(255,255,255,.22);
+  flex:0 0 auto;
+}
+.brand .evt{
+  font-weight:700;
+  letter-spacing:.16em;
+  white-space:nowrap;
+  text-transform:uppercase;
+  line-height:1;
+}
+
+.avatar{
+  flex:0 0 auto;
+  border-radius:50%;
+  background-image:url('portrait.png');
+  background-size:154% 154%;
+  background-position:50% 25%;
+  background-repeat:no-repeat;
+  box-shadow:0 0 0 var(--ring,6px) rgba(124,92,255,.95),
+             0 0 0 calc(var(--ring,6px) + 10px) rgba(124,92,255,.18);
+}
+
+.who .name{font-weight:700;line-height:1.1;letter-spacing:-.015em;}
+.who .role{color:var(--muted);font-weight:500;line-height:1.35;}
+
+.title{
+  font-weight:800;
+  line-height:1.08;
+  letter-spacing:-.025em;
+  overflow-wrap:break-word;
+  hyphens:none;
+}
+.title .hl{color:var(--accent);}
+
+.meta{
+  color:var(--muted);
+  font-weight:500;
+  line-height:1.3;
+  display:flex;
+  align-items:center;
+}
+.meta .dot{
+  display:inline-block;
+  border-radius:50%;
+  background:var(--accent);
+  flex:0 0 auto;
+}
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--accent);
+  color:#fff;
+  font-weight:700;
+  border-radius:999px;
+  text-decoration:none;
+  white-space:nowrap;
+  letter-spacing:.01em;
+  line-height:1;
+  flex:0 0 auto;
+  box-shadow:0 10px 40px rgba(124,92,255,.35);
+}
+
+.footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex:0 0 auto;
+  gap:32px;
+}
+
+.titleWrap{
+  display:flex;
+  align-items:center;
+  min-height:0;
+  flex:1 1 auto;
+}
+
+/* =========================================================
+   SQUARE 1080 x 1080
+   ========================================================= */
+.sq{
+  width:1080px;height:1080px;
+  padding:76px;
+  gap:0;
+}
+.sq::before{width:900px;height:900px;left:-280px;top:-330px;}
+.sq::after{width:760px;height:760px;right:-280px;bottom:-300px;}
+
+.sq .brand{gap:22px;}
+.sq .brand img{height:46px;width:auto;}
+.sq .brand .rule{height:34px;}
+.sq .brand .evt{font-size:25px;}
+
+.sq .person{
+  display:flex;align-items:center;gap:30px;
+  margin-top:62px;flex:0 0 auto;
+}
+.sq .avatar{width:186px;height:186px;--ring:5px;}
+.sq .who .name{font-size:42px;}
+.sq .who .role{font-size:23px;margin-top:9px;}
+
+.sq .titleWrap{margin-top:58px;margin-bottom:58px;}
+.sq .title{font-size:62px;--title-max:92px;}
+
+.sq .meta{font-size:24px;gap:14px;}
+.sq .meta .dot{width:9px;height:9px;}
+.sq .btn{font-size:25px;padding:0 42px;height:70px;}
+
+/* =========================================================
+   LANDSCAPE 1920 x 1080
+   ========================================================= */
+.ls{
+  width:1920px;height:1080px;
+  padding:78px 90px;
+}
+.ls::before{width:1000px;height:1000px;left:-340px;top:-380px;}
+.ls::after{width:900px;height:900px;right:-330px;bottom:-360px;}
+
+.ls .brand{gap:24px;}
+.ls .brand img{height:48px;width:auto;}
+.ls .brand .rule{height:36px;}
+.ls .brand .evt{font-size:26px;}
+
+.ls .main{
+  display:flex;
+  align-items:stretch;
+  gap:86px;
+  flex:1 1 auto;
+  min-height:0;
+  margin:44px 0;
+}
+.ls .left{
+  flex:0 0 auto;
+  width:470px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+.ls .avatar{width:364px;height:364px;--ring:6px;}
+.ls .who{margin-top:34px;}
+.ls .who .name{font-size:37px;white-space:nowrap;}
+.ls .who .role{font-size:22px;margin-top:10px;}
+
+.ls .right{
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.ls .title{font-size:78px;--title-max:112px;}
+
+.ls .meta{font-size:26px;gap:16px;}
+.ls .meta .dot{width:10px;height:10px;}
+.ls .btn{font-size:26px;padding:0 46px;height:74px;}
+
+/* =========================================================
+   STORY 1080 x 1920
+   ========================================================= */
+.st{
+  width:1080px;height:1920px;
+  padding:110px 80px 120px;
+  align-items:center;
+  text-align:center;
+}
+.st::before{width:980px;height:980px;left:-300px;top:-420px;}
+.st::after{width:900px;height:900px;right:-320px;bottom:-330px;}
+
+.st .brand{gap:24px;}
+.st .brand img{height:50px;width:auto;}
+.st .brand .rule{height:38px;}
+.st .brand .evt{font-size:27px;}
+
+.st .person{
+  display:flex;flex-direction:column;align-items:center;
+  margin-top:86px;flex:0 0 auto;
+}
+.st .avatar{width:380px;height:380px;--ring:7px;}
+.st .who{margin-top:44px;}
+.st .who .name{font-size:52px;}
+.st .who .role{font-size:27px;margin-top:12px;}
+
+.st .titleWrap{margin-top:80px;margin-bottom:80px;}
+.st .title{font-size:72px;text-align:center;--title-max:90px;}
+
+.st .footer{
+  flex-direction:column;
+  gap:46px;
+}
+.st .meta{font-size:28px;gap:16px;}
+.st .meta .dot{width:10px;height:10px;}
+.st .btn{font-size:28px;padding:0 54px;height:82px;}
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <!-- 1. logo + event name -->
+  <div class="brand">
+    <img src="logo.svg" alt="Fieldnotes Conf logo">
+    <div class="rule"></div>
+    <div class="evt">Fieldnotes Conf 2026</div>
+  </div>
+
+  <!-- landscape wraps portrait + title in a row -->
+  <div class="main" id="main">
+    <div class="left">
+      <!-- 2 + 3. portrait, name, role -->
+      <div class="person">
+        <div class="avatar" role="img" aria-label="Portrait of Maya Okonkwo-Lindqvist"></div>
+        <div class="who">
+          <div class="name">Maya Okonkwo-Lindqvist</div>
+          <div class="role">Principal Engineer, Northwind Labs</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <!-- 4. talk title -->
+      <div class="titleWrap">
+        <h1 class="title" id="title">Shipping at the speed of trust: <span class="hl">what ten years of on-call taught us about resilient systems</span></h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 + 6. date/venue and button -->
+  <div class="footer">
+    <div class="meta">
+      <span>November 14, 2026</span>
+      <span class="dot"></span>
+      <span>Harbor Hall, Lisbon</span>
+    </div>
+    <a class="btn" href="#">Get tickets</a>
+  </div>
+</div>
+
+<script>
+(function(){
+  var size = new URLSearchParams(location.search).get('size') || 'square';
+  var card = document.getElementById('card');
+  var cls = {square:'sq', landscape:'ls', story:'st'}[size] || 'sq';
+  card.classList.add(cls);
+
+  // For square & story the "main" wrapper is not needed as a row; flatten it
+  // so that person / title are direct children of the card column.
+  if (cls !== 'ls') {
+    var main = document.getElementById('main');
+    var left = main.querySelector('.left');
+    var right = main.querySelector('.right');
+    var person = left.querySelector('.person');
+    var titleWrap = right.querySelector('.titleWrap');
+    card.insertBefore(person, main);
+    card.insertBefore(titleWrap, main);
+    main.remove();
+  }
+
+  // Auto-fit the long title so it always wraps inside its box, never clipped.
+  function fitTitle(){
+    var title = document.getElementById('title');
+    var wrap = title.parentElement;           // .titleWrap
+    var cs = getComputedStyle(title);
+    var max = parseFloat(cs.getPropertyValue('--title-max')) ||
+              parseFloat(cs.fontSize);
+    function fitsAt(px){
+      title.style.fontSize = px + 'px';
+      // force layout
+      return title.scrollHeight <= wrap.clientHeight &&
+             title.scrollWidth  <= wrap.clientWidth;
+    }
+
+    // search on a 0.5px grid so the value we test is the value we keep
+    var lo = 16, hi = max, best = lo;
+    while (hi - lo >= 0.5){
+      var mid = Math.round(((lo + hi) / 2) * 2) / 2;
+      if (mid <= lo) mid = lo + 0.5;
+      if (mid >= hi) mid = hi;
+      if (fitsAt(mid)){ best = mid; lo = mid; } else { hi = mid - 0.5; }
+    }
+    if (fitsAt(hi)) best = hi;
+
+    // final verification — step down until it genuinely fits
+    var guard = 200;
+    while (best > 16 && !fitsAt(best) && guard--) best -= 0.5;
+    title.style.fontSize = best + 'px';
+  }
+
+  function ready(){
+    fitTitle();
+    document.documentElement.setAttribute('data-ready', '1');
+  }
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.load('800 60px Inter').then(function(){
+      return document.fonts.ready;
+    }).then(ready).catch(ready);
+  } else {
+    window.addEventListener('load', ready);
+  }
+})();
+</script>
+</body>
+</html>

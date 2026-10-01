@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker card</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: #06070f;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .card {
+    position: relative;
+    overflow: hidden;
+    background: #0F1226;
+    color: #FFFFFF;
+    display: grid;
+    isolation: isolate;
+  }
+
+  /* decorative glow */
+  .card::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,92,255,0.38) 0%, rgba(124,92,255,0.10) 45%, rgba(124,92,255,0) 70%);
+    pointer-events: none;
+  }
+  .card::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 8px;
+    background: linear-gradient(90deg, #7C5CFF 0%, #7C5CFF 55%, rgba(124,92,255,0) 100%);
+    z-index: 3;
+  }
+
+  .card > * { position: relative; z-index: 2; }
+
+  /* ---------- brand ---------- */
+  .brand {
+    grid-area: brand;
+    display: flex;
+    align-items: center;
+  }
+  .brand img { display: block; }
+  .brand .rule {
+    width: 1px;
+    background: rgba(255,255,255,0.22);
+    align-self: stretch;
+  }
+  .event {
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: #FFFFFF;
+  }
+
+  /* ---------- person ---------- */
+  .person { grid-area: person; display: flex; }
+  .portrait {
+    border-radius: 50%;
+    overflow: hidden;
+    flex: none;
+    aspect-ratio: 1 / 1;
+    background: #1b1f3d;
+    box-shadow: 0 0 0 var(--ring, 6px) rgba(124,92,255,0.95),
+                0 0 0 calc(var(--ring, 6px) + 10px) rgba(124,92,255,0.18);
+  }
+  .portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 50%;
+  }
+  .who { display: flex; flex-direction: column; min-width: 0; }
+  .name { font-weight: 700; line-height: 1.1; letter-spacing: -0.015em; }
+  .role { font-weight: 500; color: rgba(255,255,255,0.72); line-height: 1.3; }
+
+  /* ---------- title ---------- */
+  .title-wrap { grid-area: title; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .kicker {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: #7C5CFF;
+  }
+  .title {
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.022em;
+    overflow-wrap: break-word;
+    text-wrap: balance;
+  }
+  .title em { font-style: normal; color: #B9A6FF; }
+
+  /* ---------- footer ---------- */
+  .footer { grid-area: footer; display: flex; align-items: center; }
+  .meta { font-weight: 500; color: rgba(255,255,255,0.80); }
+  .meta .dot { color: #7C5CFF; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #7C5CFF;
+    color: #FFFFFF;
+    font-weight: 700;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex: none;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    box-shadow: 0 10px 30px rgba(124,92,255,0.35);
+  }
+
+  /* =======================================================
+     SQUARE 1080 x 1080
+     ======================================================= */
+  body.square .card {
+    width: 1080px; height: 1080px;
+    padding: 76px 80px 80px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto;
+    grid-template-areas: "brand" "person" "title" "footer";
+    row-gap: 54px;
+  }
+  body.square .card::before { width: 900px; height: 900px; right: -300px; top: -340px; }
+  body.square .brand { gap: 26px; height: 48px; }
+  body.square .brand img { width: 160px; height: 48px; }
+  body.square .brand .rule { margin: 6px 0; }
+  body.square .event { font-size: 27px; }
+  body.square .person { flex-direction: row; align-items: center; gap: 34px; }
+  body.square .portrait { width: 188px; --ring: 5px; }
+  body.square .name { font-size: 50px; }
+  body.square .role { font-size: 25px; margin-top: 10px; }
+  body.square .kicker { font-size: 19px; margin-bottom: 20px; }
+  body.square .title { font-size: 62px; }
+  body.square .footer { justify-content: space-between; gap: 32px; }
+  body.square .meta { font-size: 24px; }
+  body.square .btn { font-size: 25px; padding: 23px 44px; }
+
+  /* =======================================================
+     LANDSCAPE 1920 x 1080
+     ======================================================= */
+  body.landscape .card {
+    width: 1920px; height: 1080px;
+    padding: 84px 96px 90px;
+    grid-template-columns: minmax(0, 1fr) 560px;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "brand  person"
+      "title  person"
+      "footer person";
+    column-gap: 100px;
+    row-gap: 56px;
+  }
+  body.landscape .card::before { width: 1100px; height: 1100px; right: -340px; top: -380px; }
+  body.landscape .brand { gap: 30px; height: 56px; }
+  body.landscape .brand img { width: 187px; height: 56px; }
+  body.landscape .brand .rule { margin: 8px 0; }
+  body.landscape .event { font-size: 31px; }
+  body.landscape .person {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 42px;
+  }
+  body.landscape .portrait { width: 420px; --ring: 8px; }
+  body.landscape .who { align-items: center; }
+  body.landscape .name { font-size: 44px; }
+  body.landscape .role { font-size: 26px; margin-top: 14px; }
+  body.landscape .kicker { font-size: 21px; margin-bottom: 26px; }
+  body.landscape .title { font-size: 68px; }
+  body.landscape .footer { justify-content: flex-start; gap: 48px; }
+  body.landscape .meta { font-size: 27px; }
+  body.landscape .btn { font-size: 27px; padding: 25px 50px; }
+
+  /* =======================================================
+     STORY 1080 x 1920
+     ======================================================= */
+  body.story .card {
+    width: 1080px; height: 1920px;
+    padding: 110px 86px 120px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto;
+    grid-template-areas: "brand" "person" "title" "footer";
+    row-gap: 80px;
+    justify-items: center;
+    text-align: center;
+  }
+  body.story .card::before { width: 1000px; height: 1000px; right: -280px; top: -300px; }
+  body.story .brand { gap: 28px; height: 54px; }
+  body.story .brand img { width: 180px; height: 54px; }
+  body.story .brand .rule { margin: 7px 0; }
+  body.story .event { font-size: 30px; }
+  body.story .person { flex-direction: column; align-items: center; gap: 46px; }
+  body.story .portrait { width: 440px; --ring: 9px; }
+  body.story .who { align-items: center; }
+  body.story .name { font-size: 60px; }
+  body.story .role { font-size: 30px; margin-top: 16px; }
+  body.story .title-wrap { align-items: center; }
+  body.story .kicker { font-size: 22px; margin-bottom: 34px; }
+  body.story .title { font-size: 78px; }
+  body.story .footer { flex-direction: column; gap: 46px; align-items: center; }
+  body.story .meta { font-size: 29px; }
+  body.story .btn { font-size: 30px; padding: 30px 64px; }
+</style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="brand">
+      <img src="logo.svg" alt="Fieldnotes Conf logo">
+      <div class="rule"></div>
+      <div class="event">Fieldnotes Conf 2026</div>
+    </div>
+
+    <div class="person">
+      <div class="portrait"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+      <div class="who">
+        <div class="name">Maya&nbsp;Okonkwo-Lindqvist</div>
+        <div class="role">Principal Engineer, Northwind Labs</div>
+      </div>
+    </div>
+
+    <div class="title-wrap">
+      <div class="kicker">Keynote</div>
+      <h1 class="title">Shipping at the speed of trust: what ten years of on-call taught us about resilient systems</h1>
+    </div>
+
+    <div class="footer">
+      <div class="meta">November 14, 2026 <span class="dot">·</span> Harbor Hall, Lisbon</div>
+      <a class="btn" href="#">Get tickets</a>
+    </div>
+  </div>
+
+<script>
+  const size = new URLSearchParams(location.search).get('size') || 'square';
+  document.body.className = size;
+
+  window.__ready = false;
+  (async () => {
+    await document.fonts.load('800 70px Inter');
+    await document.fonts.load('500 30px Inter');
+    await document.fonts.ready;
+    await Promise.all([...document.images].map(img => img.complete ? null :
+      new Promise(r => { img.onload = img.onerror = r; })));
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    window.__ready = true;
+  })();
+
+  window.__audit = () => {
+    const card = document.getElementById('card');
+    const cb = card.getBoundingClientRect();
+    const pad = getComputedStyle(card);
+    const inner = {
+      l: cb.left + parseFloat(pad.paddingLeft),
+      r: cb.right - parseFloat(pad.paddingRight),
+      t: cb.top + parseFloat(pad.paddingTop),
+      b: cb.bottom - parseFloat(pad.paddingBottom)
+    };
+    const issues = [];
+    const sel = '.brand, .event, .person, .portrait, .who, .name, .role, .title-wrap, .kicker, .title, .footer, .meta, .btn';
+    const boxes = [];
+    document.querySelectorAll(sel).forEach(el => {
+      const r = el.getBoundingClientRect();
+      const cls = el.className;
+      boxes.push({ cls, x: Math.round(r.x - cb.x), y: Math.round(r.y - cb.y), w: Math.round(r.width), h: Math.round(r.height) });
+      if (r.left < inner.l - 0.6 || r.right > inner.r + 0.6 || r.top < inner.t - 0.6 || r.bottom > inner.b + 0.6) {
+        issues.push(`OUT-OF-PADDING ${cls}: box=[${r.left - cb.left|0},${r.top - cb.top|0},${r.right - cb.left|0},${r.bottom - cb.top|0}] inner=[${inner.l - cb.left|0},${inner.t - cb.top|0},${inner.r - cb.left|0},${inner.b - cb.top|0}]`);
+      }
+      if (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0) issues.push(`H-OVERFLOW ${cls} ${el.scrollWidth}>${el.clientWidth}`);
+      if (el.scrollHeight > el.clientHeight + 1 && el.clientHeight > 0) issues.push(`V-OVERFLOW ${cls} ${el.scrollHeight}>${el.clientHeight}`);
+    });
+    // overlap check between sibling text blocks
+    const groups = ['.brand', '.person', '.title-wrap', '.footer'].map(s => document.querySelector(s).getBoundingClientRect());
+    const names = ['brand', 'person', 'title-wrap', 'footer'];
+    for (let i = 0; i < groups.length; i++) for (let j = i + 1; j < groups.length; j++) {
+      const a = groups[i], b = groups[j];
+      const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+      const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+      if (ox > 1 && oy > 1) issues.push(`OVERLAP ${names[i]} x ${names[j]} (${ox|0}x${oy|0})`);
+    }
+    const p = document.querySelector('.portrait').getBoundingClientRect();
+    if (Math.abs(p.width - p.height) > 0.6) issues.push(`PORTRAIT NOT SQUARE ${p.width}x${p.height}`);
+    const t = document.querySelector('.title');
+    const lh = parseFloat(getComputedStyle(t).lineHeight);
+    return {
+      size, card: [cb.width, cb.height],
+      titleLines: Math.round(t.getBoundingClientRect().height / lh),
+      fonts: document.fonts.check('800 70px Inter'),
+      ready: window.__ready,
+      slackBottom: Math.round(inner.b - document.querySelector('.footer').getBoundingClientRect().bottom),
+      boxes, issues
+    };
+  };
+</script>
+</body>
+</html>

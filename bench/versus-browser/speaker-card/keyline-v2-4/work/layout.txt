@@ -1,0 +1,63 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  glow ellipse 594,-302 900×900
+  main frame 0,0 1080×1080
+   header frame 80,80 920×48
+    logoImg image 80,80 160×48 contain
+    logoDiv frame 260,89 1×30
+    eventName text 281,91 327×27 22px
+   content frame 80,239 920×584
+    avatar frame 80,239 248×248
+     portraitImg image 80,239 248×248 cover
+    textcol frame 80,523 920×300
+     ident frame 80,523 920×84
+      spName text 80,523 920×46 40px
+      spRole text 80,577 920×30 23px
+     talkTitle text 80,637 920×186 54px 3L
+   footer frame 80,933 920×67
+    ticketBtn frame 80,933 196×67
+     btnLabel text 120,953 116×27 22px
+    dateVenue text 308,952 429×29 22px
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  glow ellipse 1190,-367 900×900
+  main frame 0,0 1920×1080
+   header frame 88,72 1744×48
+    logoImg image 88,72 160×48 contain
+    logoDiv frame 268,81 1×30
+    eventName text 289,83 327×27 22px
+   content frame 88,316 1744×430
+    avatar frame 88,316 430×430
+     portraitImg image 88,316 430×430 cover
+    textcol frame 590,375 1242×312
+     ident frame 590,375 1242×84
+      spName text 590,375 1242×46 40px
+      spRole text 590,429 1242×30 23px
+     talkTitle text 590,489 1242×198 58px 3L
+   footer frame 88,941 1744×67
+    ticketBtn frame 88,941 196×67
+     btnLabel text 128,961 116×27 22px
+    dateVenue text 316,960 429×29 22px
+story 1080×1920
+ root frame 0,0 1080×1920
+  glow ellipse 594,-269 900×900
+  main frame 0,0 1080×1920
+   header frame 96,96 888×60
+    logoImg image 96,96 200×60 contain
+    logoDiv frame 316,111 1×30
+    eventName text 337,111 375×31 26px
+   content frame 96,436 888×951
+    avatar frame 96,436 400×400
+     portraitImg image 96,436 400×400 cover
+    textcol frame 96,888 888×499
+     ident frame 96,888 888×111
+      spName text 96,888 888×64 56px
+      spRole text 96,960 888×39 30px
+     talkTitle text 96,1039 888×348 76px 4L
+   footer frame 96,1667 888×157
+    ticketBtn frame 96,1667 243×82
+     btnLabel text 144,1691 147×34 28px
+    dateVenue text 96,1785 585×39 30px

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker Card</title>
+<style>
+@font-face{
+  font-family:"Inter";
+  src:url("Inter.ttf") format("truetype");
+  font-weight:100 900;
+  font-style:normal;
+  font-display:block;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+html,body{width:100%;height:100%;background:#0F1226;overflow:hidden;}
+
+body{
+  font-family:"Inter",sans-serif;
+  color:#FFFFFF;
+  -webkit-font-smoothing:antialiased;
+}
+
+:root{
+  --bg:#0F1226;
+  --accent:#7C5CFF;
+  --pad:72px;
+  --fs-event:26px;
+  --fs-name:42px;
+  --fs-role:24px;
+  --fs-title:62px;
+  --fs-meta:25px;
+  --fs-btn:25px;
+  --avatar:250px;
+  --logo-w:166px;
+}
+
+/* ---------- shell ---------- */
+.card{
+  position:relative;
+  width:100vw;height:100vh;
+  padding:var(--pad);
+  background:var(--bg);
+  display:flex;
+  overflow:hidden;
+}
+
+.glow{
+  position:absolute;border-radius:50%;z-index:0;pointer-events:none;
+  background:radial-gradient(circle,rgba(124,92,255,.40) 0%,rgba(124,92,255,.13) 44%,rgba(124,92,255,0) 70%);
+}
+.glow.a{width:1000px;height:1000px;right:-310px;top:-400px;}
+.glow.b{width:780px;height:780px;left:-320px;bottom:-330px;
+  background:radial-gradient(circle,rgba(124,92,255,.24) 0%,rgba(124,92,255,0) 70%);}
+
+.hairline{
+  position:absolute;left:0;top:0;right:0;height:6px;
+  background:linear-gradient(90deg,#7C5CFF 0%,#A98CFF 45%,rgba(124,92,255,0) 100%);
+  z-index:3;
+}
+
+.inner{
+  position:relative;z-index:2;
+  width:100%;height:100%;
+  display:flex;flex-direction:column;
+  justify-content:space-between;
+}
+
+/* ---------- brand ---------- */
+.brand{display:flex;align-items:center;gap:22px;flex:none;}
+.brand img{width:var(--logo-w);height:auto;display:block;}
+.brand .rule{width:1px;height:calc(var(--logo-w)*.26);background:rgba(255,255,255,.28);flex:none;}
+.event{
+  font-size:var(--fs-event);
+  font-weight:700;
+  letter-spacing:.155em;
+  line-height:1;
+  white-space:nowrap;
+}
+
+/* ---------- speaker ---------- */
+.speaker{display:flex;align-items:center;gap:34px;flex:none;}
+.avatar{
+  width:var(--avatar);height:var(--avatar);flex:none;
+  border-radius:50%;overflow:hidden;position:relative;background:#1b1f3d;
+  box-shadow:0 0 0 5px rgba(124,92,255,.95),0 0 0 12px rgba(124,92,255,.16),0 26px 60px rgba(0,0,0,.45);
+}
+.avatar img{
+  width:100%;height:100%;
+  object-fit:cover;object-position:50% 43%;
+  display:block;border-radius:50%;
+}
+.who{min-width:0;}
+.name{
+  font-size:var(--fs-name);font-weight:700;
+  letter-spacing:-.02em;line-height:1.1;
+  overflow-wrap:break-word;
+}
+.role{
+  margin-top:12px;
+  font-size:var(--fs-role);font-weight:500;line-height:1.3;
+  color:#B9BCD8;overflow-wrap:break-word;
+}
+
+/* ---------- title ---------- */
+.title{
+  font-size:var(--fs-title);font-weight:700;
+  line-height:1.09;letter-spacing:-.026em;
+  overflow-wrap:break-word;flex:none;
+}
+.title .hl{color:#C9B8FF;}
+
+/* ---------- footer ---------- */
+.foot{display:flex;align-items:center;gap:36px;flex:none;}
+.meta{font-size:var(--fs-meta);font-weight:500;line-height:1.35;color:#D6D8EC;}
+.meta .dot{color:var(--accent);font-weight:700;}
+.btn{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;
+  background:var(--accent);color:#fff;
+  font-size:var(--fs-btn);font-weight:700;letter-spacing:.01em;line-height:1;
+  padding:calc(var(--fs-btn)*.80) calc(var(--fs-btn)*1.7);
+  border-radius:999px;white-space:nowrap;
+  box-shadow:0 14px 34px rgba(124,92,255,.40);
+}
+
+/* =========================================================
+   SQUARE + STORY : flatten wrappers, even vertical rhythm
+   ========================================================= */
+@media not all and (min-aspect-ratio:11/10){
+  .main,.content{display:contents;}
+}
+
+/* ---- SQUARE 1080x1080 ---- */
+@media (aspect-ratio:1/1){
+  :root{--fs-title:61px;}
+  .title{max-width:960px;}
+}
+
+/* ---- STORY 1080x1920 ---- */
+@media (max-aspect-ratio:4/5){
+  :root{
+    --pad:86px;
+    --fs-event:30px;
+    --fs-name:60px;
+    --fs-role:30px;
+    --fs-title:90px;
+    --fs-meta:31px;
+    --fs-btn:31px;
+    --avatar:520px;
+    --logo-w:200px;
+  }
+  .glow.a{width:1240px;height:1240px;right:-380px;top:-480px;}
+  .glow.b{width:1040px;height:1040px;left:-400px;bottom:-400px;}
+  .speaker{flex-direction:column;align-items:flex-start;gap:40px;}
+  .foot{flex-direction:column;align-items:flex-start;gap:34px;}
+  .btn{padding:calc(var(--fs-btn)*.84) calc(var(--fs-btn)*1.8);}
+}
+
+/* =========================================================
+   LANDSCAPE 1920x1080
+   ========================================================= */
+@media (min-aspect-ratio:11/10){
+  :root{
+    --pad:84px;
+    --fs-event:28px;
+    --fs-name:48px;
+    --fs-role:27px;
+    --fs-title:73px;
+    --fs-meta:28px;
+    --fs-btn:27px;
+    --avatar:372px;
+    --logo-w:190px;
+  }
+  .inner{justify-content:flex-start;}
+  .main{
+    display:flex;flex-direction:row;
+    flex:1;min-height:0;
+    margin-top:64px;
+    align-items:stretch;
+  }
+  .speaker{
+    flex-direction:column;align-items:flex-start;
+    justify-content:center;
+    width:440px;flex:none;gap:34px;
+  }
+  .content{
+    flex:1;min-width:0;
+    display:flex;flex-direction:column;
+    justify-content:center;
+    gap:58px;
+    margin-left:76px;padding-left:76px;
+    border-left:1px solid rgba(255,255,255,.13);
+  }
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="glow a"></div>
+  <div class="glow b"></div>
+  <div class="hairline"></div>
+
+  <div class="inner">
+    <div class="brand">
+      <img src="logo.svg" alt="">
+      <div class="rule"></div>
+      <div class="event">FIELDNOTES CONF 2026</div>
+    </div>
+
+    <div class="main">
+      <div class="speaker">
+        <div class="avatar"><img src="portrait.png" alt=""></div>
+        <div class="who">
+          <div class="name">Maya Okonkwo&#8209;Lindqvist</div>
+          <div class="role">Principal Engineer, Northwind Labs</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <h1 class="title">Shipping at the speed of trust: <span class="hl">what ten years of on&#8209;call taught us about resilient systems</span></h1>
+
+        <div class="foot">
+          <div class="meta">November 14, 2026 <span class="dot">&middot;</span> Harbor Hall, Lisbon</div>
+          <div class="btn">Get tickets</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

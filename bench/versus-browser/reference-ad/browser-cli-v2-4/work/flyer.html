@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype-variations');
+    font-weight: 100 900;
+    font-style: normal;
+  }
+
+  :root {
+    --navy: #1B2A5C;
+    --red: #D0202E;
+    --pad: 46px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  /* The stage is sized in DESIGN pixels (viewport / k) and scaled by k,
+     so bands stay full-bleed and the whole layout scales uniformly. */
+  #stage {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: top left;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: var(--pad) 0;
+    font-family: 'Inter', sans-serif;
+    color: var(--navy);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .gutter { padding-left: var(--pad); padding-right: var(--pad); }
+
+  /* 1. Headline */
+  .headline {
+    font-size: 72px;
+    line-height: 1.07;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin-bottom: 30px;
+  }
+  .headline em { color: var(--red); font-style: normal; }
+
+  /* 2. Photo band (full width, crops via object-fit) */
+  .photoband {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 180px;
+    max-height: 700px;
+    overflow: hidden;
+    margin-bottom: 34px;
+    background: var(--navy);
+  }
+  .photoband img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 42%;
+    display: block;
+  }
+  /* Art-direct the crop: the band's aspect differs a lot per size, so shift the
+     focal point to keep a complete subject (never a half-cut sun). */
+  html[data-k="0.85"] .photoband img { object-position: center 64%; }
+  html[data-k="0.28"] .photoband img { object-position: center 50%; }
+
+  /* 3. Candidates */
+  .candidates {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 26px;
+    margin-bottom: 34px;
+  }
+  .cand {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .mono {
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: #fff;
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .cand .name {
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .cand .role {
+    margin-top: 7px;
+    font-size: 23px;
+    font-weight: 700;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.11em;
+    white-space: nowrap;
+  }
+
+  /* 4. CTA bar (full width) */
+  .cta {
+    width: 100%;
+    background: var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    padding: 26px 0;
+    margin-bottom: 34px;
+  }
+  .cta img { width: 56px; height: 44px; display: block; }
+  .cta span {
+    font-size: 46px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.07em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* 5. Steps */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .step img { width: 40px; height: 40px; flex: 0 0 auto; display: block; }
+  .step span {
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+  }
+
+  /* 6. Footer */
+  .footer {
+    font-size: 23px;
+    font-weight: 500;
+    color: #64719B;
+    letter-spacing: 0.01em;
+    border-top: 2px solid #E2E6F0;
+    padding-top: 22px;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <h1 class="headline gutter">Proven <em>RESULTS</em> for <em>WILLOWMERE</em> Families</h1>
+
+    <div class="photoband"><img src="photo.png" alt=""></div>
+
+    <div class="candidates gutter">
+      <div class="cand">
+        <div class="mono">DL</div>
+        <div class="name">Dana Levi</div>
+        <div class="role">Mayor</div>
+      </div>
+      <div class="cand">
+        <div class="mono">OH</div>
+        <div class="name">Omar Haddad</div>
+        <div class="role">Council</div>
+      </div>
+      <div class="cand">
+        <div class="mono">RC</div>
+        <div class="name">Ruth Cohen</div>
+        <div class="role">Council</div>
+      </div>
+    </div>
+
+    <div class="cta">
+      <img src="mail.svg" alt="">
+      <span>VOTE BY MAIL</span>
+    </div>
+
+    <div class="steps gutter">
+      <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October&nbsp;20</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Mail it back by November&nbsp;3</span></div>
+    </div>
+
+    <div class="footer gutter">Paid for by Willowmere Forward · willowmereforward.org</div>
+  </div>
+
+<script>
+  // Map viewport width -> content scale required by the spec.
+  var SCALES = { 1080: 1, 1200: 0.85, 300: 0.28 };
+  var k = SCALES[window.innerWidth] || 1;
+  var stage = document.getElementById('stage');
+  stage.style.width  = (window.innerWidth  / k) + 'px';
+  stage.style.height = (window.innerHeight / k) + 'px';
+  stage.style.transform = 'scale(' + k + ')';
+  document.documentElement.dataset.k = k;
+</script>
+</body>
+</html>

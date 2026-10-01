@@ -1,0 +1,60 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  header frame 72,72 936×48
+   logoImg image 72,72 160×48 contain
+   divider frame 252,81 1×30
+   eventName text 273,83 327×26 22px
+  body frame 72,168 936×840
+   speakerBlock frame 72,168 936×200
+    portraitImg image 72,168 200×200 cover
+    nameCol frame 300,226 708×85
+     nameTxt text 300,226 708×46 40px
+     roleTxt text 300,282 708×29 22px
+   textBlock frame 72,416 936×592
+    titleTxt text 72,416 936×288 64px 4L
+    gap1 spacer 72,740 936×170
+    footer frame 72,946 936×62 → row
+     dateTxt text 72,964 406×27 21px
+     ctaBtn frame 820,946 188×62
+      ctaTxt text 856,964 116×26 22px
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  header frame 80,80 1760×54
+   logoImg image 80,80 180×54 contain
+   divider frame 280,92 1×30
+   eventName text 301,94 327×26 22px
+  body frame 80,190 1760×810
+   speakerBlock frame 80,190 520×810
+    portraitImg image 80,190 320×320 cover
+    nameCol frame 80,546 520×135
+     nameTxt text 80,546 520×96 42px 2L
+     roleTxt text 80,652 520×29 22px
+   textBlock frame 672,190 1168×810
+    titleTxt text 672,190 1168×222 66px 3L
+    gap1 spacer 672,448 1168×448
+    footer frame 672,932 1168×68 → row
+     dateTxt text 672,951 445×30 23px
+     ctaBtn frame 1639,932 201×68
+      ctaTxt text 1679,952 121×28 23px
+story 1080×1920
+ root frame 0,0 1080×1920
+  header frame 84,84 912×54
+   logoImg image 84,84 180×54 contain
+   divider frame 284,96 1×30
+   eventName text 305,98 327×26 22px
+  body frame 84,202 912×1634
+   speakerBlock frame 84,202 912×531
+    portraitImg image 84,202 380×380 cover
+    nameCol frame 84,622 912×111
+     nameTxt text 84,622 912×67 58px
+     roleTxt text 84,699 912×34 26px
+   textBlock frame 84,797 912×1039
+    titleTxt text 84,797 912×340 76px 4L
+    gap1 spacer 84,1173 912×485
+    footer frame 84,1694 912×142
+     dateTxt text 84,1694 464×31 24px
+     ctaBtn frame 84,1757 233×79
+      ctaTxt text 132,1781 137×31 26px

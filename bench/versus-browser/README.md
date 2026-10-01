@@ -58,7 +58,13 @@ Then judge the unjudged runs, rewrite `results.tsv` and print the medians:
 cargo test --release --test versus_browser judge_runs -- --ignored --nocapture
 ```
 
-## Prompt version vs1
+## Prompt version vs2
+
+The same protocol (prompts, tasks, judge, tooling unchanged; only the version label) rerun on keyline `43d4acd`. The `commit` column says `f386138`, the commit that bumped the label; its `src/` is identical to `43d4acd`.
+
+**In progress:** blocks 1–4 ran (24 runs, all judged); the runner stopped before block 5 because another change landed in the working tree's `src/` and rebuilt the binary. All 24 runs used the binary built from `43d4acd` at 14:06 (the next release build was at 15:27, after block 4); `reference-ad/*-v2-4` say `+dirty` only because `src/` changed while they were being saved. No results table or claim until all five blocks have run.
+
+## Prompt version vs1 (stopped, superseded by vs2)
 
 **vs1 stopped after 29 runs so keyline changes could land; a full rerun follows as vs2.** Blocks 1–4 ran in full, and block 5 got five of its six runs (`speaker-card/keyline-5` never ran). Every run that ran is kept here and in `results.tsv`, and judged. vs1 numbers are not compared with vs2's.
 

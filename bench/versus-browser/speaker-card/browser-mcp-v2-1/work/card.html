@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker card</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  :root {
+    --bg: #0F1226;
+    --accent: #7C5CFF;
+    --ink: #FFFFFF;
+    --muted: rgba(255,255,255,0.68);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #000;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #card {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    isolation: isolate;
+  }
+
+  /* decorative glow */
+  #card::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,92,255,0.40) 0%, rgba(124,92,255,0.14) 45%, rgba(124,92,255,0) 70%);
+    pointer-events: none;
+  }
+  #card::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    left: 0; right: 0; bottom: 0;
+    height: 10px;
+    background: linear-gradient(90deg, var(--accent) 0%, #B49CFF 50%, rgba(124,92,255,0) 100%);
+  }
+
+  .inner { position: relative; z-index: 1; display: flex; width: 100%; }
+
+  /* ---------- shared pieces ---------- */
+  .brand { display: flex; align-items: center; gap: 18px; }
+  .brand img { display: block; }
+  .brand .evt {
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    line-height: 1;
+  }
+  .brand .rule {
+    width: 2px; background: rgba(255,255,255,0.22); align-self: stretch;
+    margin: 2px 0;
+  }
+
+  .portrait {
+    border-radius: 50%;
+    overflow: hidden;
+    flex: none;
+    aspect-ratio: 1 / 1;
+    background: #22263f;
+    box-shadow: 0 0 0 var(--ring, 6px) rgba(124,92,255,0.95), 0 0 0 calc(var(--ring, 6px) + 10px) rgba(124,92,255,0.18);
+  }
+  .portrait img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
+
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 0.6em;
+    color: var(--accent); font-weight: 700;
+    letter-spacing: 0.22em; text-transform: uppercase; line-height: 1;
+  }
+  .eyebrow::before { content: ""; display: block; width: 2.2em; height: 2px; background: var(--accent); }
+
+  .name { font-weight: 700; line-height: 1.08; letter-spacing: -0.02em; }
+  .role { color: var(--muted); font-weight: 500; line-height: 1.3; }
+
+  .title {
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+  .title em { font-style: normal; color: var(--accent); }
+
+  .meta { color: var(--muted); font-weight: 500; line-height: 1.35; }
+
+  .cta {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--accent); color: #fff;
+    font-weight: 700; letter-spacing: 0.01em; line-height: 1;
+    border-radius: 999px; white-space: nowrap;
+    box-shadow: 0 10px 34px rgba(124,92,255,0.40);
+  }
+
+  /* ================= SQUARE 1080x1080 ================= */
+  body.square #card { width: 1080px; height: 1080px; }
+  body.square #card::before { width: 900px; height: 900px; right: -300px; top: -320px; }
+  body.square .inner { flex-direction: column; padding: 78px 84px 84px; gap: 0; }
+
+  body.square .brand img { width: 160px; height: 48px; }
+  body.square .brand .rule { height: 34px; align-self: center; }
+  body.square .brand .evt { font-size: 25px; }
+
+  body.square .speaker { display: flex; align-items: center; gap: 36px; margin-top: 62px; }
+  body.square .portrait { width: 200px; --ring: 6px; }
+  body.square .eyebrow { font-size: 16px; }
+  body.square .name { font-size: 50px; margin-top: 16px; }
+  body.square .role { font-size: 25px; margin-top: 10px; }
+
+  body.square .title { font-size: 71px; margin-top: auto; padding-top: 64px; }
+
+  body.square .footer { margin-top: auto; padding-top: 44px; border-top: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: space-between; gap: 40px; }
+  body.square .meta { font-size: 25px; }
+  body.square .cta { font-size: 25px; padding: 25px 46px; }
+
+  /* ================= LANDSCAPE 1920x1080 ================= */
+  body.landscape #card { width: 1920px; height: 1080px; }
+  body.landscape #card::before { width: 1100px; height: 1100px; right: -260px; top: -200px; }
+  body.landscape .inner { flex-direction: row; align-items: stretch; padding: 78px 96px 84px; gap: 90px; }
+
+  body.landscape .left { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+  body.landscape .right { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; gap: 30px; }
+
+  body.landscape .brand img { width: 173px; height: 52px; }
+  body.landscape .brand .rule { height: 36px; align-self: center; }
+  body.landscape .brand .evt { font-size: 27px; }
+
+  body.landscape .title { font-size: 90px; margin-top: auto; padding-top: 56px; }
+
+  body.landscape .footer { margin-top: auto; padding-top: 44px; border-top: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; gap: 44px; }
+  body.landscape .meta { font-size: 27px; }
+  body.landscape .cta { font-size: 26px; padding: 26px 50px; }
+
+  body.landscape .right { width: 540px; }
+  body.landscape .portrait { width: 410px; --ring: 8px; }
+  body.landscape .speaker { text-align: center; width: 100%; }
+  body.landscape .eyebrow { font-size: 17px; justify-content: center; }
+  body.landscape .name { font-size: 43px; margin-top: 18px; }
+  body.landscape .role { font-size: 25px; margin-top: 12px; }
+
+  /* ================= STORY 1080x1920 ================= */
+  body.story #card { width: 1080px; height: 1920px; }
+  body.story #card::before { width: 1000px; height: 1000px; right: -280px; top: -260px; }
+  body.story .inner { flex-direction: column; align-items: center; text-align: center; padding: 130px 86px 140px; }
+
+  body.story .brand img { width: 186px; height: 56px; }
+  body.story .brand .rule { height: 38px; align-self: center; }
+  body.story .brand .evt { font-size: 29px; }
+
+  body.story .speaker { display: flex; flex-direction: column; align-items: center; margin-top: 96px; }
+  body.story .portrait { width: 400px; --ring: 8px; }
+  body.story .eyebrow { font-size: 19px; margin-top: 54px; }
+  body.story .name { font-size: 62px; margin-top: 22px; }
+  body.story .role { font-size: 30px; margin-top: 14px; }
+
+  body.story .title { font-size: 80px; margin-top: auto; padding-top: 88px; }
+
+  body.story .footer { margin-top: auto; padding-top: 62px; border-top: 1px solid rgba(255,255,255,0.12); align-self: stretch; display: flex; flex-direction: column; align-items: center; gap: 46px; }
+  body.story .meta { font-size: 30px; }
+  body.story .cta { font-size: 30px; padding: 32px 62px; }
+</style>
+</head>
+<body>
+<div id="card">
+  <div class="inner"></div>
+</div>
+
+<script>
+  const BRAND = `
+    <div class="brand">
+      <img src="logo.svg" alt="Fieldnotes Conf logo">
+      <div class="rule"></div>
+      <div class="evt">Fieldnotes Conf 2026</div>
+    </div>`;
+
+  const PORTRAIT = `<div class="portrait"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>`;
+
+  const IDENTITY = `
+    <div class="eyebrow">Featured speaker</div>
+    <div class="name">Maya Okonkwo-Lindqvist</div>
+    <div class="role">Principal Engineer, Northwind Labs</div>`;
+
+  const TITLE = `<h1 class="title">Shipping at the speed of trust: <em>what ten years of on-call taught us about resilient systems</em></h1>`;
+
+  const META = `<div class="meta">November 14, 2026 &middot; Harbor Hall, Lisbon</div>`;
+  const CTA = `<div class="cta">Get tickets</div>`;
+
+  const size = new URLSearchParams(location.search).get('size') || 'square';
+  document.body.className = size;
+
+  const inner = document.querySelector('.inner');
+
+  if (size === 'square') {
+    inner.innerHTML = `
+      ${BRAND}
+      <div class="speaker">
+        ${PORTRAIT}
+        <div class="who">${IDENTITY}</div>
+      </div>
+      ${TITLE}
+      <div class="footer">${META}${CTA}</div>`;
+  } else if (size === 'landscape') {
+    inner.innerHTML = `
+      <div class="left">
+        ${BRAND}
+        ${TITLE}
+        <div class="footer">${META}${CTA}</div>
+      </div>
+      <div class="right">
+        ${PORTRAIT}
+        <div class="speaker">${IDENTITY}</div>
+      </div>`;
+  } else {
+    inner.innerHTML = `
+      ${BRAND}
+      <div class="speaker">
+        ${PORTRAIT}
+        ${IDENTITY}
+      </div>
+      ${TITLE}
+      <div class="footer">${META}${CTA}</div>`;
+  }
+
+  document.fonts.ready.then(() => { document.documentElement.dataset.ready = '1'; });
+</script>
+</body>
+</html>

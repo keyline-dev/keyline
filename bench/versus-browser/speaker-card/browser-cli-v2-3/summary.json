@@ -1,0 +1,33 @@
+{
+  "arm": "browser-cli",
+  "cacheRead": 509506,
+  "cacheWrite": 42508,
+  "calls": 23,
+  "callsByTool": {
+    "Bash": 9,
+    "Edit": 3,
+    "Read": 8,
+    "Write": 3
+  },
+  "claudeVersion": "2.1.251",
+  "coldCostUsd": 3.2641092734190544,
+  "commit": "f386138",
+  "costUsd": 1.1934770000000003,
+  "filesOk": true,
+  "fixedOverhead": 3570,
+  "imagesSeen": 8,
+  "input": 1356,
+  "jsMeasure": true,
+  "label": "v2-3",
+  "model": "claude-opus-5[1m]",
+  "outcome": "success",
+  "output": 20496,
+  "peakContext": 45038,
+  "promptVersion": "vs2",
+  "secs": 310.661,
+  "task": "speaker-card",
+  "thinking": 8490,
+  "timedOut": false,
+  "totalTokens": 573866,
+  "turns": 24
+}

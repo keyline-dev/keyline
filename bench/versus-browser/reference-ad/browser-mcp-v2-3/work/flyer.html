@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face {
+  font-family: 'Inter';
+  src: url('Inter.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+#stage {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+}
+#flyer {
+  position: absolute;
+  top: 0; left: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+/* ---- blocks ---- */
+.pad { padding-left: var(--gutter); padding-right: var(--gutter); box-sizing: border-box; }
+
+.headline {
+  color: #1B2A5C;
+  font-weight: 800;
+  font-size: calc(62px * var(--tscale));
+  line-height: 1.06;
+  letter-spacing: calc(-1px * var(--tscale));
+  margin: 0;
+  text-wrap: balance;
+}
+.headline .hl { color: #D0202E; }
+
+.photoband {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #ccd;
+  flex: none;
+}
+.photoband img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  display: block;
+}
+
+.cands {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cand {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  box-sizing: border-box;
+  padding: 0 calc(6px * var(--tscale));
+}
+.cand .nm {
+  color: #1B2A5C;
+  font-weight: 700;
+  font-size: calc(30px * var(--tscale));
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.cand .rl {
+  color: #D0202E;
+  font-weight: 600;
+  font-size: calc(21px * var(--tscale));
+  line-height: 1.2;
+  margin-top: calc(6px * var(--tscale));
+  text-transform: uppercase;
+  letter-spacing: calc(1.2px * var(--tscale));
+  white-space: nowrap;
+}
+
+.ctabar {
+  width: 100%;
+  background: #D0202E;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(22px * var(--tscale));
+  box-sizing: border-box;
+  padding: calc(22px * var(--tscale)) calc(16px * var(--tscale));
+  flex: none;
+}
+.ctabar img { height: calc(44px * var(--tscale)); width: calc(56px * var(--tscale)); display: block; flex: none; }
+.ctabar span {
+  font-weight: 800;
+  font-size: calc(46px * var(--tscale));
+  letter-spacing: calc(2px * var(--tscale));
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.steps { display: flex; flex-direction: column; gap: calc(18px * var(--tscale)); width: 100%; box-sizing: border-box; }
+.step { display: flex; align-items: flex-start; gap: calc(16px * var(--tscale)); }
+.step img { width: calc(40px * var(--tscale)); height: calc(40px * var(--tscale)); flex: none; margin-top: calc(1px * var(--tscale)); }
+.step span {
+  color: #1B2A5C;
+  font-weight: 500;
+  font-size: calc(27px * var(--tscale));
+  line-height: 1.3;
+}
+
+.footer {
+  color: #5A6480;
+  font-weight: 500;
+  font-size: calc(19px * var(--tscale));
+  line-height: 1.35;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="flyer">
+    <h1 class="headline pad" id="headline">Proven <span class="hl">RESULTS</span> for <span class="hl">WILLOWMERE</span> Families</h1>
+
+    <div class="photoband" id="photoband"><img src="photo.png" alt=""></div>
+
+    <div class="cands pad" id="cands">
+      <div class="cand"><div class="nm">Dana Levi</div><div class="rl">Mayor</div></div>
+      <div class="cand"><div class="nm">Omar Haddad</div><div class="rl">Council</div></div>
+      <div class="cand"><div class="nm">Ruth Cohen</div><div class="rl">Council</div></div>
+    </div>
+
+    <div class="ctabar" id="ctabar">
+      <img src="mail.svg" alt="">
+      <span>VOTE BY MAIL</span>
+    </div>
+
+    <div class="steps pad" id="steps">
+      <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October&nbsp;20</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Mail it back by November&nbsp;3</span></div>
+    </div>
+
+    <div class="footer pad" id="footer">Paid for by Willowmere Forward&nbsp;· willowmereforward.org</div>
+  </div>
+</div>
+
+<script>
+function layout(opts) {
+  var W = opts.w, H = opts.h, s = opts.s;
+  var stage = document.getElementById('stage');
+  var flyer = document.getElementById('flyer');
+  stage.style.width = W + 'px';
+  stage.style.height = H + 'px';
+  flyer.style.width = W + 'px';
+  flyer.style.height = H + 'px';
+
+  var root = flyer.style;
+  root.setProperty('--tscale', s);
+  root.setProperty('--gutter', (opts.gutter) + 'px');
+
+  // vertical rhythm: gaps between blocks, scaled
+  var g = function(v) { return (v * s) + 'px'; };
+  flyer.style.paddingTop = g(opts.padTop);
+  flyer.style.paddingBottom = g(opts.padBottom);
+
+  document.getElementById('photoband').style.marginTop = g(opts.gapHeadPhoto);
+  document.getElementById('cands').style.marginTop = g(opts.gapPhotoCands);
+  document.getElementById('ctabar').style.marginTop = g(opts.gapCandsCta);
+  document.getElementById('steps').style.marginTop = g(opts.gapCtaSteps);
+  document.getElementById('footer').style.marginTop = g(opts.gapStepsFooter);
+
+  var pb = document.getElementById('photoband');
+  pb.style.height = opts.photoH + 'px';
+
+  if (opts.headlineSize) document.getElementById('headline').style.fontSize = opts.headlineSize + 'px';
+  if (opts.maxHeadWidth) document.getElementById('headline').style.maxWidth = opts.maxHeadWidth;
+  if (opts.candCol) {
+    document.getElementById('cands').style.flexDirection = 'column';
+  }
+  if (opts.ctaCol) {
+    document.getElementById('ctabar').style.flexDirection = 'column';
+  }
+  // optionally center the steps list as a group (rows stay left-aligned to each other)
+  var steps = document.getElementById('steps');
+  steps.style.width = '';
+  steps.style.margin = '';
+  steps.style.paddingLeft = '';
+  steps.style.paddingRight = '';
+  steps.style.marginTop = g(opts.gapCtaSteps);
+  if (opts.stepsCenter) {
+    var rows = steps.querySelectorAll('.step');
+    var maxw = 0;
+    rows.forEach(function(r) { r.style.width = 'max-content'; });
+    rows.forEach(function(r) { maxw = Math.max(maxw, r.getBoundingClientRect().width); });
+    rows.forEach(function(r) { r.style.width = ''; });
+    steps.style.width = Math.ceil(maxw + 2) + 'px';
+    steps.style.marginLeft = 'auto';
+    steps.style.marginRight = 'auto';
+    steps.style.paddingLeft = '0';
+    steps.style.paddingRight = '0';
+  }
+  document.documentElement.dataset.ready = '1';
+}
+window.layout = layout;
+
+window.OPTS = {
+  portrait: { w:1080, h:1350, s:1, gutter:72, padTop:64, padBottom:56, photoH:526,
+    gapHeadPhoto:44, gapPhotoCands:48, gapCandsCta:48, gapCtaSteps:48, gapStepsFooter:44 },
+  wide: { w:1200, h:1000, s:0.85, gutter:61, padTop:54, padBottom:48, photoH:360, stepsCenter:true,
+    gapHeadPhoto:45, gapPhotoCands:49, gapCandsCta:49, gapCtaSteps:49, gapStepsFooter:45 },
+  sky: { w:300, h:600, s:0.28, gutter:20, padTop:60, padBottom:60, photoH:300, stepsCenter:true,
+    gapHeadPhoto:94, gapPhotoCands:96, gapCandsCta:96, gapCtaSteps:96, gapStepsFooter:94 }
+};
+
+window.measure = function() {
+  var f = document.getElementById('flyer');
+  var out = { flyer: f.getBoundingClientRect(), overflow: [] };
+  var fr = f.getBoundingClientRect();
+  document.querySelectorAll('#flyer *').forEach(function(el) {
+    var r = el.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return;
+    if (r.bottom > fr.bottom + 0.5 || r.top < fr.top - 0.5 || r.left < fr.left - 0.5 || r.right > fr.right + 0.5) {
+      out.overflow.push({ cls: el.className, tag: el.tagName, top: r.top, bottom: r.bottom, left: r.left, right: r.right, txt: (el.textContent||'').slice(0,30) });
+    }
+    if (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0) {
+      out.overflow.push({ reason: 'scrollW', cls: el.className, sw: el.scrollWidth, cw: el.clientWidth, txt: (el.textContent||'').slice(0,30) });
+    }
+  });
+  var ids = ['headline','photoband','cands','ctabar','steps','footer'];
+  out.blocks = ids.map(function(id){ var r = document.getElementById(id).getBoundingClientRect(); return {id:id, top:Math.round(r.top), bottom:Math.round(r.bottom), left:Math.round(r.left), right:Math.round(r.right)}; });
+  var last = document.getElementById('footer').getBoundingClientRect();
+  out.slack = Math.round(fr.bottom - last.bottom);
+  return JSON.parse(JSON.stringify(out));
+};
+</script>
+</body>
+</html>

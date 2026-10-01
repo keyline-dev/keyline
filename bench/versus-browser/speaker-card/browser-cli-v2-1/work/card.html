@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker Card</title>
+<style>
+@font-face {
+  font-family: 'Inter';
+  src: url('Inter.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+:root{
+  --bg:#0F1226;
+  --accent:#7C5CFF;
+  --ink:#FFFFFF;
+  --muted:rgba(255,255,255,.66);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  font-variation-settings:'opsz' 32;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+
+.card{
+  position:relative;
+  width:100vw;
+  height:100vh;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ---- decorative glow ---- */
+.card::before{
+  content:'';
+  position:absolute;
+  width:120vmin;height:120vmin;
+  right:-45vmin;top:-55vmin;
+  background:radial-gradient(circle, rgba(124,92,255,.38) 0%, rgba(124,92,255,.10) 42%, rgba(124,92,255,0) 70%);
+  pointer-events:none;
+}
+.card::after{
+  content:'';
+  position:absolute;
+  width:100vmin;height:100vmin;
+  left:-42vmin;bottom:-50vmin;
+  background:radial-gradient(circle, rgba(124,92,255,.22) 0%, rgba(124,92,255,0) 68%);
+  pointer-events:none;
+}
+
+.inner{
+  position:relative;
+  z-index:2;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  height:100%;
+}
+
+/* ---- header ---- */
+.brand{
+  display:flex;
+  align-items:center;
+  gap:var(--brand-gap);
+  flex:none;
+}
+.brand img{
+  height:var(--logo-h);
+  width:auto;
+  display:block;
+}
+.brand .rule{
+  width:2px;
+  height:calc(var(--logo-h) * .74);
+  background:rgba(255,255,255,.26);
+  flex:none;
+}
+.event{
+  font-size:var(--event-size);
+  font-variation-settings:'wght' 700,'opsz' 20;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  color:#fff;
+}
+
+/* ---- speaker block ---- */
+.speaker{
+  display:flex;
+  align-items:center;
+  gap:var(--sp-gap);
+  flex:none;
+}
+.avatar{
+  width:var(--avatar);
+  height:var(--avatar);
+  flex:none;
+  border-radius:50%;
+  overflow:hidden;
+  background:#1b1f3d;
+  box-shadow:0 0 0 calc(var(--avatar)*.022) var(--accent),
+             0 0 0 calc(var(--avatar)*.045) rgba(124,92,255,.22),
+             0 24px 60px rgba(0,0,0,.45);
+}
+.avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:50% 42%;
+  display:block;
+  border-radius:50%;
+}
+.who{min-width:0;}
+.name{
+  font-size:var(--name-size);
+  line-height:1.1;
+  font-variation-settings:'wght' 700,'opsz' 32;
+  letter-spacing:-.015em;
+}
+.role{
+  margin-top:calc(var(--name-size)*.26);
+  font-size:var(--role-size);
+  line-height:1.3;
+  font-variation-settings:'wght' 500,'opsz' 20;
+  color:var(--muted);
+}
+
+/* ---- title ---- */
+.title{
+  font-size:var(--title-size);
+  line-height:1.08;
+  font-variation-settings:'wght' 700,'opsz' 40;
+  letter-spacing:-.025em;
+  text-wrap:balance;
+  max-width:var(--title-max);
+  flex:none;
+}
+.title .hl{color:var(--accent);}
+
+/* ---- footer ---- */
+.meta{
+  font-size:var(--meta-size);
+  line-height:1.35;
+  font-variation-settings:'wght' 500,'opsz' 20;
+  color:var(--muted);
+}
+.meta .dot{color:var(--accent);}
+.cta{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.5em;
+  background:var(--accent);
+  color:#fff;
+  font-size:var(--cta-size);
+  font-variation-settings:'wght' 650,'opsz' 20;
+  letter-spacing:.01em;
+  padding:calc(var(--cta-size)*.78) calc(var(--cta-size)*1.7);
+  border-radius:999px;
+  white-space:nowrap;
+  box-shadow:0 18px 44px rgba(124,92,255,.38);
+  flex:none;
+}
+.cta svg{width:.92em;height:.92em;display:block;}
+
+/* =====================================================
+   SQUARE 1080 x 1080
+   ===================================================== */
+@media (min-aspect-ratio: 99/100) and (max-aspect-ratio: 101/100){
+  .card{
+    --pad:78px;
+    --logo-h:48px; --brand-gap:22px; --event-size:23px;
+    --avatar:170px; --sp-gap:34px; --name-size:42px; --role-size:23px;
+    --title-size:62px; --title-max:100%;
+    --meta-size:24px; --cta-size:21px;
+  }
+  .inner{padding:var(--pad);justify-content:space-between;}
+  .speaker{margin-top:10px;}
+  .title{margin-top:4px;}
+  .foot{
+    display:flex;align-items:center;justify-content:space-between;gap:40px;
+    border-top:1px solid rgba(255,255,255,.14);
+    padding-top:34px;
+  }
+}
+
+/* =====================================================
+   LANDSCAPE 1920 x 1080
+   ===================================================== */
+@media (min-aspect-ratio: 3/2){
+  .card{
+    --pad:86px;
+    --logo-h:52px; --brand-gap:24px; --event-size:25px;
+    --avatar:400px; --sp-gap:0px; --name-size:44px; --role-size:25px;
+    --title-size:76px; --title-max:100%;
+    --meta-size:26px; --cta-size:23px;
+  }
+  .inner{
+    padding:var(--pad) var(--pad);
+    display:grid;
+    grid-template-columns:1fr auto;
+    grid-template-rows:auto 1fr auto;
+    column-gap:96px;
+    row-gap:0;
+    align-items:start;
+  }
+  .brand{grid-column:1;grid-row:1;}
+  .title{grid-column:1;grid-row:2;align-self:center;padding:42px 0;}
+  .foot{
+    grid-column:1;grid-row:3;
+    display:flex;align-items:center;justify-content:space-between;gap:56px;
+    border-top:1px solid rgba(255,255,255,.14);
+    padding-top:36px;
+  }
+  .speaker{
+    grid-column:2;grid-row:1 / span 3;
+    flex-direction:column;
+    align-self:center;
+    justify-self:center;
+    text-align:center;
+    gap:36px;
+    max-width:460px;
+  }
+}
+
+/* =====================================================
+   STORY 1080 x 1920
+   ===================================================== */
+@media (max-aspect-ratio: 2/3){
+  .card{
+    --pad:88px;
+    --logo-h:54px; --brand-gap:24px; --event-size:25px;
+    --avatar:360px; --sp-gap:0px; --name-size:56px; --role-size:30px;
+    --title-size:78px; --title-max:100%;
+    --meta-size:30px; --cta-size:27px;
+  }
+  .inner{
+    padding:110px var(--pad) 120px;
+    justify-content:space-between;
+    align-items:center;
+    text-align:center;
+  }
+  .brand{justify-content:center;}
+  .speaker{flex-direction:column;gap:38px;}
+  .title{text-align:center;}
+  .foot{
+    display:flex;flex-direction:column;align-items:center;gap:44px;
+    width:100%;
+    border-top:1px solid rgba(255,255,255,.14);
+    padding-top:48px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="inner">
+
+    <header class="brand">
+      <img src="logo.svg" alt="Fieldnotes Conf logo">
+      <span class="rule"></span>
+      <span class="event">Fieldnotes Conf 2026</span>
+    </header>
+
+    <section class="speaker">
+      <div class="avatar"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+      <div class="who">
+        <div class="name">Maya Okonkwo&#8209;Lindqvist</div>
+        <div class="role">Principal Engineer, Northwind Labs</div>
+      </div>
+    </section>
+
+    <h1 class="title">Shipping at the speed of <span class="hl">trust</span>: what ten years of on&#8209;call taught us about resilient systems</h1>
+
+    <footer class="foot">
+      <div class="meta">November 14, 2026 <span class="dot">&middot;</span> Harbor Hall, Lisbon</div>
+      <div class="cta">Get tickets
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
+      </div>
+    </footer>
+
+  </div>
+</div>
+</body>
+</html>
