@@ -61,7 +61,15 @@ pub fn render_video(
     max_kb: Option<u32>,
 ) -> Result<Video> {
     let rate = Rate::Quality(quality.clamp(1, 100));
-    let bytes = encode_once(scene, size, fps, assets_dir, container, sound, rate)?;
+    let bytes = encode_once(
+        scene,
+        size,
+        fps,
+        assets_dir,
+        container,
+        sound,
+        (rate, false),
+    )?;
     let Some(kb) = max_kb else {
         return Ok(Video {
             bytes,
@@ -108,7 +116,7 @@ pub fn render_video(
         let r = rate_at(start);
         tries[0] = (
             start,
-            encode_once(scene, size, fps, assets_dir, container, sound, r)?,
+            encode_once(scene, size, fps, assets_dir, container, sound, (r, false))?,
         );
     }
     // Every try is measured. Up to three more, each between the closest
@@ -141,7 +149,18 @@ pub fn render_video(
         if tries.iter().any(|t| rate_at(t.0) == rate) {
             break;
         }
-        let bytes = encode_once(scene, size, fps, assets_dir, container, sound, rate)?;
+        // Once a bitrate overshot, the ceiling tightens to the bitrate
+        // itself: some hardware encoders run well past a loose one.
+        let strict = tries.iter().any(|t| t.1.len() as f64 > budget);
+        let bytes = encode_once(
+            scene,
+            size,
+            fps,
+            assets_dir,
+            container,
+            sound,
+            (rate, strict),
+        )?;
         tries.push((next, bytes));
     }
     // The biggest that fits, else the smallest, reported too big.
@@ -169,6 +188,8 @@ pub fn render_video(
 /// A setting's guess from one try: its setting and its size over the target.
 type Guess = fn(f64, f64) -> f64;
 
+/// One ffmpeg encode at `rate`; `strict` holds a bitrate's ceiling to the
+/// bitrate itself.
 fn encode_once(
     scene: &Scene,
     size: &Size,
@@ -176,7 +197,7 @@ fn encode_once(
     assets_dir: &Path,
     container: Container,
     sound: bool,
-    rate: Rate,
+    (rate, strict): (Rate, bool),
 ) -> Result<Vec<u8>> {
     let ffmpeg = super::ffmpeg().map_err(|e| anyhow!(e))?;
     let (count, w, h) = crate::render::animation_dims(scene, size, fps, "video")?;
@@ -240,16 +261,17 @@ fn encode_once(
                     let bits = (w * h) as f32 * fps * per_px;
                     cmd.args(["-b:v", &format!("{}k", (bits / 1000.0).round().max(100.0))]);
                 }
-                // A ceiling at the target kept the average near 60% of it;
-                // the size is measured after, so a looser one is safe.
+                // A ceiling at the target kept the average near 60% of it,
+                // so the first try allows more; `strict` after an overshoot.
                 Rate::Bitrate(k) => {
+                    let (max, buf) = if strict { (k, k) } else { (k * 3 / 2, k * 2) };
                     cmd.args([
                         "-b:v",
                         &format!("{k}k"),
                         "-maxrate",
-                        &format!("{}k", k * 3 / 2),
+                        &format!("{max}k"),
                         "-bufsize",
-                        &format!("{}k", k * 2),
+                        &format!("{buf}k"),
                     ]);
                     if enc == "libx264" {
                         cmd.args(["-preset", "medium"]);
