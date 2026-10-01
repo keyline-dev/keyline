@@ -1,9 +1,9 @@
-//! The benchmark's prompts, frozen before the counted runs (prompt version
-//! `vs1`). Every arm gets the same system prompt and task body; only the
+//! The benchmark's prompts, frozen before the counted runs (written for
+//! `vs1`; `vs2` reran them unchanged on a newer keyline). Every arm gets the same system prompt and task body; only the
 //! tools paragraph differs.
 
 /// Prompt version; runs are compared only with runs on the same version.
-pub const VERSION: &str = "vs1";
+pub const VERSION: &str = "vs2";
 
 /// The system prompt, the same for every arm.
 pub const SYSTEM: &str = "You make images. Work autonomously; don't ask questions.";
