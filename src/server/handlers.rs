@@ -230,7 +230,32 @@ impl Server {
                             Format::Png if max_kb.is_none() => {
                                 render_png_on(&scene, &size, &assets, backend)?
                             }
-                            Format::Pdf => render_pdf(&scene, &size, &assets)?,
+                            // maxKB: the photos' quality lowered a step at a
+                            // time, as for JPEG, until the file fits.
+                            Format::Pdf => {
+                                let steps = std::iter::once(quality)
+                                    .chain([75, 60, 45, 30].into_iter().filter(|q| *q < quality));
+                                let mut best: Option<(Vec<u8>, u32)> = None;
+                                for q in steps {
+                                    let bytes = render_pdf(&scene, &size, &assets, q)?;
+                                    let fits =
+                                        max_kb.is_none_or(|kb| bytes.len() <= kb as usize * 1024);
+                                    if best.as_ref().is_none_or(|(b, _)| bytes.len() < b.len()) {
+                                        best = Some((bytes, q));
+                                    }
+                                    if fits {
+                                        break;
+                                    }
+                                }
+                                let (bytes, q) = best.ok_or_else(|| anyhow::anyhow!("no pdf"))?;
+                                if q != quality {
+                                    note = format!(" quality {q}");
+                                }
+                                if max_kb.is_some_and(|kb| bytes.len() > kb as usize * 1024) {
+                                    note.push_str(" !too-big");
+                                }
+                                bytes
+                            }
                             Format::Mp4 | Format::Webm => {
                                 let container = if format == Format::Mp4 {
                                     crate::video::encode::Container::Mp4

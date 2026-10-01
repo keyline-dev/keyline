@@ -61,12 +61,15 @@ pub(super) fn arrange<'a>(
         let need = measure(scene, c, k, parent, (None, None), true).0;
         widen(&mut col_w, &cols, (s.1, s.3), col_gap, need);
     }
+    // A row is as tall as its items at the width they're drawn: their own
+    // px width, else the cell's.
+    let drawn_width = |c: &Layer, cell: f32| c.width.and_then(Length::px).map_or(cell, |v| v * k);
     let mut row_h = sizes(&rows, inner.1, row_gap, k, |i| {
         flow.iter()
             .zip(&slots)
             .filter(|(_, s)| s.0 == i && s.2 == 1)
             .map(|(c, s)| {
-                let w = span(&col_w, s.1, s.3, col_gap);
+                let w = drawn_width(c, span(&col_w, s.1, s.3, col_gap));
                 measure(scene, c, k, parent, (Some(w), None), true).1
             })
             .fold(0.0, f32::max)
@@ -74,7 +77,7 @@ pub(super) fn arrange<'a>(
     // An item spanning rows needs their sum: what's missing goes to the
     // `auto` rows it spans, as in CSS.
     for (c, s) in flow.iter().zip(&slots).filter(|(_, s)| s.2 > 1) {
-        let w = span(&col_w, s.1, s.3, col_gap);
+        let w = drawn_width(c, span(&col_w, s.1, s.3, col_gap));
         let need = measure(scene, c, k, parent, (Some(w), None), true).1;
         widen(&mut row_h, &rows, (s.0, s.2), row_gap, need);
     }

@@ -194,3 +194,21 @@ fn an_item_spanning_auto_rows_gets_their_sum() {
     // b and c each take their 100 px at the top of a 145 px row.
     assert_eq!(b["c"].y, 155.0);
 }
+
+#[test]
+fn an_auto_row_is_as_tall_as_its_item_at_the_items_own_width() {
+    // The copy is 200 px wide in a 600 px cell: its text wraps at 200, and
+    // the auto row holds all of it.
+    let s = scene(
+        json!([{"id": "g", "type": "frame", "width": 600, "gridTemplateColumns": "1fr", "children": [
+        {"id": "copy", "type": "frame", "width": 200, "flexDirection": "column", "children": [
+            {"id": "t", "type": "text", "text": "A sentence that wraps onto several lines at two hundred", "width": "fill", "fontSize": 24}]}]}]),
+    );
+    let b = boxes(&s, &s.sizes[0]);
+    let (g, copy) = (b["g"], b["copy"]);
+    assert!(copy.w <= 200.5, "{copy:?}");
+    assert!(
+        g.h + 0.5 >= copy.h && copy.h > 60.0,
+        "the row holds it: grid {g:?}, copy {copy:?}"
+    );
+}

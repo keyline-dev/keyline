@@ -27,10 +27,11 @@ impl Text<'_> {
 
 impl Text<'_> {
     /// The first word the lines break inside ("Winsto" / "n"): a word
-    /// wider than its box.
-    pub fn broken_word(&self, p: &Paragraph) -> Option<String> {
+    /// wider than its box, and how wide it is drawn, px (its pieces on
+    /// each line added up).
+    pub fn broken_word(&self, p: &Paragraph) -> Option<(String, f32)> {
         let d = &self.display;
-        p.get_line_metrics().windows(2).find_map(|w| {
+        let (start, end) = p.get_line_metrics().windows(2).find_map(|w| {
             let at = byte_index(d, w[0].end_index);
             let before = d[..at].chars().next_back()?;
             let after = d[at..].chars().next()?;
@@ -39,9 +40,20 @@ impl Text<'_> {
                 let end = d[at..]
                     .find(char::is_whitespace)
                     .map_or(d.len(), |i| at + i);
-                d[start..end].to_owned()
+                (start, end)
             })
-        })
+        })?;
+        let utf16 = |byte: usize| d[..byte].encode_utf16().count();
+        let width = p
+            .get_rects_for_range(
+                utf16(start)..utf16(end),
+                skia_safe::textlayout::RectHeightStyle::Tight,
+                skia_safe::textlayout::RectWidthStyle::Tight,
+            )
+            .iter()
+            .map(|b| b.rect.width())
+            .sum();
+        Some((d[start..end].to_owned(), width))
     }
 }
 

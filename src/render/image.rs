@@ -151,6 +151,32 @@ pub fn image_crop(bx: Rect, iw: f32, ih: f32, fit: Fit, crop: Option<&Crop>) -> 
     (1.0 - (bx.w / d.w).min(1.0), 1.0 - (bx.h / d.h).min(1.0))
 }
 
+/// `img` at most `width` px wide, its height in proportion: a print PDF
+/// needs no more than its dpi at the drawn size. Smaller ones as they are.
+pub(super) fn at_most(img: &Image, width: f32) -> Image {
+    let w = width.ceil().max(1.0);
+    if (img.width() as f32) <= w * 1.02 {
+        return img.clone();
+    }
+    let h = (img.height() as f32 * w / img.width() as f32)
+        .ceil()
+        .max(1.0);
+    let Some(mut surface) = skia_safe::surfaces::raster_n32_premul((w as i32, h as i32)) else {
+        return img.clone();
+    };
+    surface.canvas().draw_image_rect_with_sampling_options(
+        img,
+        None,
+        skia_safe::Rect::from_wh(w, h),
+        skia_safe::SamplingOptions::new(
+            skia_safe::FilterMode::Linear,
+            skia_safe::MipmapMode::Linear,
+        ),
+        &skia_safe::Paint::default(),
+    );
+    surface.image_snapshot()
+}
+
 /// Reads an SVG's intrinsic size, which doubles as validation on upload.
 pub fn svg_size(bytes: &[u8]) -> Result<(f32, f32)> {
     let tree = resvg::usvg::Tree::from_data(bytes, &resvg::usvg::Options::default())?;

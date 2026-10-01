@@ -389,13 +389,9 @@ fn line(
             // and overlaps there follow from it, and change once it's fixed.
             if let (Some((para, _)), Some(t), false) =
                 (&p.text, crate::text::Text::of(l, p.k), clip.quiet)
-                && let Some(word) = t.broken_word(para)
+                && let Some((word, wide)) = t.broken_word(para)
             {
-                let _ = write!(
-                    out,
-                    " !breaks \"{word}\" (needs {} wide)",
-                    n(para.min_intrinsic_width().ceil())
-                );
+                let _ = write!(out, " !breaks \"{word}\" (needs {} wide)", n(wide.ceil()));
             }
             // What the platform's bars would cover: the letters, where
             // they're drawn (rotated, scaled or moved, the box around them).

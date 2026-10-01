@@ -260,7 +260,9 @@ fn flex_item<'a>(
         Some(Length::Px(v)) => Some(v * k),
         Some(Length::Pct(p)) => inner_cross.map(|m| p * m),
         Some(Length::Fill) => inner_cross,
-        _ if align == StackAlign::Stretch => inner_cross,
+        // Stretched to the container, unless it wraps: then to its own
+        // line, once the lines are known (as CSS does).
+        _ if align == StackAlign::Stretch && !stack.wrap => inner_cross,
         _ => None,
     };
     let main_forced = match len_main {
@@ -303,6 +305,14 @@ fn flex_item<'a>(
             (Kind::Text { .. }, true) => Text::of(c, k).map_or(0.0, |t| t.min_width()),
             (Kind::Text { .. }, false) if by_content => nat_main,
             (Kind::Frame { children, .. }, false) if by_content && !children.is_empty() => nat_main,
+            // A firstFit gives way down to its shortest option, not to
+            // nothing (then it picks that option, as it should).
+            (Kind::FirstFit { children }, false) if by_content => children
+                .iter()
+                .filter(|o| !o.hidden)
+                .map(|o| measure(scene, o, k, parent, (forced.0, None), true).1)
+                .reduce(f32::min)
+                .unwrap_or(0.0),
             _ => 0.0,
         });
     Flex {

@@ -227,14 +227,21 @@ pub fn encode(image: &Image, format: Format, quality: u32, max_kb: Option<u32>) 
 
 /// Renders `size` as a one-page vector PDF: 1 px = 1 pt, except a print
 /// preset, whose page is its paper size (`a4-portrait` is A4). Blurs and
-/// shaders Skia can't express in PDF are rasterized inside it.
+/// shaders Skia can't express in PDF are rasterized inside it. Photos are
+/// embedded at most at 300 dpi of their drawn size, opaque ones as JPEG at
+/// `quality` (1–100).
 ///
 /// # Errors
 /// Missing assets.
-pub fn render_pdf(scene: &Scene, size: &Size, assets_dir: &Path) -> Result<Vec<u8>> {
+pub fn render_pdf(scene: &Scene, size: &Size, assets_dir: &Path, quality: u32) -> Result<Vec<u8>> {
     let mut out = Vec::new();
     let pt = crate::scene::pdf_points_per_px(&size.id);
-    let mut page = skia_safe::pdf::new_document(&mut out, None)
+    // Opaque photos go in as JPEG at `quality`, not lossless.
+    let meta = skia_safe::pdf::Metadata {
+        encoding_quality: Some(i32::try_from(quality.clamp(1, 100)).unwrap_or(90)),
+        ..Default::default()
+    };
+    let mut page = skia_safe::pdf::new_document(&mut out, Some(&meta))
         .begin_page((size.width * pt, size.height * pt), None);
     page.canvas().scale((pt, pt));
     draw_scene(
@@ -256,6 +263,43 @@ mod tests {
     use super::{Format, encode, render_pdf};
 
     #[test]
+    fn a_pdfs_photo_is_kept_to_print_resolution_and_its_quality() {
+        // A 2400 × 1600 photo of noise (it doesn't compress) drawn 300 pt
+        // wide: at 300 dpi that's 1250 px, so most of its pixels go, and
+        // JPEG at a lower quality takes it smaller still.
+        let dir = std::env::temp_dir().join(format!("keyline-pdf-size-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        // Opaque, as a photo is (JPEG holds no transparency).
+        let info = skia_safe::ImageInfo::new(
+            (2400, 1600),
+            skia_safe::ColorType::RGB888x,
+            skia_safe::AlphaType::Opaque,
+            None,
+        );
+        let mut surface = skia_safe::surfaces::raster(&info, None, None).unwrap();
+        surface.canvas().clear(skia_safe::Color::WHITE);
+        let mut paint = skia_safe::Paint::default();
+        paint.set_shader(skia_safe::shaders::fractal_noise((0.9, 0.9), 4, 7.0, None));
+        surface.canvas().draw_paint(&paint);
+        let png = surface
+            .image_snapshot()
+            .encode(None, skia_safe::EncodedImageFormat::PNG, None)
+            .unwrap();
+        std::fs::write(dir.join("noise"), png.as_bytes()).unwrap();
+        let scene: crate::scene::Scene = serde_json::from_value(serde_json::json!({
+            "width": 600, "height": 400, "sizes": [{"id": "page", "width": 600, "height": 400}],
+            "assets": {"photo": {"sha256": "noise", "width": 2400, "height": 1600}},
+            "layers": [{"id": "p", "type": "image", "asset": "photo", "width": 300, "height": 200}]}))
+        .unwrap();
+        let at = |q| render_pdf(&scene, &scene.sizes[0], &dir, q).unwrap().len();
+        let (q90, q30) = (at(90), at(30));
+        // Full size and lossless, the noise alone was several MB.
+        assert!(q90 < 1_500_000, "{q90} bytes at 90");
+        assert!(q30 * 2 < q90, "{q30} bytes at 30 vs {q90} at 90");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn an_a4_pdf_is_an_a4_page() {
         let page = |size: &str| {
             let size = crate::scene::SizeSpec::Named(size.into())
@@ -265,7 +309,7 @@ mod tests {
                 "width": size.width, "height": size.height, "sizes": [size],
                 "layers": [{"id": "r", "type": "rect", "width": 100, "height": 100, "fill": "#D0202E"}]}))
             .unwrap();
-            let pdf = render_pdf(&scene, &scene.sizes[0], &std::env::temp_dir()).unwrap();
+            let pdf = render_pdf(&scene, &scene.sizes[0], &std::env::temp_dir(), 90).unwrap();
             let text = String::from_utf8_lossy(&pdf).into_owned();
             let at = text.find("/MediaBox [").unwrap() + "/MediaBox [".len();
             let end = at + text[at..].find(']').unwrap();

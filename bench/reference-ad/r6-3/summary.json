@@ -1,0 +1,60 @@
+{
+  "commit": "28ecefc+dirty",
+  "costUsd": 0.5103519999999999,
+  "defects": 0,
+  "durationMs": 127181,
+  "label": "r6-3",
+  "model": "claude-opus-5[1m]",
+  "previewImages": 2,
+  "replyChars": 6279,
+  "smallestTextPx": [
+    [
+      "portrait",
+      24.0
+    ],
+    [
+      "wide",
+      20.0
+    ],
+    [
+      "sky",
+      12.0
+    ]
+  ],
+  "toolCalls": 10,
+  "toolTrafficChars": 17640,
+  "turns": 11,
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 17029,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 17029,
+    "cache_read_input_tokens": 140736,
+    "inference_geo": "not_available",
+    "input_tokens": 22,
+    "iterations": [
+      {
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1128,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "cache_creation_input_tokens": 1128,
+        "cache_read_input_tokens": 19697,
+        "input_tokens": 2,
+        "output_tokens": 78,
+        "type": "message"
+      }
+    ],
+    "output_tokens": 10730,
+    "output_tokens_details": {
+      "thinking_tokens": 3728
+    },
+    "server_tool_use": {
+      "web_fetch_requests": 0,
+      "web_search_requests": 0
+    },
+    "service_tier": "standard",
+    "speed": "standard"
+  }
+}

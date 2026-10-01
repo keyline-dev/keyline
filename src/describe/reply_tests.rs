@@ -160,11 +160,11 @@ fn a_photos_print_resolution_counts_the_page_points() {
     let s =
         scene(json!([{"id": "p", "type": "image", "asset": "img", "width": 100, "height": 100}]));
     // 400 px drawn over 100 px: at 1 pt a px, 288 dpi; on a 300 dpi page
-    // (0.24 pt a px), 1200.
+    // (0.24 pt a px) it would be 1200, but it's embedded at 300 at most.
     assert_eq!(image_dpi(&s, &s.sizes[0], 1.0).map(f32::round), Some(288.0));
     assert_eq!(
         image_dpi(&s, &s.sizes[0], 0.24).map(f32::round),
-        Some(1200.0)
+        Some(300.0)
     );
     assert_eq!(image_dpi(&scene(json!([])), &s.sizes[0], 1.0), None);
 }
@@ -703,4 +703,123 @@ fn a_stroke_crossing_text_covers_only_what_it_crosses() {
         .and_then(|n| n.parse().ok())
         .unwrap_or(100.0);
     assert!(pct < 20.0, "{d}");
+}
+
+#[test]
+fn a_broken_word_says_the_width_the_whole_word_needs() {
+    // The width it needs is the word's own, at its size, not its widest
+    // broken piece.
+    let s = scene(json!([
+        {"id": "name", "type": "text", "text": "Winston", "width": 150, "fontSize": 80, "fontWeight": 800},
+        {"id": "whole", "type": "text", "text": "Winston", "y": 100, "fontSize": 80, "fontWeight": 800}
+    ]));
+    let d = describe(&s, Some("wide"), true, None).unwrap();
+    let whole: f32 = d
+        .lines()
+        .find(|l| l.contains("whole text"))
+        .and_then(|l| l.split_whitespace().nth(3))
+        .and_then(|wh| wh.split('×').next())
+        .and_then(|w| w.parse().ok())
+        .unwrap();
+    let needs: f32 = d
+        .split("(needs ")
+        .nth(1)
+        .and_then(|r| r.split(' ').next())
+        .and_then(|n| n.parse().ok())
+        .unwrap();
+    assert!(
+        (needs - whole).abs() <= 2.0,
+        "needs {needs}, the word is {whole} wide: {d}"
+    );
+}
+
+#[test]
+fn an_outline_with_no_fill_given_covers_only_by_its_stroke() {
+    // Builder B's rescue: a blob outline with a stroke and no `fill`,
+    // turned, scaled and moved in its frame, its stroke clear of the chip.
+    let s = scene(json!([
+        {"id": "chip", "type": "text", "text": "calm", "x": 150, "y": 85, "fontSize": 24},
+        {"id": "pic", "type": "frame", "x": 100, "y": 20, "width": 160, "height": 160, "clipsContent": false, "children": [
+            {"id": "blobLine", "type": "path", "shape": "blob-3", "width": "100%", "height": "100%",
+             "stroke": {"width": 6, "color": "#E4572E"}, "rotate": 4, "scale": 0.98, "translate": [18, 16]}]}
+    ]));
+    // The outline is drawn over the chip, which sits inside its ring, clear
+    // of the stroke.
+    let d = describe(&s, Some("wide"), false, None).unwrap();
+    assert!(!d.contains("!covered"), "{d}");
+}
+
+#[test]
+fn ink_that_touches_is_never_left_unsaid() {
+    // Sliding an eyebrow down onto tall caps: from far apart to touching to
+    // overlapping, each step is ok, `warn ink` or `!overlaps`, and touching
+    // reads `warn ink 0px`.
+    let mut touched = false;
+    let mut far = false;
+    // Far apart first, then a tenth of a pixel at a time across touching,
+    // where `!overlaps` (over a pixel) and `warn ink` (a gap) meet.
+    for step in 0..=170 {
+        let y = if step == 0 {
+            20.0
+        } else {
+            50.0 + step as f32 * 0.1
+        };
+        let s = scene(json!([
+            {"id": "eyebrow", "type": "text", "text": "HEADLINING", "x": 40, "y": y, "fontSize": 24},
+            {"id": "caps", "type": "text", "text": "VOLTA", "x": 20, "y": 100, "fontSize": 100, "fontWeight": 900, "lineHeight": 0.7}
+        ]));
+        let d = describe(&s, Some("wide"), false, None).unwrap();
+        // Once touching, it never reads ok again: closer only gets worse.
+        assert!(!(touched && d == "ok"), "{y}: touching, but nothing said");
+        far |= d == "ok";
+        touched |= d.contains("warn ink 0px from caps");
+        assert!(
+            d == "ok" || d.contains("warn ink") || d.contains("!overlaps"),
+            "{y}: {d}"
+        );
+    }
+    assert!(far && touched, "the slide spans apart to touching");
+}
+
+#[test]
+fn a_first_fit_in_a_crowded_column_keeps_its_shortest_option() {
+    let s = scene(
+        json!([{"id": "col", "type": "frame", "width": 300, "height": 200, "flexDirection": "column", "children": [
+        {"id": "photo", "type": "rect", "width": "fill", "height": 120, "fill": "#333333"},
+        {"id": "head", "type": "firstFit", "width": "fill", "children": [
+            {"id": "long", "type": "text", "text": "A headline long enough to take three lines", "width": "fill", "fontSize": 30, "maxLines": 3},
+            {"id": "short", "type": "text", "text": "Short", "width": "fill", "fontSize": 30}]},
+        {"id": "cta", "type": "rect", "width": "fill", "height": 60, "fill": "#D0202E"}]}]),
+    );
+    let d = describe(&s, Some("wide"), true, None).unwrap();
+    let head = d.lines().find(|l| l.contains("head firstFit")).unwrap();
+    // Not squeezed to nothing: as tall as its short option, and the column
+    // says what it needs.
+    let h: f32 = head
+        .split_whitespace()
+        .nth(3)
+        .and_then(|wh| wh.split('×').nth(1))
+        .and_then(|h| h.parse().ok())
+        .unwrap();
+    assert!(h >= 30.0, "{d}");
+    assert!(head.contains("→ short"), "{d}");
+    assert!(
+        d.contains("col frame") && d.contains("!overflow needs 300×"),
+        "{d}"
+    );
+}
+
+#[test]
+fn drawn_lines_cover_every_shot() {
+    // The lineup in shot 2 wraps; a still shows shot 1, the video both.
+    let s = scene(json!([
+        {"id": "s1", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 1}, "children": [
+            {"id": "title", "type": "text", "text": "Nightline", "fontSize": 40}]},
+        {"id": "s2", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 1}, "children": [
+            {"id": "acts", "type": "text", "text": "Deep Orchard", "width": 200, "fontSize": 40}]}
+    ]))
+    .resolved()
+    .into_owned();
+    let r = text_report(&s, &s.sizes[0]);
+    assert!(r.contains(r#" acts 40px: "Deep" / "Orchard""#), "{r}");
 }

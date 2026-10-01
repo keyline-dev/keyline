@@ -216,22 +216,42 @@ fn painted(p: &Placed) -> bool {
         f.iter()
             .all(|paint| matches!(paint, crate::scene::Paint::Solid(s) if s.color.0 >> 24 == 0))
     });
+    let filled = fills.is_some_and(|f| !f.is_empty()) && !clear;
+    let stroked = p
+        .layer
+        .look
+        .strokes
+        .as_ref()
+        .is_some_and(|s| !s.as_slice().is_empty());
     match &p.layer.kind {
         Kind::Text { .. } | Kind::Spacer { .. } | Kind::FirstFit { .. } => false,
-        Kind::Frame { .. } => fills.is_some_and(|f| !f.is_empty()) && !clear,
-        _ => !clear || p.layer.look.strokes.is_some(),
+        Kind::Frame { .. } => filled,
+        // A shape draws only the fill and stroke it's given.
+        _ if shape(p) => filled || stroked,
+        _ => true,
     }
 }
 
-/// Whether a shape draws only its stroke: its fills are empty or clear.
+/// Whether a shape draws only its stroke: no fill given, or clear ones.
 fn outline_only(p: &Placed) -> bool {
     let l = &p.layer.look;
-    let clear = l.fills.as_ref().is_some_and(|f| {
+    // No fill given, or only clear ones.
+    let unfilled = l.fills.as_ref().is_none_or(|f| {
         f.as_slice()
             .iter()
             .all(|paint| matches!(paint, crate::scene::Paint::Solid(s) if s.color.0 >> 24 == 0))
     });
-    clear && l.strokes.as_ref().is_some_and(|s| !s.as_slice().is_empty())
+    shape(p) && unfilled && l.strokes.as_ref().is_some_and(|s| !s.as_slice().is_empty())
+}
+
+/// A rect, ellipse, polygon or path: drawn only by its fill and stroke
+/// (a line draws its own stroke).
+fn shape(p: &Placed) -> bool {
+    use crate::scene::Kind;
+    matches!(
+        p.layer.kind,
+        Kind::Rect { .. } | Kind::Ellipse { .. } | Kind::Polygon { .. } | Kind::Path { .. }
+    )
 }
 
 /// A text's highlight boxes where they're drawn, padding included.
@@ -265,7 +285,7 @@ fn highlight_boxes(p: &Placed, m: &Matrix) -> Vec<Rect> {
 }
 
 /// Texts whose ink comes closer to a neighbour's than 15% of the smaller
-/// font size without touching, one above the other or side by side (caps
+/// font size, touching included (short of the overlap `!overlaps` reports), one above the other or side by side (caps
 /// that overshoot a tight `lineHeight`): the upper or left text, the gap
 /// in px and the neighbour, the closest one per text.
 pub(super) fn tight<'s>(placed: &[Placed<'s>]) -> HashMap<&'s str, (f32, &'s str)> {
@@ -302,9 +322,12 @@ pub(super) fn tight<'s>(placed: &[Placed<'s>]) -> HashMap<&'s str, (f32, &'s str
             } else {
                 continue;
             };
-            if !(0.0..floor).contains(&gap) {
+            // Touching, or overlapping by up to the pixel `!overlaps` lets
+            // pass, counts as no gap.
+            if !(-1.0..floor).contains(&gap) {
                 continue;
             }
+            let gap = gap.max(0.0);
             let (who, other) = if first { (*a, *b) } else { (*b, *a) };
             if out.get(who).is_none_or(|(g, _)| gap < *g) {
                 out.insert(who, (gap, other));

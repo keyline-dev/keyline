@@ -296,7 +296,7 @@ A frame with `flexDirection` is a stack, like CSS flexbox (`display: "flex"` alo
 | `flexDirection` | `row`, `column`, `row-reverse`, `column-reverse`, or a list | required | Direction; a list is tried in order: `["row", "column"]` is a row where it fits, else a column |
 | `gap` | px or `[rowGap, columnGap]` | 0 | Space between children |
 | `padding` | Sides | 0 | Space inside the frame's edges |
-| `alignItems` | `stretch`, `flex-start`, `center`, `flex-end`, `baseline` | `stretch` | Across the direction; `stretch` fills the cross axis unless a child has a size there |
+| `alignItems` | `stretch`, `flex-start`, `center`, `flex-end`, `baseline` | `stretch` | Across the direction; `stretch` fills the cross axis unless a child has a size there (with `flexWrap`, each line's height, as in CSS) |
 | `justifyContent` | `flex-start`, `center`, `flex-end`, `space-between`, `space-around`, `space-evenly` | `flex-start` | Along the direction |
 | `flexWrap` | `nowrap`, `wrap` | `nowrap` | Wrap onto more lines when they don't fit |
 

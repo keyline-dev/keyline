@@ -131,7 +131,7 @@ pub fn halftone_hints(scene: &Scene) -> Vec<String> {
 }
 
 /// The lowest resolution of `scene`'s photos on a page `pt` points per
-/// px, dots per inch: what print cares about. `None` without one.
+/// px, dots per inch, as embedded (300 at most): what print cares about. `None` without one.
 pub fn image_dpi(scene: &Scene, size: &Size, pt: f32) -> Option<f32> {
     fn walk(scene: &Scene, placed: &[Placed], pt: f32, min: &mut Option<f32>) {
         for p in placed {
@@ -139,7 +139,8 @@ pub fn image_dpi(scene: &Scene, size: &Size, pt: f32) -> Option<f32> {
                 && let Some(a) = scene.assets.get(asset).filter(|a| !a.svg)
             {
                 let up = image_scale(p.rect, a.width, a.height, fit, crop, tile_scale * p.k);
-                let dpi = 72.0 / (pt * up);
+                // Embedded at most at 300 dpi (`render_pdf`).
+                let dpi = (72.0 / (pt * up)).min(300.0);
                 if min.is_none_or(|m| dpi < m) {
                     *min = Some(dpi);
                 }
@@ -272,7 +273,19 @@ pub fn text_report(scene: &Scene, size: &Size) -> String {
         }
     }
     let mut out = String::new();
-    go(&mut out, &layout(&scene.for_size(size), size));
+    // Every shot a size plays, not only the first a still shows; after the
+    // first, only the shot's own layers (the rest were listed with it).
+    let sized = scene.for_size(size);
+    for (view, _, first) in super::views(&sized, &super::unplayed(scene, size)) {
+        let placed = layout(&view, size);
+        let shown: Vec<&Placed> = placed
+            .iter()
+            .filter(|p| first || p.layer.time.shot.is_some())
+            .collect();
+        for p in shown {
+            go(&mut out, std::slice::from_ref(p));
+        }
+    }
     out
 }
 

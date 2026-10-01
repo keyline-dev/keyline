@@ -449,6 +449,14 @@ async fn renders_jpeg_webp_and_pdf_and_fit_a_file_size_cap() {
     // The page in points, and the photo's print resolution: 1600 px across
     // a 1080 pt band cropped to cover it, 107 dpi.
     assert!(pdf.contains(" (1080×1350 pt, images ≥ 107 dpi, "), "{pdf}");
+    // A cap nothing meets: the photo's quality lowered all the way, said.
+    let capped = mcp
+        .ok(
+            "render",
+            json!({"sceneId": id, "format": "pdf", "maxKB": 1, "sizes": ["portrait"]}),
+        )
+        .await;
+    assert!(capped.contains(" quality 30 !too-big"), "{capped}");
     for (size, p) in paths(&pdf) {
         let bytes = file(&p);
         assert!(bytes.starts_with(b"%PDF"), "{size}");

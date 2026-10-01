@@ -391,6 +391,11 @@ impl Ctx<'_> {
                         tile_scale * p.k,
                         *focus,
                     )?;
+                    // Print resolution: at most 300 dpi where it lands on the
+                    // page (points), not every pixel the photo has.
+                    let to_page = canvas.local_to_device_as_3x3();
+                    let pt = to_page.scale_x().hypot(to_page.skew_y());
+                    let img = image::at_most(&img, drawn.w * pt * 300.0 / 72.0);
                     let mut paint = Paint::default();
                     paint.set_anti_alias(true);
                     if let Some(cf) = fills::adjust_filter(adjust) {
