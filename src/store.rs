@@ -71,12 +71,7 @@ impl Store {
     /// # Errors
     /// Bad id or I/O failure.
     pub fn save(&self, id: &str, scene: &Scene) -> Result<()> {
-        let path = self.scene_path(id)?;
-        let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, serde_json::to_vec_pretty(scene)?)?;
-        // Rename is atomic, so a crash never leaves a half-written scene.
-        std::fs::rename(&tmp, &path)?;
-        Ok(())
+        write_atomic(&self.scene_path(id)?, &serde_json::to_vec_pretty(scene)?)
     }
 
     /// Stores bytes under their SHA-256 and returns the hash.
@@ -128,6 +123,22 @@ pub(crate) fn check_id(id: &str) -> Result<()> {
     Ok(())
 }
 
+/// Writes `bytes` to `path` through a fresh temporary file in the same
+/// folder, renamed into place: a crash never leaves a half-written file, and
+/// two servers sharing a folder never write the same temporary file.
+///
+/// # Errors
+/// I/O failure.
+pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
+    let dir = path
+        .parent()
+        .with_context(|| format!("no folder for {}", path.display()))?;
+    let mut tmp = tempfile::NamedTempFile::new_in(dir)?;
+    std::io::Write::write_all(&mut tmp, bytes)?;
+    tmp.persist(path)?;
+    Ok(())
+}
+
 /// Lower-case hex SHA-256 of `bytes`.
 pub fn sha256_hex(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
@@ -176,5 +187,15 @@ mod tests {
         .unwrap();
         s.save("s1", &scene).unwrap();
         assert_eq!(s.load("s1").unwrap(), scene);
+    }
+
+    #[test]
+    fn atomic_writes_replace_and_leave_no_temporary_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("index.json");
+        write_atomic(&path, b"one").unwrap();
+        write_atomic(&path, b"two").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"two");
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
     }
 }

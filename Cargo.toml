@@ -38,6 +38,9 @@ sha2 = "0.11.0"
 skia-safe = { version = "0.153.3", features = ["textlayout", "svg", "webp"] }
 tokio = { version = "1.53.1", features = ["full"] }
 csscolorparser = "0.9.0"
+tempfile = "3.27.0"
+strsim = "0.11.1"
+percent-encoding = "2.3.2"
 
 [dev-dependencies]
 rmcp = { version = "3.4.1", features = ["client", "transport-child-process"] }

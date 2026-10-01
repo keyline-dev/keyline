@@ -257,7 +257,7 @@ instagram-portrait 1080×1350
 | `sizes` | array of strings | all sizes | Size ids to render |
 | `format` | `png` \| `jpeg` \| `webp` \| `pdf` \| `apng` \| `gif` \| `mp4` \| `webm` | `png` | See [Output formats](#output-formats) |
 | `quality` | 0–100 | 90 | JPEG, WebP, MP4 and WebM quality |
-| `maxKB` | number | | File-size cap: JPEG and WebP lower their quality, APNG and GIF their frame rate, until the file fits. MP4 and WebM try up to three more encodes, each measured, aiming just under the cap (85–100% of it): libx264 and VP9 at a lower quality, a hardware encoder at a bitrate. They keep the largest that fits, else the smallest, with `!too-big` |
+| `maxKB` | number | | File-size cap: JPEG and WebP lower their quality, APNG and GIF their frame rate, until the file fits. MP4 and WebM try up to three more encodes, each measured, aiming just under the cap (85–100% of it): libx264 and VP9 at a lower quality, a hardware encoder at a bitrate, and when that still doesn't fit (some ignore a low bitrate), libx264 at a lower quality. They keep the largest that fits, else the smallest, with `!too-big` |
 | `preview` | boolean | false | Also returns one small image of all sizes side by side |
 | `time` | number | | Seconds into a moving scene: a still at that moment |
 | `muted` | boolean | false | `true` leaves all sound out of `mp4` and `webm`: the soundtrack and every clip's (a clip's own `muted` leaves out one) |

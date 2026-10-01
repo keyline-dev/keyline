@@ -2,7 +2,7 @@
 //! calls make, from the command line, for scripts and CI.
 
 use std::fmt::Write as _;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde_json::{Value, json};
 
@@ -47,16 +47,9 @@ impl Server {
     /// written: the one-line error the tool would give.
     pub async fn render_file(&self, r: &RenderFile) -> Result<Report, String> {
         let path = r.scene.display().to_string();
-        let created = self
+        let (id, created) = self
             .scene_create_impl(from(json!({ "path": path }))?)
             .await?;
-        // The reply names the new scene just before its version, `v0`.
-        let words: Vec<&str> = created.split_whitespace().collect();
-        let id = words
-            .windows(2)
-            .find(|w| w[1] == "v0")
-            .map(|w| w[0].to_owned())
-            .ok_or("the scene didn't load")?;
         let rows: Value = match &r.rows {
             Some(p) => serde_json::from_slice(
                 &std::fs::read(p).map_err(|e| format!("{}: {e}", p.display()))?,
@@ -83,10 +76,9 @@ impl Server {
         if r.preview {
             args["preview"] = json!(true);
         }
-        let blocks = self.render_impl(from(args.clone())?).await?;
+        let (blocks, files) = self.render_impl(from(args.clone())?).await?;
         let out = r.out.clone().unwrap_or_else(|| PathBuf::from("."));
         std::fs::create_dir_all(&out).map_err(|e| format!("{}: {e}", out.display()))?;
-        let renders = self.store.root().join("renders");
         let mut text = String::new();
         let scene = self.store.load(&id).map_err(|e| e.to_string())?;
         // Problem lines start with their size: only the sizes drawn count.
@@ -124,10 +116,20 @@ impl Server {
                 }
             }
         }
-        for t in blocks.iter().filter_map(|b| b.as_text()) {
-            for line in t.text.lines() {
-                let _ = writeln!(text, "{}", copy_out(line, &renders, &out)?);
-            }
+        // Each file copied into `out`, and the reply naming the copy.
+        let mut reply = blocks
+            .iter()
+            .filter_map(|b| b.as_text())
+            .map(|t| t.text.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        for src in &files {
+            let dst = out.join(src.file_name().ok_or("a render has no file name")?);
+            std::fs::copy(src, &dst).map_err(|e| format!("{}: {e}", dst.display()))?;
+            reply = reply.replace(&src.display().to_string(), &dst.display().to_string());
+        }
+        for line in reply.lines() {
+            let _ = writeln!(text, "{line}");
         }
         if let Some(image) = blocks.iter().find_map(|b| b.as_image()) {
             use base64::Engine as _;
@@ -157,22 +159,4 @@ fn rows_of(args: &Value) -> Value {
 /// The tool's args from JSON, as an agent's call would give them.
 fn from<T: serde::de::DeserializeOwned>(v: Value) -> Result<T, String> {
     serde_json::from_value(v).map_err(|e| e.to_string())
-}
-
-/// A reply line naming a rendered file (`<size> <path> (<facts>)`, the
-/// path under `renders`): the file copied into `out`, and the line with
-/// its new path. Other lines as they are.
-fn copy_out(line: &str, renders: &Path, out: &Path) -> Result<String, String> {
-    let root = renders.display().to_string();
-    let Some(at) = line.find(&root) else {
-        return Ok(line.to_owned());
-    };
-    let end = line.rfind(" (").filter(|&e| e > at).unwrap_or(line.len());
-    let src = Path::new(&line[at..end]);
-    let (Some(name), true) = (src.file_name(), src.is_file()) else {
-        return Ok(line.to_owned());
-    };
-    let dst = out.join(name);
-    std::fs::copy(src, &dst).map_err(|e| format!("{}: {e}", dst.display()))?;
-    Ok(format!("{}{}{}", &line[..at], dst.display(), &line[end..]))
 }

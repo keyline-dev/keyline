@@ -4,7 +4,7 @@
 //! one of those folders.
 
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
@@ -37,15 +37,18 @@ impl AllowedDirs {
     /// # Errors
     /// Paths are off, the file is missing, outside every allowed folder
     /// (after following symlinks), not a regular file, or too large.
-    pub fn read(&self, path: &str, max: usize) -> Result<Vec<u8>, String> {
+    pub fn read(&self, path: impl AsRef<Path>, max: usize) -> Result<Vec<u8>, String> {
+        let path = path.as_ref();
         if self.0.is_empty() {
             return Err("local paths are off; start the server with --allow-read <folder>".into());
         }
         // The real location, every symlink and `..` followed.
-        let real = std::fs::canonicalize(path).map_err(|_| format!("no such file {path}"))?;
+        let real =
+            std::fs::canonicalize(path).map_err(|_| format!("no such file {}", path.display()))?;
         if !self.0.iter().any(|d| real.starts_with(d)) {
             return Err(format!(
-                "{path} is outside the folders the server may read (--allow-read)"
+                "{} is outside the folders the server may read (--allow-read)",
+                path.display()
             ));
         }
         // ponytail: a folder swapped for a symlink between the check and the
@@ -53,18 +56,24 @@ impl AllowedDirs {
         // Checked before opening: Windows refuses to open a folder at all,
         // which would hide this clearer answer.
         if !std::fs::metadata(&real).is_ok_and(|m| m.is_file()) {
-            return Err(format!("{path} isn't a file"));
+            return Err(format!("{} isn't a file", path.display()));
         }
-        let file = std::fs::File::open(&real).map_err(|e| format!("{path}: {e}"))?;
-        let meta = file.metadata().map_err(|e| format!("{path}: {e}"))?;
+        let file = std::fs::File::open(&real).map_err(|e| format!("{}: {e}", path.display()))?;
+        let meta = file
+            .metadata()
+            .map_err(|e| format!("{}: {e}", path.display()))?;
         let max64 = u64::try_from(max).unwrap_or(u64::MAX);
         if meta.len() > max64 {
-            return Err(format!("{path} is larger than {} MB", max >> 20));
+            return Err(format!(
+                "{} is larger than {} MB",
+                path.display(),
+                max >> 20
+            ));
         }
         let mut bytes = Vec::new();
         file.take(max64.saturating_add(1))
             .read_to_end(&mut bytes)
-            .map_err(|e| format!("{path}: {e}"))?;
+            .map_err(|e| format!("{}: {e}", path.display()))?;
         Ok(bytes)
     }
 }
@@ -102,33 +111,31 @@ mod tests {
         std::fs::write(allowed.join("sub/logo.svg"), b"<svg/>").unwrap();
         std::fs::write(outside.join("secret.txt"), b"secret").unwrap();
         let dirs = AllowedDirs::new(std::slice::from_ref(&allowed)).unwrap();
-        let path = |p: &std::path::Path| p.display().to_string();
 
         assert_eq!(
-            dirs.read(&path(&allowed.join("sub/logo.svg")), 1024)
-                .unwrap(),
+            dirs.read(allowed.join("sub/logo.svg"), 1024).unwrap(),
             b"<svg/>"
         );
         // `..` out of the folder, and a missing file.
         let up = allowed.join("../outside/secret.txt");
         assert!(
-            dirs.read(&path(&up), 1024)
+            dirs.read(up, 1024)
                 .unwrap_err()
                 .contains("outside the folders")
         );
         assert!(
-            dirs.read(&path(&allowed.join("nope.png")), 1024)
+            dirs.read(allowed.join("nope.png"), 1024)
                 .unwrap_err()
                 .contains("no such file")
         );
         // A folder, and a file over the limit.
         assert!(
-            dirs.read(&path(&allowed.join("sub")), 1024)
+            dirs.read(allowed.join("sub"), 1024)
                 .unwrap_err()
                 .contains("isn't a file")
         );
         assert!(
-            dirs.read(&path(&allowed.join("sub/logo.svg")), 3)
+            dirs.read(allowed.join("sub/logo.svg"), 3)
                 .unwrap_err()
                 .contains("larger than")
         );
@@ -141,7 +148,7 @@ mod tests {
             std::os::unix::fs::symlink(&outside, allowed.join("door")).unwrap();
             for p in [allowed.join("link.txt"), allowed.join("door/secret.txt")] {
                 assert!(
-                    dirs.read(&path(&p), 1024)
+                    dirs.read(&p, 1024)
                         .unwrap_err()
                         .contains("outside the folders"),
                     "{p:?}"
@@ -151,7 +158,7 @@ mod tests {
             std::os::unix::fs::symlink(allowed.join("sub/logo.svg"), allowed.join("alias.svg"))
                 .unwrap();
             assert_eq!(
-                dirs.read(&path(&allowed.join("alias.svg")), 1024).unwrap(),
+                dirs.read(allowed.join("alias.svg"), 1024).unwrap(),
                 b"<svg/>"
             );
         }

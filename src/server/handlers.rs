@@ -2,6 +2,7 @@
 //! adding assets, rendering, fetching fonts and locked edits.
 
 use std::fmt::Write as _;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use base64::Engine;
@@ -25,7 +26,11 @@ use crate::render::{
 use crate::scene::{Asset, Color, SCHEMA_VERSION, Scene, Size, SizeSpec};
 
 impl Server {
-    pub(super) async fn scene_create_impl(&self, a: SceneCreateArgs) -> Result<String, String> {
+    /// The new scene's id, and the tool's reply.
+    pub(super) async fn scene_create_impl(
+        &self,
+        a: SceneCreateArgs,
+    ) -> Result<(String, String), String> {
         let template = a.url.is_some() || a.path.is_some();
         let scene = if template {
             self.template(a).await?
@@ -62,7 +67,7 @@ impl Server {
         if self.motion && crate::video::ffmpeg().is_err() {
             out.push_str("\nvideo off: no ffmpeg (install it or pass --ffmpeg); apng, gif work");
         }
-        Ok(out)
+        Ok((id, out))
     }
 
     pub(super) async fn asset_add_impl(&self, a: AssetAddArgs) -> Result<String, String> {
@@ -138,7 +143,11 @@ impl Server {
         })
     }
 
-    pub(super) async fn render_impl(&self, a: RenderArgs) -> Result<Vec<ContentBlock>, String> {
+    /// The tool's reply, and the files it wrote.
+    pub(super) async fn render_impl(
+        &self,
+        a: RenderArgs,
+    ) -> Result<(Vec<ContentBlock>, Vec<PathBuf>), String> {
         let raw = self.store.load(&a.scene_id).map_err(err)?;
         let fetched = self.scene_fonts(&raw).await?;
         let variants = variants(&raw, &a.rows)?;
@@ -166,6 +175,7 @@ impl Server {
 
         let mut text = String::new();
         let mut drawn = Vec::new();
+        let mut files = Vec::new();
         for (tag, scene) in variants {
             let scene = Arc::new(scene);
             drawn.push(Arc::clone(&scene));
@@ -318,6 +328,7 @@ impl Server {
                     "{row}{size_id} {}{note}\n{report}",
                     path.display()
                 ));
+                files.push(path);
             }
         }
         // The fonts actually drawn, so a fallback weight or family shows.
@@ -391,7 +402,7 @@ impl Server {
                 "image/png",
             ));
         }
-        Ok(content)
+        Ok((content, files))
     }
 
     /// Makes every family `scene` uses available before it's measured or

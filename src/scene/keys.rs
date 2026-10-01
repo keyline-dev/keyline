@@ -178,26 +178,10 @@ fn nearest<'a>(u: &str, known: &[&'a str]) -> Option<&'a str> {
     let u = u.to_ascii_lowercase();
     known
         .iter()
-        .map(|k| (edits(&u, &k.to_ascii_lowercase()), *k))
+        .map(|k| (strsim::levenshtein(&u, &k.to_ascii_lowercase()), *k))
         .filter(|(d, _)| *d <= (u.len() / 3).max(1))
         .min_by_key(|(d, _)| *d)
         .map(|(_, k)| k)
-}
-
-/// Levenshtein distance.
-fn edits(a: &str, b: &str) -> usize {
-    let b: Vec<char> = b.chars().collect();
-    let mut row: Vec<usize> = (0..=b.len()).collect();
-    for (i, ca) in a.chars().enumerate() {
-        let mut prev = row[0];
-        row[0] = i + 1;
-        for (j, cb) in b.iter().enumerate() {
-            let cur = row[j + 1];
-            row[j + 1] = (prev + usize::from(ca != *cb)).min(row[j] + 1).min(cur + 1);
-            prev = cur;
-        }
-    }
-    row[b.len()]
 }
 
 #[cfg(test)]

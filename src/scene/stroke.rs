@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::defaults::{is_false, is_zero};
+use super::defaults::{is_default, is_false, is_zero};
 use super::{Color, Gradient};
 
 /// An outline, SVG-style; `color` paints it with a color or
@@ -37,50 +37,63 @@ pub struct Stroke {
 
 impl Serialize for Stroke {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        use serde_json::{Map, Value, json};
-        let mut o = Map::new();
-        if self.width != StrokeWidth::All(1.0) {
-            o.insert("width".into(), val::<_, S::Error>(&self.width)?);
+        Out {
+            width: self.width,
+            color: self
+                .gradient
+                .as_ref()
+                .map(|gradient| Paint::Gradient { gradient })
+                .or(self.color.map(Paint::Color)),
+            align: self.align,
+            dash: &self.dash,
+            cap: self.cap,
+            join: self.join,
+            marker_start: self.start,
+            marker_end: self.end,
+            roughness: self.rough,
+            seed: self.seed,
         }
-        if let Some(g) = &self.gradient {
-            o.insert(
-                "color".into(),
-                json!({ "gradient": val::<_, S::Error>(&g)? }),
-            );
-        } else if let Some(c) = self.color {
-            o.insert("color".into(), Value::String(c.to_string()));
-        }
-        if self.align != StrokeAlign::default() {
-            o.insert("align".into(), val::<_, S::Error>(&self.align)?);
-        }
-        if !self.dash.is_empty() {
-            o.insert("dash".into(), json!(self.dash));
-        }
-        if self.cap != Cap::default() {
-            o.insert("cap".into(), val::<_, S::Error>(&self.cap)?);
-        }
-        if self.join != Join::default() {
-            o.insert("join".into(), val::<_, S::Error>(&self.join)?);
-        }
-        if let Some(m) = self.start {
-            o.insert("markerStart".into(), val::<_, S::Error>(&m)?);
-        }
-        if let Some(m) = self.end {
-            o.insert("markerEnd".into(), val::<_, S::Error>(&m)?);
-        }
-        if self.rough != 0.0 {
-            o.insert("roughness".into(), json!(self.rough));
-        }
-        if self.seed != 0 {
-            o.insert("seed".into(), json!(self.seed));
-        }
-        o.serialize(s)
+        .serialize(s)
     }
 }
 
-/// `x` as a JSON value, for [`Stroke`]'s hand-written form.
-fn val<T: Serialize, E: serde::ser::Error>(x: &T) -> Result<serde_json::Value, E> {
-    serde_json::to_value(x).map_err(E::custom)
+/// [`Stroke`] as stored: defaults left out, and the gradient folded into
+/// `color`.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Out<'a> {
+    #[serde(skip_serializing_if = "is_one_px")]
+    width: StrokeWidth,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    color: Option<Paint<'a>>,
+    #[serde(skip_serializing_if = "is_default")]
+    align: StrokeAlign,
+    #[serde(skip_serializing_if = "<[f32]>::is_empty")]
+    dash: &'a [f32],
+    #[serde(skip_serializing_if = "is_default")]
+    cap: Cap,
+    #[serde(skip_serializing_if = "is_default")]
+    join: Join,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    marker_start: Option<Marker>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    marker_end: Option<Marker>,
+    #[serde(skip_serializing_if = "is_zero")]
+    roughness: f32,
+    #[serde(skip_serializing_if = "is_default")]
+    seed: u32,
+}
+
+/// A stroke's `color`: a color, or `{"gradient": {…}}`.
+#[derive(Serialize)]
+#[serde(untagged)]
+enum Paint<'a> {
+    Gradient { gradient: &'a Gradient },
+    Color(Color),
+}
+
+fn is_one_px(w: &StrokeWidth) -> bool {
+    *w == StrokeWidth::All(1.0)
 }
 
 /// One stroke width, or one per side of a rect.

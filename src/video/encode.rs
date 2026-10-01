@@ -41,7 +41,8 @@ pub struct Video {
 /// Encodes `size` of a moving scene at `fps` as a video file, with its clips'
 /// sound unless `sound` is false, at `quality` (1–100). With `max_kb`, a
 /// file over it is encoded again, up to three times, at a lower quality
-/// (or, on a hardware encoder, the bitrate that budget allows).
+/// (or, on a hardware encoder, a bitrate; when that still doesn't fit,
+/// libx264 tries at a lower quality).
 ///
 /// # Errors
 /// No ffmpeg, a scene without `duration`, missing assets, or ffmpeg failing
@@ -68,7 +69,11 @@ pub fn render_video(
         assets_dir,
         container,
         sound,
-        (rate, false),
+        Encode {
+            rate,
+            strict: false,
+            software: false,
+        },
     )?;
     let Some(kb) = max_kb else {
         return Ok(Video {
@@ -86,41 +91,106 @@ pub fn render_video(
         });
     }
     // Constant-quality encoders (libx264, VP9) lower their quality, which
-    // keeps the look even; hardware encoders take a bitrate.
-    let stepped = container == Container::Webm
-        || super::h264_encoder(&super::ffmpeg().map_err(|e| anyhow!(e))?) == "libx264";
+    // keeps the look even; hardware encoders take a bitrate. Some ignore
+    // a low one: then libx264, which can always go lower, has its turn.
+    let hardware = container == Container::Mp4
+        && super::h264_encoder(&super::ffmpeg().map_err(|e| anyhow!(e))?) != "libx264";
     let secs = f64::from(crate::anim::shots::length(scene).unwrap_or(1.0)).max(0.1);
     let audio = if sound && !super::audio::sources(scene, assets_dir).is_empty() {
         160.0
     } else {
         0.0
     };
-    // A setting that grows the file, the encoder's rate at it, and a guess
-    // of the setting for a size from one try: 6 CRF steps, about 17
-    // quality points, halve the size; a bitrate scales it.
-    let (start, rate_at, guess): (f64, fn(f64) -> Rate, Guess) = if stepped {
-        (
-            f64::from(quality.clamp(1, 100)),
-            |q| Rate::Quality(q.clamp(1.0, 100.0) as u32),
-            |q, ratio| q - 17.4 * ratio.log2(),
-        )
-    } else {
-        (
-            (budget * 8.0 * 0.95 / secs / 1000.0 - audio).max(50.0),
-            |k| Rate::Bitrate(k.max(50.0) as u32),
-            |k, ratio| k / ratio,
+    let encode = |rate, strict, software| {
+        encode_once(
+            scene,
+            size,
+            fps,
+            assets_dir,
+            container,
+            sound,
+            Encode {
+                rate,
+                strict,
+                software,
+            },
         )
     };
-    let mut tries = vec![(start, bytes)];
-    if !stepped {
-        let r = rate_at(start);
-        tries[0] = (
-            start,
-            encode_once(scene, size, fps, assets_dir, container, sound, (r, false))?,
-        );
+    let quality = quality.clamp(1, 100);
+    let mut best = if hardware {
+        let start = (budget * 8.0 * 0.95 / secs / 1000.0 - audio).max(50.0);
+        let first = encode(Rate::Bitrate(start as u32), false, false)?;
+        search(budget, Setting::Bitrate, (start, first), |r, strict| {
+            encode(r, strict, false)
+        })?
+    } else {
+        search(
+            budget,
+            Setting::Quality,
+            (f64::from(quality), bytes),
+            |r, _| encode(r, false, false),
+        )?
+    };
+    if best.2 && hardware {
+        let first = encode(Rate::Quality(quality), false, true)?;
+        let soft = search(
+            budget,
+            Setting::Quality,
+            (f64::from(quality), first),
+            |r, _| encode(r, false, true),
+        )?;
+        if !soft.2 || soft.0.len() < best.0.len() {
+            best = soft;
+        }
     }
-    // Every try is measured. Up to three more, each between the closest
-    // under and over the budget so far, until one fits within 85% of it.
+    let (bytes, rate, too_big) = best;
+    Ok(Video {
+        bytes,
+        rate,
+        too_big,
+    })
+}
+
+/// What a `maxKB` search varies.
+#[derive(Clone, Copy)]
+enum Setting {
+    /// The quality, 1–100: 6 CRF steps, about 17 points, halve the size.
+    Quality,
+    /// A bitrate, kbit/s, which scales the size.
+    Bitrate,
+}
+
+impl Setting {
+    fn rate(self, x: f64) -> Rate {
+        match self {
+            Setting::Quality => Rate::Quality(x.clamp(1.0, 100.0) as u32),
+            Setting::Bitrate => Rate::Bitrate(x.max(50.0) as u32),
+        }
+    }
+
+    /// The setting for a size `ratio` times the target, from one at `x`.
+    fn guess(self, x: f64, ratio: f64) -> f64 {
+        match self {
+            Setting::Quality => x - 17.4 * ratio.log2(),
+            Setting::Bitrate => x / ratio,
+        }
+    }
+}
+
+/// Finds the file that fits `budget` bytes best, from a first try over
+/// it: up to three more, each between the closest under and over so far,
+/// until one fits within 85% of it; never above the first quality.
+/// `encode` takes the rate and whether a bitrate's ceiling should hold to
+/// it (once a try overshot). Returns the biggest that fits, else the
+/// smallest and `true` (too big).
+fn search(
+    budget: f64,
+    setting: Setting,
+    first: (f64, Vec<u8>),
+    mut encode: impl FnMut(Rate, bool) -> Result<Vec<u8>>,
+) -> Result<(Vec<u8>, Rate, bool)> {
+    let start = first.0;
+    let mut tries = vec![first];
     let target = budget * 0.95;
     for _ in 0..3 {
         let len = |t: &&(f64, Vec<u8>)| t.1.len();
@@ -139,57 +209,50 @@ pub fn render_video(
                 let (lu, lo) = ((u.1.len() as f64).ln(), (o.1.len() as f64).ln());
                 u.0 + (o.0 - u.0) * (target.ln() - lu) / (lo - lu)
             }
-            (Some(t), None) | (None, Some(t)) => guess(t.0, t.1.len() as f64 / target),
+            (Some(t), None) | (None, Some(t)) => setting.guess(t.0, t.1.len() as f64 / target),
             (None, None) => break,
+        };
+        let next = match setting {
+            Setting::Quality => next.min(start),
+            Setting::Bitrate => next,
         }
-        // Never above the quality asked for.
-        .min(if stepped { start } else { f64::MAX })
         .floor();
-        let rate = rate_at(next);
-        if tries.iter().any(|t| rate_at(t.0) == rate) {
+        let rate = setting.rate(next);
+        if tries.iter().any(|t| setting.rate(t.0) == rate) {
             break;
         }
-        // Once a bitrate overshot, the ceiling tightens to the bitrate
-        // itself: some hardware encoders run well past a loose one.
         let strict = tries.iter().any(|t| t.1.len() as f64 > budget);
-        let bytes = encode_once(
-            scene,
-            size,
-            fps,
-            assets_dir,
-            container,
-            sound,
-            (rate, strict),
-        )?;
-        tries.push((next, bytes));
+        tries.push((next, encode(rate, strict)?));
     }
-    // The biggest that fits, else the smallest, reported too big.
-    let fits = |t: &&(f64, Vec<u8>)| t.1.len() as f64 <= budget;
-    let best = match tries.iter().filter(fits).max_by_key(|t| t.1.len()) {
-        Some(t) => t,
+    let fits = |t: &(f64, Vec<u8>)| t.1.len() as f64 <= budget;
+    let at = match tries
+        .iter()
+        .enumerate()
+        .filter(|(_, t)| fits(t))
+        .max_by_key(|(_, t)| t.1.len())
+    {
+        Some((i, _)) => i,
         None => tries
             .iter()
-            .min_by_key(|t| t.1.len())
-            .ok_or_else(|| anyhow!("no encode"))?,
+            .enumerate()
+            .min_by_key(|(_, t)| t.1.len())
+            .map_or(0, |(i, _)| i),
     };
-    let (rate, too_big) = (rate_at(best.0), !fits(&best));
-    let bytes = tries
-        .into_iter()
-        .find(|t| rate_at(t.0) == rate)
-        .map(|t| t.1)
-        .unwrap_or_default();
-    Ok(Video {
-        bytes,
-        rate,
-        too_big,
-    })
+    let (x, bytes) = tries.swap_remove(at);
+    let too_big = bytes.len() as f64 > budget;
+    Ok((bytes, setting.rate(x), too_big))
 }
 
-/// A setting's guess from one try: its setting and its size over the target.
-type Guess = fn(f64, f64) -> f64;
+/// One encode's settings: the rate, whether a bitrate's ceiling holds to
+/// the bitrate itself, and whether to use libx264 whatever the encoder.
+#[derive(Clone, Copy)]
+struct Encode {
+    rate: Rate,
+    strict: bool,
+    software: bool,
+}
 
-/// One ffmpeg encode at `rate`; `strict` holds a bitrate's ceiling to the
-/// bitrate itself.
+/// One ffmpeg encode.
 fn encode_once(
     scene: &Scene,
     size: &Size,
@@ -197,11 +260,24 @@ fn encode_once(
     assets_dir: &Path,
     container: Container,
     sound: bool,
-    (rate, strict): (Rate, bool),
+    Encode {
+        rate,
+        strict,
+        software,
+    }: Encode,
 ) -> Result<Vec<u8>> {
     let ffmpeg = super::ffmpeg().map_err(|e| anyhow!(e))?;
     let (count, w, h) = crate::render::animation_dims(scene, size, fps, "video")?;
-    let out = tempfile_path(container);
+    // MP4's fast start needs a seekable file, not a pipe; the path deletes
+    // the file when it drops, on every return.
+    let out = tempfile::Builder::new()
+        .prefix("keyline-")
+        .suffix(match container {
+            Container::Mp4 => ".mp4",
+            Container::Webm => ".webm",
+        })
+        .tempfile()?
+        .into_temp_path();
     let mut cmd = Command::new(&ffmpeg);
     cmd.args(["-hide_banner", "-loglevel", "error", "-y"])
         .args(["-f", "rawvideo", "-pix_fmt", "rgba"])
@@ -240,7 +316,11 @@ fn encode_once(
     }
     match container {
         Container::Mp4 => {
-            let enc = super::h264_encoder(&ffmpeg);
+            let enc = if software {
+                "libx264".to_owned()
+            } else {
+                super::h264_encoder(&ffmpeg)
+            };
             cmd.args([
                 "-c:v",
                 &enc,
@@ -316,7 +396,6 @@ fn encode_once(
     drop(stdin);
     let done = child.wait_with_output()?;
     if !done.status.success() {
-        let _ = std::fs::remove_file(&out);
         let why = String::from_utf8_lossy(&done.stderr);
         // The first error says why; later lines are its consequences.
         let first = why
@@ -326,19 +405,5 @@ fn encode_once(
         return Err(anyhow!("ffmpeg failed: {}", first.unwrap_or("no message")));
     }
     fed?;
-    let bytes = std::fs::read(&out)?;
-    let _ = std::fs::remove_file(&out);
-    Ok(bytes)
-}
-
-/// A fresh temporary file for ffmpeg to write (MP4's fast start needs a
-/// seekable file, not a pipe).
-fn tempfile_path(container: Container) -> std::path::PathBuf {
-    static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-    let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let ext = match container {
-        Container::Mp4 => "mp4",
-        Container::Webm => "webm",
-    };
-    std::env::temp_dir().join(format!("keyline-{}-{n}.{ext}", std::process::id()))
+    Ok(std::fs::read(&out)?)
 }

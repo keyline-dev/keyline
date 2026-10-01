@@ -14,7 +14,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 
-use crate::store::sha256_hex;
+use crate::store::{sha256_hex, write_atomic};
 use crate::text;
 
 const CSS_API: &str = "https://fonts.googleapis.com/css2";
@@ -115,9 +115,7 @@ pub async fn ensure(family: &str, dir: &Path) -> Result<Outcome> {
     }
     let n = files.len();
     text::add_fonts(files)?;
-    let tmp = dir.join("index.json.tmp");
-    std::fs::write(&tmp, serde_json::to_vec_pretty(&index)?)?;
-    std::fs::rename(&tmp, dir.join(INDEX))?;
+    write_atomic(&dir.join(INDEX), &serde_json::to_vec_pretty(&index)?)?;
     eprintln!("fetched font {family}: {n} file(s) into {}", dir.display());
     Ok(Outcome::Fetched(n))
 }

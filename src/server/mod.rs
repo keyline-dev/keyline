@@ -95,7 +95,7 @@ impl Server {
         description = "Create a scene from sizes, or from a template by url or path with its tokens set. Returns its id."
     )]
     async fn scene_create(&self, Parameters(a): Parameters<SceneCreateArgs>) -> CallToolResult {
-        reply(self.scene_create_impl(a).await)
+        reply(self.scene_create_impl(a).await.map(|(_, text)| text))
     }
 
     #[tool(
@@ -235,7 +235,7 @@ adds one small image of all sizes."
     )]
     async fn render(&self, Parameters(a): Parameters<RenderArgs>) -> CallToolResult {
         match self.render_impl(a).await {
-            Ok(content) => CallToolResult::success(content),
+            Ok((content, _)) => CallToolResult::success(content),
             Err(e) => CallToolResult::error(vec![ContentBlock::text(e)]),
         }
     }

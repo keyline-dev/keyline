@@ -171,9 +171,7 @@ impl Server {
                 fetch(url.as_str()).await.map_err(err)
             }
             Base::Dir(_) if web => fetch(name).await.map_err(err),
-            Base::Dir(dir) => self
-                .reads
-                .read(&dir.join(name).to_string_lossy(), MAX_VIDEO_BYTES),
+            Base::Dir(dir) => self.reads.read(dir.join(name), MAX_VIDEO_BYTES),
         }
     }
 }

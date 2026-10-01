@@ -76,25 +76,9 @@ fn data_url(data: &str) -> Result<Vec<u8>> {
             .decode(body.trim())
             .context("bad base64 in data: URL")?
     } else {
-        let mut out = Vec::with_capacity(body.len());
-        let mut rest = body.as_bytes();
-        while let Some((&b, tail)) = rest.split_first() {
-            let hex = tail
-                .get(..2)
-                .and_then(|h| std::str::from_utf8(h).ok())
-                .and_then(|h| u8::from_str_radix(h, 16).ok());
-            match (b, hex) {
-                (b'%', Some(v)) => {
-                    out.push(v);
-                    rest = &tail[2..];
-                }
-                _ => {
-                    out.push(b);
-                    rest = tail;
-                }
-            }
-        }
-        out
+        // A stray `%` stays as it is, and so does `#`: inline SVGs often
+        // carry an unescaped `fill="#fff"`.
+        percent_encoding::percent_decode_str(body).collect()
     };
     if bytes.len() > MAX_ASSET_BYTES {
         bail!("asset larger than {} MB", MAX_ASSET_BYTES >> 20);
@@ -171,6 +155,10 @@ mod tests {
         );
         assert_eq!(data_url("text/plain;base64,aGk=").unwrap(), b"hi");
         assert_eq!(data_url("text/plain,100%").unwrap(), b"100%");
+        assert_eq!(
+            data_url("image/svg+xml,<svg fill=\"#fff\"/>").unwrap(),
+            b"<svg fill=\"#fff\"/>"
+        );
         assert!(
             data_url("image/png")
                 .unwrap_err()

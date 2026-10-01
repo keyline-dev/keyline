@@ -4,6 +4,8 @@
 use std::path::Path;
 use std::process::Command;
 
+use serde::Deserialize;
+
 use crate::scene::Clip;
 
 /// The first video stream's `(width, height, clip)`; `(0, 0, clip)` for a
@@ -26,19 +28,19 @@ pub fn probe(file: &Path) -> Result<Option<(f32, f32, Clip)>, String> {
     if !out.status.success() {
         return Ok(None);
     }
-    let v: serde_json::Value = serde_json::from_slice(&out.stdout).map_err(|e| e.to_string())?;
-    let streams = v["streams"].as_array().cloned().unwrap_or_default();
-    let kind = |s: &serde_json::Value, k: &str| s["codec_type"].as_str() == Some(k);
-    let audio = streams.iter().any(|s| kind(s, "audio"));
-    let num = |x: &serde_json::Value| {
-        x.as_f64()
-            .or_else(|| x.as_str().and_then(|s| s.parse().ok()))
-    };
-    let duration = num(&v["format"]["duration"]).unwrap_or(0.0);
+    let v: Probe = serde_json::from_slice(&out.stdout).map_err(|e| e.to_string())?;
+    let kind = |s: &Stream, k: &str| s.codec_type == k;
+    let audio = v.streams.iter().any(|s| kind(s, "audio"));
+    let duration = v
+        .format
+        .duration
+        .and_then(|d| d.parse::<f64>().ok())
+        .unwrap_or(0.0);
     // An MP3's cover art is a one-picture "video" stream.
-    let Some(stream) = streams
+    let Some(stream) = v
+        .streams
         .iter()
-        .find(|s| kind(s, "video") && s["disposition"]["attached_pic"].as_i64() != Some(1))
+        .find(|s| kind(s, "video") && s.disposition.attached_pic != 1)
     else {
         return Ok((audio && duration > 0.0).then_some((
             0.0,
@@ -50,12 +52,13 @@ pub fn probe(file: &Path) -> Result<Option<(f32, f32, Clip)>, String> {
             },
         )));
     };
-    let (Some(w), Some(h)) = (num(&stream["width"]), num(&stream["height"])) else {
+    let (Some(w), Some(h)) = (stream.width, stream.height) else {
         return Ok(None);
     };
     // "30000/1001" and the like.
-    let fps = stream["avg_frame_rate"]
-        .as_str()
+    let fps = stream
+        .avg_frame_rate
+        .as_deref()
         .and_then(|r| r.split_once('/'))
         .and_then(|(n, d)| Some(n.parse::<f64>().ok()? / d.parse::<f64>().ok()?))
         .filter(|f| f.is_finite() && *f > 0.0)
@@ -73,4 +76,37 @@ pub fn probe(file: &Path) -> Result<Option<(f32, f32, Clip)>, String> {
             audio,
         },
     )))
+}
+
+/// The parts of ffprobe's JSON that [`probe`] reads.
+#[derive(Deserialize)]
+struct Probe {
+    #[serde(default)]
+    streams: Vec<Stream>,
+    #[serde(default)]
+    format: Format,
+}
+
+#[derive(Deserialize, Default)]
+struct Format {
+    /// Seconds, as a decimal string.
+    duration: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct Stream {
+    #[serde(default)]
+    codec_type: String,
+    width: Option<u32>,
+    height: Option<u32>,
+    /// A fraction, such as "30000/1001".
+    avg_frame_rate: Option<String>,
+    #[serde(default)]
+    disposition: Disposition,
+}
+
+#[derive(Deserialize, Default)]
+struct Disposition {
+    #[serde(default)]
+    attached_pic: u8,
 }

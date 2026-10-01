@@ -30,7 +30,7 @@ pub(super) fn highlights(
             paint.set_path_effect(PathEffect::discrete(
                 6.0 * k,
                 h.padding * k * 0.35,
-                seed(&layer.id),
+                crate::anim::track::seed(&layer.id),
             ));
         }
         let pad = h.padding * k;
@@ -239,11 +239,4 @@ pub fn curve_sagitta(total_width: f32, r: f32) -> f32 {
     let radius = r.abs().max(1.0);
     let half = (total_width / 2.0 / radius).min(std::f32::consts::FRAC_PI_2);
     radius - radius * half.cos()
-}
-
-/// A stable seed from a layer id, so rough edges repeat render to render.
-fn seed(id: &str) -> u32 {
-    id.bytes().fold(2166136261u32, |h, b| {
-        (h ^ u32::from(b)).wrapping_mul(16777619)
-    })
 }
