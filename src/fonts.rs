@@ -20,6 +20,9 @@ use crate::text;
 const CSS_API: &str = "https://fonts.googleapis.com/css2";
 const FONT_HOST: &str = "https://fonts.gstatic.com/";
 const INDEX: &str = "index.json";
+/// How cached files were fetched: 1 asks for italics too. A family cached
+/// by an older fetch is fetched again, so its italics come.
+const FETCH: u32 = 1;
 
 /// The cache index: font file name → what it is.
 pub type Index = BTreeMap<String, Entry>;
@@ -33,6 +36,9 @@ pub struct Entry {
     pub url: String,
     /// When it was downloaded, seconds since the Unix epoch.
     pub fetched: u64,
+    /// How it was fetched ([`FETCH`]); 0 before italics were asked for.
+    #[serde(default)]
+    pub version: u32,
 }
 
 /// What `ensure` had to do.
@@ -59,14 +65,17 @@ pub fn index(dir: &Path) -> Index {
 /// A malformed family name, a family Google Fonts doesn't have, or a
 /// network or disk failure.
 pub async fn ensure(family: &str, dir: &Path) -> Result<Outcome> {
-    if text::families().iter().any(|f| f == family) {
+    let stale = index(dir)
+        .values()
+        .any(|e| e.family == family && e.version < FETCH);
+    if !stale && text::families().iter().any(|f| f == family) {
         return Ok(Outcome::Available);
     }
     // Another server process on the same data dir may have fetched it
     // since this one started: load it from the cache instead.
     let cached: Vec<_> = index(dir)
         .into_iter()
-        .filter(|(_, e)| e.family == family)
+        .filter(|(_, e)| e.family == family && !stale)
         .filter_map(|(name, _)| std::fs::read(dir.join(name)).ok())
         .map(|bytes| (bytes, Some(family.to_owned())))
         .collect();
@@ -88,6 +97,12 @@ pub async fn ensure(family: &str, dir: &Path) -> Result<Outcome> {
     let urls = font_urls(&http, family).await?;
     std::fs::create_dir_all(dir)?;
     let mut index = index(dir);
+    // The family's old files, replaced once the new ones are in.
+    let old: Vec<String> = index
+        .iter()
+        .filter(|(_, e)| e.family == family)
+        .map(|(name, _)| name.clone())
+        .collect();
     let fetched = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
@@ -109,9 +124,17 @@ pub async fn ensure(family: &str, dir: &Path) -> Result<Outcome> {
                 family: family.to_owned(),
                 url,
                 fetched,
+                version: FETCH,
             },
         );
         files.push((bytes, Some(family.to_owned())));
+    }
+    // Old files the fetch didn't bring again (same bytes, same name).
+    for name in old {
+        if index.get(&name).is_some_and(|e| e.version < FETCH) {
+            index.remove(&name);
+            let _ = std::fs::remove_file(dir.join(&name));
+        }
     }
     let n = files.len();
     text::add_fonts(files)?;
@@ -120,14 +143,25 @@ pub async fn ensure(family: &str, dir: &Path) -> Result<Outcome> {
     Ok(Outcome::Fetched(n))
 }
 
-/// The family's TTF URLs: its weight axis if it has one, else each static
-/// weight it has (Google returns the subset of a weight list that exists),
-/// else its single style.
+/// The family's TTF URLs, italics too where it has them: its weight axis
+/// if it has one, else each static weight it has (Google returns the
+/// subset of a weight list that exists), else its single style. Without
+/// its italic files a family's italic is the upright slanted, which tips
+/// tall accents off their letters.
 async fn font_urls(http: &reqwest::Client, family: &str) -> Result<Vec<String>> {
     let name = family.replace(' ', "+");
+    let weights = (1..=9).map(|w| w * 100);
+    let both: Vec<String> = [0, 1]
+        .iter()
+        .flat_map(|i| weights.clone().map(move |w| format!("{i},{w}")))
+        .collect();
+    let upright: Vec<String> = weights.map(|w| w.to_string()).collect();
     let queries = [
+        format!("{name}:ital,wght@0,100..900;1,100..900"),
         format!("{name}:wght@100..900"),
-        format!("{name}:wght@100;200;300;400;500;600;700;800;900"),
+        format!("{name}:ital,wght@{}", both.join(";")),
+        format!("{name}:wght@{}", upright.join(";")),
+        format!("{name}:ital@0;1"),
         name.clone(),
     ];
     for query in queries {
@@ -219,6 +253,7 @@ mod tests {
             family: "Cached Sans".into(),
             url: "https://fonts.gstatic.com/x.ttf".into(),
             fetched: 1,
+            version: FETCH,
         };
         let index = Index::from([(name, entry)]);
         std::fs::write(dir.join(INDEX), serde_json::to_vec(&index).unwrap()).unwrap();
@@ -241,6 +276,7 @@ mod tests {
             family: "Shared Sans".into(),
             url: "https://fonts.gstatic.com/y.ttf".into(),
             fetched: 1,
+            version: FETCH,
         };
         std::fs::write(
             dir.join(INDEX),
@@ -253,6 +289,40 @@ mod tests {
             Outcome::Available
         );
         assert!(text::families().contains(&"Shared Sans".to_string()));
+    }
+
+    /// Needs the network: a family with true italics (Cormorant, static
+    /// weights) gets them, so its italic isn't the upright slanted; and a
+    /// family cached before italics were fetched is fetched again.
+    #[tokio::test]
+    #[ignore = "downloads from Google Fonts; run with --ignored"]
+    async fn google_fonts_italics_come_and_old_caches_are_refreshed() {
+        let dir = std::env::temp_dir().join(format!("keyline-mcp-italic-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // An old cache: one upright file, from before italics were asked for.
+        let bytes = include_bytes!("../fonts/InterVariable.ttf");
+        let old = Entry {
+            family: "Cormorant".into(),
+            url: "https://fonts.gstatic.com/old.ttf".into(),
+            fetched: 1,
+            version: 0,
+        };
+        let name = format!("{}.ttf", sha256_hex(bytes));
+        std::fs::write(dir.join(&name), bytes).unwrap();
+        std::fs::write(
+            dir.join(INDEX),
+            serde_json::to_vec(&Index::from([(name, old)])).unwrap(),
+        )
+        .unwrap();
+        let got = ensure("Cormorant", &dir).await.unwrap();
+        assert!(matches!(got, Outcome::Fetched(n) if n >= 10), "{got:?}");
+        let italic = text::typeface("Cormorant", 400, true).unwrap();
+        assert_eq!(
+            italic.font_style().slant(),
+            skia_safe::font_style::Slant::Italic
+        );
+        assert_eq!(ensure("Cormorant", &dir).await.unwrap(), Outcome::Available);
     }
 
     /// Needs the network: the first request downloads, the second is served

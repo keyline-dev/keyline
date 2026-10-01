@@ -359,7 +359,7 @@ A size can rearrange the whole grid by changing only its templates in `media`.
 | `lineHeight` | number | the font's own line spacing | × `fontSize`; a value above 4 is an error (px was likely meant) |
 | `letterSpacing` | px | 0 | |
 | `textTransform` | `uppercase`, `lowercase`, `capitalize` | none | |
-| `fontStyle` | `normal`, `italic` | `normal` | |
+| `fontStyle` | `normal`, `italic` | `normal` | The family's italic face (Google Fonts families come with theirs); one without an italic is drawn slanted |
 | `textDecoration` | `underline`, `line-through` | none | |
 | `textWrap` | `wrap`, `balance`, `pretty` | `wrap` | `balance` evens line lengths; `pretty` avoids a lone last word |
 | `maxLines` | number | none | Lines before the ellipsis, in any box; cut text is reported `!truncated` |
