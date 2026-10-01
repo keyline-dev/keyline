@@ -254,3 +254,37 @@ fn hugging_stacks_never_wrap_their_own_text_at_any_scale() {
         }
     }
 }
+
+#[test]
+fn centred_text_is_placed_by_the_height_it_has_at_each_size() {
+    // Two lines at the narrow master, one at a wide size: placed by one
+    // line's height there, so it stays centred.
+    let s = scene_with(
+        json!([{"id": "t", "type": "text", "text": "Three nights of sound", "width": "80%",
+            "fontSize": 60, "textAlign": "center", "place": "center"}]),
+        json!({"width": 540, "height": 960, "sizes": [{"id": "master", "width": 540, "height": 960}]}),
+    );
+    let tall = boxes(&s, &s.sizes[0])["t"];
+    let wide = boxes(&s, &size("wide", 1600.0, 900.0, 1.0))["t"];
+    assert!(
+        wide.h < tall.h * 0.75,
+        "one line at the wide size: {wide:?} vs {tall:?}"
+    );
+    assert!(
+        (wide.y + wide.h / 2.0 - 450.0).abs() < 0.5,
+        "centred: {wide:?}"
+    );
+    // Pinned by its centre with a constraint, its centre holds too.
+    let s = scene_with(
+        json!([{"id": "t", "type": "text", "text": "Three nights of sound", "width": "80%", "y": 400,
+            "fontSize": 60, "textAlign": "center", "constraints": {"vertical": "center"}}]),
+        json!({"width": 540, "height": 960, "sizes": [{"id": "master", "width": 540, "height": 960}]}),
+    );
+    let tall = boxes(&s, &s.sizes[0])["t"];
+    let wide = boxes(&s, &size("wide", 1600.0, 900.0, 1.0))["t"];
+    let moved = (900.0 - 960.0) / 2.0;
+    assert!(
+        ((wide.y + wide.h / 2.0) - (tall.y + tall.h / 2.0 + moved)).abs() < 0.5,
+        "{wide:?} vs {tall:?}"
+    );
+}

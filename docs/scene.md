@@ -52,7 +52,7 @@ A layer's final values are built in this order; each step wins over the one befo
 3. **Styles**, in the order listed; a later style wins. The layer's own fields win over all styles.
 4. **`media`**, per size: aspect classes broadest first, then the size id.
 
-`media` and `layer_update`'s `set` merge like a JSON merge patch: nested objects (an object `enter`, `constraints`) merge field by field, while lists (`fill`, `ranges`, `children`) and plain values are replaced whole, and `null` resets a field. Styles and a `use` layer's fields replace whole top-level fields.
+`media` and `layer_update`'s `set` merge like a JSON merge patch: nested objects (an object `enter`, `constraints`) merge field by field, while lists (`fill`, `ranges`, `children`) and plain values are replaced whole, and `null` resets a field. Styles and a `use` layer's fields replace whole top-level fields, except `media`: a style's `media` and the layer's own merge, size by size and field by field, the layer's winning.
 
 ## Document
 
@@ -544,7 +544,7 @@ An image fill works on any shape: a photo in a circle is `{"type": "ellipse", "f
 
 ### Styles
 
-`styles` hold any layer fields, `media` included: a `card` style can carry `fill`, `borderRadius` and `shadow`. A layer's `style` takes one name or a list; a later style wins where they overlap, and the layer's own fields win over all of them. Changing a style through `layer_update` changes every layer that uses it. A style can't set `id`, `text` or children; a `type` in it is dropped.
+`styles` hold any layer fields, `media` included: a `card` style can carry `fill`, `borderRadius` and `shadow`. A layer with its own `media` keeps the style's too: `{"style": "ink", "media": {"story": {"fontSize": 40}}}` still gets `ink`'s `a4-portrait` color, and where both set a field for one size, the layer's wins. A layer's `style` takes one name or a list; a later style wins where they overlap, and the layer's own fields win over all of them. Changing a style through `layer_update` changes every layer that uses it. A style can't set `id`, `text` or children; a `type` in it is dropped.
 
 ### Components
 

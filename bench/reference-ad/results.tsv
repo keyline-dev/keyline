@@ -65,3 +65,6 @@ r4b-3	848a9e9+dirty	claude-opus-5[1m]	0.369	7	107	6	9603	1	8201	4753	12813	69198
 cause-1	6783ad8+dirty	claude-opus-5[1m]	0.358	8	92	7	7268	2	6775	3712	15012	73769	portrait 26, wide 22, sky 12	0	2620
 cause-2	6783ad8+dirty	claude-opus-5[1m]	0.482	12	131	11	14651	2	10030	3731	15574	147120	portrait 24, wide 22, sky 11	0	4616
 cause-3	6783ad8+dirty	claude-opus-5[1m]	0.378	7	672	6	11062	1	8229	4794	13470	72407	portrait 22, wide 19, sky 10	0	5177
+r5-1	320959c+dirty	claude-opus-5[1m]	0.502	9	136	8	9006	2	10404	6321	18724	106372	portrait 26, wide 24, sky 13	0	2799
+r5-2	320959c+dirty	claude-opus-5[1m]	0.377	6	127	5	8185	1	8982	4974	12282	55659	portrait 22, wide 19, sky 12	0	1640
+r5-3	320959c+dirty	claude-opus-5[1m]	0.520	9	144	8	15657	1	11681	5339	16917	114328	portrait 22, wide 19, sky 12	0	4988

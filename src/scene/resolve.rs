@@ -41,7 +41,34 @@ pub(super) fn styled(l: &Layer, scene: &Scene) -> Result<Option<Layer>, String> 
             .map_err(|e| format!("style {name}: {e}"))?;
         if let serde_json::Value::Object(style) = style {
             for (k, val) in style {
-                obj.entry(k).or_insert(val);
+                match (obj.get_mut(&k), val) {
+                    // Both set per-size changes: merged, size by size and
+                    // field by field, the layer's own winning.
+                    (Some(serde_json::Value::Object(own)), serde_json::Value::Object(theirs))
+                        if k == "media" =>
+                    {
+                        for (size, change) in theirs {
+                            match (own.get_mut(&size), change) {
+                                (
+                                    Some(serde_json::Value::Object(mine)),
+                                    serde_json::Value::Object(change),
+                                ) => {
+                                    for (field, v) in change {
+                                        mine.entry(field).or_insert(v);
+                                    }
+                                }
+                                (Some(_), _) => {}
+                                (None, change) => {
+                                    own.insert(size, change);
+                                }
+                            }
+                        }
+                    }
+                    (Some(_), _) => {}
+                    (None, val) => {
+                        obj.insert(k, val);
+                    }
+                }
             }
         }
     }
@@ -219,6 +246,33 @@ impl Scene {
 #[cfg(test)]
 mod tests {
     use crate::scene::{Kind, Scene};
+
+    #[test]
+    fn a_layers_media_merges_with_its_styles_layer_winning_per_field() {
+        let s: Scene = serde_json::from_value(serde_json::json!({"width": 100, "height": 100,
+            "sizes": [{"id": "story", "width": 100, "height": 100}, {"id": "a4", "width": 100, "height": 100}],
+            "styles": {"ink": {"color": "#F4EFE6", "media": {
+                "a4": {"color": "#1A1A1A"}, "story": {"fontSize": 30, "color": "#FFFFFF"}}}},
+            "layers": [{"id": "t", "type": "text", "text": "Hi", "style": "ink",
+                "media": {"story": {"fontSize": 40}}}]}))
+        .unwrap();
+        s.validate().unwrap();
+        let resolved = s.resolved();
+        let at = |i: usize| {
+            let sized = resolved.for_size(&s.sizes[i]).into_owned();
+            let Kind::Text {
+                font_size, color, ..
+            } = sized.layers[0].kind.clone()
+            else {
+                unreachable!()
+            };
+            (font_size, color.to_string())
+        };
+        // The style's a4 change survives the layer's own media.
+        assert_eq!(at(1).1, "#1A1A1A");
+        // Both change story: the layer's fontSize wins, the style's color stays.
+        assert_eq!(at(0), (40.0, "#FFFFFF".to_owned()));
+    }
 
     #[test]
     fn a_sizes_own_text_expands_style_tags() {

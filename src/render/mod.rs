@@ -7,6 +7,37 @@ mod image;
 mod mask;
 mod output;
 mod paint;
+
+/// The ink of a stroke-only shape (an outline with no fill): its widest
+/// stroke along its outline, as a filled path in layout px. `None` for a
+/// layer with no shape or no stroke.
+pub fn stroke_ink(p: &Placed) -> Option<skia_safe::Path> {
+    let path = shape::shape_of(p)?.path();
+    let width = p
+        .layer
+        .look
+        .strokes
+        .iter()
+        .flat_map(OneOrMany::as_slice)
+        .map(|s| {
+            // A stroke drawn inside or outside the edge covers one side of
+            // it at twice the width; centred, both at the width.
+            let both = if s.align == crate::scene::StrokeAlign::Center {
+                1.0
+            } else {
+                2.0
+            };
+            s.width.max() * p.k * both
+        })
+        .reduce(f32::max)?;
+    let mut paint = Paint::default();
+    paint.set_style(skia_safe::PaintStyle::Stroke);
+    paint.set_stroke_width(width);
+    let mut out = skia_safe::PathBuilder::new();
+    skia_safe::path_utils::fill_path_with_paint(&path, &paint, &mut out, None, None)
+        .then(|| out.detach())
+}
+
 #[cfg(test)]
 mod paint_tests;
 mod rough;

@@ -104,6 +104,8 @@ pub(super) fn overlaps<'s>(placed: &[Placed<'s>]) -> HashMap<&'s str, Vec<&'s st
 enum Over<'s> {
     Text(&'s str, Rect, Vec<Rect>),
     Paint(&'s str, Rect),
+    /// A stroke-only shape: only its stroke covers anything.
+    Outline(&'s str, skia_safe::Path),
 }
 
 /// Texts whose ink a later-drawn layer covers by more than a pixel each
@@ -126,7 +128,13 @@ pub(super) fn covers<'s>(
                     highlight_boxes(p, &own),
                 ));
             } else if shown && painted(p) {
-                order.push(Over::Paint(&l.id, mapped(&own, p.rect)));
+                match outline_only(p)
+                    .then(|| crate::render::stroke_ink(p))
+                    .flatten()
+                {
+                    Some(ink) => order.push(Over::Outline(&l.id, ink.make_transform(&own))),
+                    None => order.push(Over::Paint(&l.id, mapped(&own, p.rect))),
+                }
             }
             if shown {
                 collect(order, masks, &p.children, &own);
@@ -159,6 +167,19 @@ pub(super) fn covers<'s>(
         for above in &order[i + 1..] {
             let hit = match above {
                 Over::Paint(other, r) => share(*ink, *r).map(|s| ((*other).to_owned(), s)),
+                Over::Outline(other, stroke) => {
+                    let area = skia_safe::Path::rect(
+                        skia_safe::Rect::from_xywh(ink.x, ink.y, ink.w, ink.h),
+                        None,
+                    );
+                    skia_safe::op(stroke, &area, skia_safe::PathOp::Intersect)
+                        .map(|hit| *hit.bounds())
+                        .filter(|b| b.width() > 1.0 && b.height() > 1.0)
+                        .map(|b| {
+                            let s = b.width() * b.height() / (ink.w * ink.h).max(1.0);
+                            ((*other).to_owned(), s)
+                        })
+                }
                 Over::Text(other, _, boxes) => boxes
                     .iter()
                     .filter_map(|b| share(*ink, *b))
@@ -200,6 +221,17 @@ fn painted(p: &Placed) -> bool {
         Kind::Frame { .. } => fills.is_some_and(|f| !f.is_empty()) && !clear,
         _ => !clear || p.layer.look.strokes.is_some(),
     }
+}
+
+/// Whether a shape draws only its stroke: its fills are empty or clear.
+fn outline_only(p: &Placed) -> bool {
+    let l = &p.layer.look;
+    let clear = l.fills.as_ref().is_some_and(|f| {
+        f.as_slice()
+            .iter()
+            .all(|paint| matches!(paint, crate::scene::Paint::Solid(s) if s.color.0 >> 24 == 0))
+    });
+    clear && l.strokes.as_ref().is_some_and(|s| !s.as_slice().is_empty())
 }
 
 /// A text's highlight boxes where they're drawn, padding included.

@@ -130,7 +130,7 @@ fn a_first_fit_says_why_it_skipped_an_option_when_its_choice_has_a_problem() {
     let mut lines = d.lines();
     assert_eq!(
         lines.next().unwrap(),
-        "wide pick firstFit 0,0 400×60 → short (long: long cut at maxLines 1)",
+        "wide pick firstFit 0,0 400×60 → short (long: 2L > maxLines 1)",
         "{d}"
     );
     assert!(
@@ -219,7 +219,7 @@ fn a_squeezed_photo_is_told_the_min_height_that_stops_the_squeeze() {
     // A stretch constraint shrinks the band with a shorter size: setting
     // its height again does nothing; a minHeight holds it.
     let band = |extra: serde_json::Value| {
-        let mut l = json!({"id": "band", "type": "image", "asset": "img", "width": 400, "height": 200,
+        let mut l = json!({"id": "band", "type": "image", "asset": "img", "y": 20, "width": 400, "height": 160,
             "constraints": {"horizontal": "stretch", "vertical": "stretch"}});
         l.as_object_mut()
             .unwrap()
@@ -229,7 +229,7 @@ fn a_squeezed_photo_is_told_the_min_height_that_stops_the_squeeze() {
         describe(&s, Some("wide"), false, None).unwrap()
     };
     let w = band(json!({}));
-    assert!(w.contains("400×100 cover crop 75%h warn crop cuts the image's middle (focus 50%,50%): squeezed from 200 to 100: minHeight 200 shows half"), "{w}");
+    assert!(w.contains("400×60 cover crop 85%h warn crop cuts the image's middle (focus 50%,50%): squeezed from 160 to 60: minHeight 200 shows half"), "{w}");
     let w = band(json!({"minHeight": 200}));
     assert!(!w.contains("warn crop"), "following it fixes it: {w}");
 }
@@ -385,10 +385,7 @@ fn the_render_report_names_the_option_a_first_fit_drew() {
         {"id": "short", "type": "text", "text": "Short", "fontSize": 30}]}]),
     );
     let r = text_report(&s, &s.sizes[0]);
-    assert!(
-        r.contains(" head → short (long: long cut at maxLines 1)\n"),
-        "{r}"
-    );
+    assert!(r.contains(" head → short (long: 2L > maxLines 1)\n"), "{r}");
 }
 
 #[test]
@@ -548,5 +545,87 @@ fn a_tilted_line_near_the_safe_area_is_checked_as_drawn() {
         line(-4.0).contains("cta text") && line(-4.0).contains("!unsafe"),
         "{}",
         line(-4.0)
+    );
+}
+
+#[test]
+fn an_outline_covers_text_only_where_its_stroke_runs() {
+    let d = |tx: f32, ty: f32| {
+        describe(
+            &scene(json!([
+                {"id": "label", "type": "text", "text": "KINDLEPAW", "x": tx, "y": ty, "fontSize": 20},
+                {"id": "blobLine", "type": "ellipse", "x": 50, "y": 10, "width": 300, "height": 180,
+                 "fill": [], "stroke": {"width": 4, "color": "#D0202E"}}
+            ])),
+            Some("wide"),
+            false,
+            None,
+        )
+        .unwrap()
+    };
+    // Inside the ring, clear of its stroke: nothing covers it.
+    assert_eq!(d(150.0, 90.0), "ok");
+    // Across the stroke at the ring's left edge: covered.
+    assert!(
+        d(30.0, 90.0).contains("!covered by blobLine "),
+        "{}",
+        d(30.0, 90.0)
+    );
+}
+
+#[test]
+fn a_photo_filling_the_canvas_gets_no_crop_warning() {
+    // A landscape photo filling a tall canvas crops its sides by over half:
+    // it can't grow, and its focus shows where it's set.
+    let mut s = scene(
+        json!([{"id": "bg", "type": "image", "asset": "img", "width": "fill", "height": "fill"}]),
+    );
+    s.sizes.truncate(1);
+    s.sizes[0].width = 60.0;
+    let d = describe(&s, None, false, None).unwrap();
+    assert_eq!(d, "ok");
+    // Not filling it, the same crop warns.
+    let s = scene(
+        json!([{"id": "band", "type": "image", "asset": "img", "x": 10, "width": 60, "height": 200}]),
+    );
+    assert!(
+        describe(&s, Some("wide"), false, None)
+            .unwrap()
+            .contains("warn crop")
+    );
+}
+
+#[test]
+fn a_cut_only_while_it_moves_says_when() {
+    let card = |child: serde_json::Value| {
+        let s = scene(
+            json!([{"id": "info", "type": "frame", "x": 20, "y": 20, "width": 300, "height": 120, "children": [child]}]),
+        );
+        describe(&s, Some("wide"), false, None).unwrap()
+    };
+    // Whole at rest, its pop overshoots the frame that clips it.
+    let d = card(
+        json!({"id": "ticket", "type": "rect", "x": 4, "y": 4, "width": 292, "height": 112, "fill": "#000000",
+        "enter": {"effect": "pop", "delay": 2.1, "duration": 0.6}}),
+    );
+    assert!(
+        d.contains("ticket rect")
+            && d.contains("!clipped by info: ")
+            && d.contains(" during enter pop 2.1–2.7s"),
+        "{d}"
+    );
+    // A pulse does too.
+    let d = card(
+        json!({"id": "cta", "type": "rect", "x": 10, "y": 10, "width": 280, "height": 100, "fill": "#000000",
+        "animate": {"scale": [1, 1.1, 1], "duration": 1, "repeat": -1}}),
+    );
+    assert!(d.contains(" during scale 0–1s"), "{d}");
+    // A photo filling the frame and zooming slowly means to run past it.
+    assert_eq!(
+        card(
+            json!({"id": "photo", "type": "image", "asset": "img", "width": 300, "height": 120,
+            "animate": {"scale": [1, 1.1], "duration": 6}})
+        ),
+        "wide photo image 20,20 300×120 cover crop 60%h warn crop cuts the image's middle (focus 50%,50%): height 150 shows half\n"
     );
 }

@@ -61,7 +61,7 @@ pub struct Placed<'a> {
     /// when it had several, or the id of a `firstFit`'s child.
     pub chosen: Option<String>,
     /// Why a `firstFit` passed over its first option, when it did:
-    /// `long: headline cut at maxLines 3`.
+    /// `long: 4L > maxLines 3`.
     pub skipped: Option<String>,
     /// For an overflowing stack, or one squeezed by its siblings: the
     /// sibling growing past its own size that causes it.
@@ -181,20 +181,39 @@ fn place_free<'a>(
                 new.0,
                 k,
             );
+            // Text that rewraps at its new width (a `%` or `fill` width)
+            // is placed by the height it has there, not the master's: else
+            // a centred line that wrapped to two at the master sits half a
+            // line high where it fits on one.
+            let vpin: Pin = layer.constraints.v.into();
+            let by_height = vs.is_some() || matches!(vpin, Pin::Center | Pin::End);
+            let tall = match layer.height {
+                None if by_height && (w - natural.0).abs() > 0.5 => {
+                    measure(scene, layer, k, new, (Some(w), forced.1), false).1
+                }
+                _ => natural.1,
+            };
             let (y, h) = free_axis(
                 FreeAxis {
                     pos: layer.y,
                     len: layer.height,
-                    pin: layer.constraints.v.into(),
+                    pin: vpin,
                     spot: vs,
                     inset: my,
                     range: (layer.min_height, layer.max_height),
                 },
-                natural.1,
+                tall,
                 old.1,
                 new.1,
                 k,
             );
+            // Pinned by its centre or bottom edge, that edge stays where the
+            // master's height put it.
+            let y = match (vs, vpin) {
+                (None, Pin::Center) => y + (natural.1 - tall) / 2.0,
+                (None, Pin::End) => y + natural.1 - tall,
+                _ => y,
+            };
             let (w, h) = clamp(layer, k, (w, h));
             let rect = Rect {
                 x: origin.0 + x,

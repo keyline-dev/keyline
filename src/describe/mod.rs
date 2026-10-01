@@ -41,7 +41,7 @@ use crate::scene::{Fit, Kind, Position, Scene};
 use contrast::contrast;
 use group::{grouped, named, shown};
 use overlap::{covers, ink, overlaps, tight};
-use parts::{crop_warning, motion, shadow_cut, text_cut};
+use parts::{crop_warning, motion, motion_cut, shadow_cut, text_cut};
 use views::{hide, knockout_frames, unplayed, views};
 
 pub use facts::{
@@ -139,6 +139,7 @@ fn check(
             let checks = Checks {
                 scene,
                 full,
+                canvas: (size.width, size.height),
                 shots: crate::anim::shots::timeline(scene)
                     .iter()
                     .map(|&(i, start, dur, _)| (scene.layers[i].id.as_str(), (start, start + dur)))
@@ -213,6 +214,8 @@ struct Checks<'s, 'i> {
     scene: &'s Scene,
     /// Listing every layer (`full`), with its motion.
     full: bool,
+    /// The size's width and height, px.
+    canvas: (f32, f32),
     /// Each shot's frame id and when it plays, seconds.
     shots: HashMap<&'s str, (f32, f32)>,
     /// The part of the canvas the platform doesn't cover, when it covers any.
@@ -453,7 +456,15 @@ fn line(
                 if !a.svg && up > 1.005 {
                     let _ = write!(out, " upscaled {up:.1}x");
                 }
-                if fit == Fit::Cover && crop.is_none() {
+                // A photo filling the canvas can't be made bigger, and its
+                // crop keeps the focus where it's set: nothing to warn.
+                let drawn = overlap::mapped(m, r);
+                let (cw, ch) = checks.canvas;
+                let bleeds = drawn.x <= 0.5
+                    && drawn.y <= 0.5
+                    && drawn.right() >= cw - 0.5
+                    && drawn.bottom() >= ch - 0.5;
+                if fit == Fit::Cover && crop.is_none() && !bleeds {
                     let focus = kind.focus().unwrap_or([0.5, 0.5]);
                     crop_warning(&mut out, p, (a.width, a.height), focus);
                 }
@@ -505,6 +516,9 @@ fn line(
         }
     } else if let Some(cut) = &cut_here {
         out.push_str(cut);
+    } else if let Some(cut) = motion_cut(p, shown, &clip) {
+        // Whole at rest, cut while it moves: said with when.
+        out.push_str(&cut);
     } else if let Some(by) = clip.by.iter().find(|b| **b != "canvas")
         && shadow_cut(p, visible)
     {

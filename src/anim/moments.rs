@@ -6,13 +6,23 @@ use crate::scene::Scene;
 /// Up to `n` moments worth looking at in a moving scene, sorted, for its
 /// preview: each shot's middle, then the loop's seam (its last frame) when
 /// it loops or something leaves, then the middle of each entrance and each
-/// keyframe track, earliest first, then even steps. None closer than a
+/// keyframe track (where it's biggest when it grows: a `pop`'s overshoot, a
+/// pulse), earliest first, then even steps. None closer than a
 /// quarter second to another. Empty for a still scene.
 pub fn moments(scene: &Scene, n: usize) -> Vec<f32> {
     fn motions(layers: &[crate::scene::Layer], offset: f32, out: &mut Vec<f32>, leaves: &mut bool) {
         for l in layers {
+            // An entrance at its middle, or where it's biggest when it
+            // overshoots (a `pop`), where a frame would cut it.
             if let Some(m) = &l.time.enter {
-                out.push(offset + m.at.unwrap_or(0.0) + m.duration / 2.0);
+                let a = m.at.unwrap_or(0.0);
+                let at = (0..=16)
+                    .map(|i| a + m.duration * i as f32 / 16.0)
+                    .map(|t| (t, m.enter(t).scale))
+                    .filter(|(_, s)| *s > 1.001)
+                    .max_by(|x, y| x.1.total_cmp(&y.1))
+                    .map_or(a + m.duration / 2.0, |(t, _)| t);
+                out.push(offset + at);
             }
             *leaves |= l.time.out.is_some();
             for t in l
@@ -21,7 +31,19 @@ pub fn moments(scene: &Scene, n: usize) -> Vec<f32> {
                 .iter()
                 .flat_map(crate::scene::OneOrMany::as_slice)
             {
-                out.push(offset + t.at + t.duration / 2.0);
+                // A scale track where it's biggest; others at their middle.
+                let seed = super::track::seed(&l.id);
+                let at = (0..=16)
+                    .map(|i| t.at + t.duration * i as f32 / 16.0)
+                    .filter_map(|at| {
+                        match t.value("scale", super::track::Val::Num(1.0), at, seed) {
+                            Some(super::track::Val::Num(s)) if s > 1.001 => Some((at, s)),
+                            _ => None,
+                        }
+                    })
+                    .max_by(|x, y| x.1.total_cmp(&y.1))
+                    .map_or(t.at + t.duration / 2.0, |(at, _)| at);
+                out.push(offset + at);
             }
             if let Some(children) = l.kind.children() {
                 motions(children, offset, out, leaves);
@@ -110,5 +132,22 @@ mod tests {
             moments(&scene(&json!({"layers": []})), 6).is_empty(),
             "a still"
         );
+    }
+
+    #[test]
+    fn a_pop_is_sampled_where_it_overshoots() {
+        let s: crate::scene::Scene =
+            serde_json::from_value(json!({"width": 100, "height": 100, "duration": 6,
+            "sizes": [{"id": "a", "width": 100, "height": 100}],
+            "layers": [{"id": "ticket", "type": "rect", "width": 50, "height": 50,
+                "enter": {"effect": "pop", "delay": 2.1, "duration": 0.6}}]}))
+            .unwrap();
+        let m = moments(&s, 6);
+        let pop = s.layers[0].time.enter.clone().unwrap();
+        let biggest = m
+            .iter()
+            .map(|t| pop.enter(*t).scale)
+            .fold(0.0_f32, f32::max);
+        assert!(biggest > 1.01, "a moment shows the overshoot: {m:?}");
     }
 }
