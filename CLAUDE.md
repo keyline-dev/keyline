@@ -88,6 +88,7 @@ Every MCP tool is designed to minimize tokens the agent spends on tool definitio
 - Images: return file paths, not bytes. Previews only on request, as one small contact sheet of all sizes.
 - Verify with measurements, not pixels: defects (`!overflow` …) to fix, advisories (`warn contrast`) to judge, facts (smallest text, upscaling) with no threshold.
 - Errors: one short line saying what failed and how to fix it.
+- Schemas every client accepts: Gemini (and other clients that read schemas as OpenAPI) rejects a whole tool list over one unsupported construct. A `type` is one string, never a list (`["string", "null"]`, what schemars writes for `Option<T>`): an optional argument is simply left out of `required`. `items` is a schema, never `true` (what `Vec<Value>` writes). `src/server/schema.rs` rewrites both before `tools/list` returns them, and a test over the real tool list keeps it so; check a new argument's schema against it.
 
 ## Rust practices
 

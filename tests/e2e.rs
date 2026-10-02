@@ -236,6 +236,27 @@ async fn tool_surface_stays_small() {
     let size = serde_json::to_string(&tools).unwrap().len();
     println!("tools/list: {size} chars (~{} tokens)", size / 4);
     assert!(size < TOOLS_LIST_MAX_CHARS, "tools/list is {size} chars");
+    // Gemini rejects the whole list over one type list or `items: true`.
+    fn portable(v: &serde_json::Value, at: &str) {
+        match v {
+            serde_json::Value::Object(o) => {
+                for (k, c) in o {
+                    let here = format!("{at}.{k}");
+                    assert!(!(k == "type" && c.is_array()), "{here} is a list");
+                    assert!(!(k == "items" && c.is_boolean()), "{here} is {c}");
+                    portable(c, &here);
+                }
+            }
+            serde_json::Value::Array(a) => a.iter().for_each(|c| portable(c, at)),
+            _ => {}
+        }
+    }
+    for t in &tools {
+        portable(
+            &serde_json::Value::Object((*t.input_schema).clone()),
+            &t.name,
+        );
+    }
 
     // The whole reference ad costs about 2k tokens of tool traffic.
     build_reference_ad(&mcp).await;

@@ -3,6 +3,11 @@
 //! descriptions of top-level arguments. Nested types' docs (written for
 //! developers), `$schema`, `format` and `additionalProperties` go. The
 //! server still validates every argument itself.
+//!
+//! The result must suit every client, Gemini's too, which reads schemas as
+//! OpenAPI and rejects the whole tool list over one `"type": [..]` (schemars'
+//! `Option<T>`) or `"items": true` (`Vec<Value>`): an optional argument is
+//! one type left out of `required`, and a list's items are a schema.
 
 use std::sync::Arc;
 
@@ -107,6 +112,7 @@ fn compact(v: &mut Value, keep_docs: bool) {
             for k in DROP {
                 o.remove(*k);
             }
+            portable(o);
             for (key, child) in o.iter_mut() {
                 match key.as_str() {
                     "properties" if keep_docs => props(child),
@@ -128,6 +134,25 @@ fn compact(v: &mut Value, keep_docs: bool) {
             }
         }
         _ => {}
+    }
+}
+
+/// Rewrites what OpenAPI readers (Gemini) refuse: a nullable `type` list
+/// becomes its one other type, `items: true` any object, and a `null`
+/// default (the same as leaving the argument out) goes.
+fn portable(o: &mut serde_json::Map<String, Value>) {
+    if let Some(Value::Array(types)) = o.get_mut("type") {
+        types.retain(|t| t != "null");
+        if let [one] = types.as_slice() {
+            let one = one.clone();
+            o.insert("type".into(), one);
+        }
+    }
+    if o.get("items") == Some(&Value::Bool(true)) {
+        o.insert("items".into(), serde_json::json!({"type": "object"}));
+    }
+    if o.get("default") == Some(&Value::Null) {
+        o.remove("default");
     }
 }
 
@@ -160,7 +185,9 @@ mod tests {
             "$schema": "x", "type": "object", "additionalProperties": false,
             "properties": {
                 "sizes": {"description": "Target sizes.", "type": "array", "items": {"$ref": "#/$defs/Size"}},
-                "width": {"type": "number", "format": "float"}
+                "width": {"type": "number", "format": "float"},
+                "url": {"type": ["string", "null"], "default": null},
+                "layers": {"type": "array", "items": true}
             },
             "$defs": {"Size": {"description": "One output size.", "type": "object",
                 "properties": {"id": {"description": "Name used in replies.", "type": "string"}}}}
@@ -172,7 +199,9 @@ mod tests {
                 "type": "object",
                 "properties": {
                     "sizes": {"description": "Target sizes.", "type": "array", "items": {"$ref": "#/$defs/Size"}},
-                    "width": {"type": "number"}
+                    "width": {"type": "number"},
+                    "url": {"type": "string"},
+                    "layers": {"type": "array", "items": {"type": "object"}}
                 },
                 "$defs": {"Size": {"type": "object", "properties": {"id": {"type": "string"}}}}
             })
