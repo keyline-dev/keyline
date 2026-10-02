@@ -7,6 +7,7 @@ mod reuse_tests;
 mod scene_set;
 #[cfg(test)]
 mod tests;
+mod tree;
 
 use std::collections::HashSet;
 
@@ -263,12 +264,40 @@ pub fn update_layers(scene: &mut Scene, shared: Shared, ops: &[Op]) -> Result<Ve
             continue;
         }
         if let Some(set) = &op.set
-            && let Some(k) = ["id", "type", "children"]
-                .iter()
-                .find(|k| set.contains_key(**k))
+            && let Some(k) = ["id", "type"].iter().find(|k| set.contains_key(**k))
         {
             return Err(at(format!("can't set {k}; delete and re-add instead")));
         }
+        // The tree itself: new children, or a move to another frame or
+        // place. Any other fields in the same set apply after.
+        let mut rest = None;
+        if let Some(set) = &op.set
+            && ["children", "parent", "index"]
+                .iter()
+                .any(|k| set.contains_key(*k))
+        {
+            let Target::Id { id } = &op.target else {
+                return Err(at("children, parent and index need {id}".into()));
+            };
+            let mut set = set.clone();
+            if let Some(kids) = set.remove("children") {
+                tree::set_children(&mut next, id, kids).map_err(at)?;
+            }
+            let (parent, index) = (set.remove("parent"), set.remove("index"));
+            if parent.is_some() || index.is_some() {
+                tree::move_layer(&mut next, id, parent, index).map_err(at)?;
+            }
+            if set.is_empty() {
+                changed.push(id.clone());
+                continue;
+            }
+            // The rest of the set applies below, which lists the id.
+            rest = Some(Op {
+                set: Some(set),
+                ..op.clone()
+            });
+        }
+        let op = rest.as_ref().unwrap_or(op);
         if let Target::Style { style } = &op.target {
             restyle(&mut next, style, op).map_err(at)?;
             changed.push(style.clone());

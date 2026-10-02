@@ -3,15 +3,28 @@
 //! costs the agent a resend of its whole batch, so these are cheaper to
 //! accept than to refuse.
 
+mod css;
 pub(crate) mod dollar;
 mod names;
 
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 
 /// A layer as written, in the scene's own names and shapes; its children
 /// and `at` changes too.
 pub(crate) fn normalize(v: &mut Value) {
     let Some(o) = v.as_object_mut() else { return };
+    // Layer names from other tools: a `stack` stacks (a column unless
+    // told), a `rectangle` is a rect.
+    match o.get("type").and_then(Value::as_str) {
+        Some("stack") => {
+            o.insert("type".into(), "frame".into());
+            o.entry("flexDirection").or_insert_with(|| "column".into());
+        }
+        Some("rectangle") => {
+            o.insert("type".into(), "rect".into());
+        }
+        _ => {}
+    }
     // A generic "shape" is a path when it names one, else a rect.
     if o.get("type").and_then(Value::as_str) == Some("shape") {
         let kind = if o.contains_key("d") || o.contains_key("shape") {
@@ -30,6 +43,7 @@ pub(crate) fn normalize(v: &mut Value) {
     }
     line_ends(o);
     shot(o);
+    flow(o);
     let kind = o.get("type").and_then(Value::as_str).map(str::to_owned);
     fields(o, kind.as_deref());
     if let Some(Value::Object(media)) = o.get_mut("media") {
@@ -44,7 +58,51 @@ pub(crate) fn normalize(v: &mut Value) {
 
 /// The fields of a layer, a style (no `kind`) or a `media` change.
 pub(crate) fn fields(o: &mut Map<String, Value>, kind: Option<&str>) {
+    css::fields(o);
     names::fields(o, kind);
+}
+
+/// A frame with padding, a gap or alignment but no direction, as a padded
+/// `<div>`: its children stack down, as in CSS. Only where that's surely
+/// meant: no child placed by coordinates (a free layout), no two filling it
+/// (layers over each other), and no style (which may give a direction).
+/// Otherwise the scene's own error stands.
+fn flow(o: &mut Map<String, Value>) {
+    let stack_only = ["padding", "gap", "justifyContent", "alignItems", "flexWrap"];
+    if o.get("type").and_then(Value::as_str) != Some("frame")
+        || ["flexDirection", "gridTemplateColumns", "style"]
+            .iter()
+            .any(|k| o.contains_key(*k))
+        || !stack_only.iter().any(|k| o.contains_key(*k))
+    {
+        return;
+    }
+    let kids: &[Value] = o
+        .get("children")
+        .and_then(Value::as_array)
+        .map_or(&[], Vec::as_slice);
+    let placed = |c: &Value| {
+        [
+            "x",
+            "y",
+            "place",
+            "constraints",
+            "position",
+            "left",
+            "top",
+            "right",
+            "bottom",
+        ]
+        .iter()
+        .any(|k| c.get(*k).is_some())
+    };
+    let fills = |c: &&Value| {
+        c.get("width") == Some(&json!("fill")) && c.get("height") == Some(&json!("fill"))
+    };
+    if kids.iter().any(placed) || kids.iter().filter(fills).count() > 1 {
+        return;
+    }
+    o.insert("flexDirection".into(), "column".into());
 }
 
 /// `{"type": "shot", "duration": 3, "transition": "fade", …}`: a frame that
@@ -104,6 +162,70 @@ fn line_ends(o: &mut Map<String, Value>) {
 mod tests {
     use super::normalize;
     use serde_json::json;
+
+    #[test]
+    fn other_tools_layer_names_read_as_meant() {
+        let mut v = json!({"type": "stack", "children": [{"type": "rectangle"}]});
+        normalize(&mut v);
+        assert_eq!(
+            v,
+            json!({"type": "frame", "flexDirection": "column", "children": [{"type": "rect"}]})
+        );
+        let mut v = json!({"type": "stack", "flexDirection": "row"});
+        normalize(&mut v);
+        assert_eq!(v, json!({"type": "frame", "flexDirection": "row"}));
+        // A `layout` word is the direction; one that isn't stays, for its error.
+        let mut v = json!({"type": "frame", "layout": "horizontal"});
+        normalize(&mut v);
+        assert_eq!(v, json!({"type": "frame", "flexDirection": "row"}));
+        let mut v = json!({"type": "frame", "layout": "stack", "flexDirection": "row"});
+        normalize(&mut v);
+        assert_eq!(v, json!({"type": "frame", "flexDirection": "row"}));
+        let mut v = json!({"type": "frame", "layout": "masonry"});
+        normalize(&mut v);
+        assert_eq!(v, json!({"type": "frame", "layout": "masonry"}));
+    }
+
+    #[test]
+    fn a_padded_frame_of_flowing_children_is_a_column() {
+        let read = |v: serde_json::Value| {
+            let mut v = v;
+            normalize(&mut v);
+            v.get("flexDirection").cloned()
+        };
+        // The benchmark's: a padded footer, and a ring of padding round a photo.
+        assert_eq!(
+            read(
+                json!({"type": "frame", "padding": 24, "children": [{"type": "text", "text": "Paid for by"}]})
+            ),
+            Some(json!("column"))
+        );
+        assert_eq!(
+            read(
+                json!({"type": "frame", "padding": 6, "borderRadius": "full", "children": [{"type": "image", "width": "fill", "height": "fill"}]})
+            ),
+            Some(json!("column"))
+        );
+        // A free layout, layers over each other, a style, or a direction given: as written.
+        assert_eq!(
+            read(json!({"type": "frame", "padding": 24, "children": [{"type": "text", "x": 10}]})),
+            None
+        );
+        assert_eq!(
+            read(json!({"type": "frame", "padding": 24, "children": [
+                {"type": "image", "width": "fill", "height": "fill"}, {"type": "rect", "width": "fill", "height": "fill"}]})),
+            None
+        );
+        assert_eq!(
+            read(json!({"type": "frame", "padding": 24, "style": "card"})),
+            None
+        );
+        assert_eq!(
+            read(json!({"type": "frame", "padding": 24, "flexDirection": "row"})),
+            Some(json!("row"))
+        );
+        assert_eq!(read(json!({"type": "frame", "children": []})), None);
+    }
 
     #[test]
     fn icon_and_line_guesses_read_as_meant() {

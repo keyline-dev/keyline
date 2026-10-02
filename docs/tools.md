@@ -231,6 +231,8 @@ Each op has a `target` and exactly one action:
 | Action | Does |
 |---|---|
 | `"set": {fields}` | Merges the fields in; `null` resets a field to its default |
+| `"set": {"children": [layers]}` | With an `{id}` target of a frame: replaces its children, checked and given ids as `layer_add` does; `null` empties it |
+| `"set": {"parent": "bg", "index": 0}` | With an `{id}` target: moves the layer into frame `bg` (`null`: the scene's top level), at `index` from the bottom (0) up; either alone works, `index` alone moving it within its own parent. Other fields in the same `set` apply too |
 | `"delete": true` | Removes the target (and a layer's children) |
 | `"detach": true` | With an `{id}` target of a `use` layer: turns its instances into plain layers that no longer follow the component |
 

@@ -65,6 +65,19 @@ pub(super) fn fields(o: &mut Map<String, Value>, kind: Option<&str>) {
             rename(o, from, "fill");
         }
     }
+    // A `layout` word for the stack's direction (`stack` stacks down);
+    // any other value stays, for its error.
+    if let Some(Value::String(l)) = o.get("layout") {
+        let dir = match l.as_str() {
+            "row" | "horizontal" | "hstack" => Some("row"),
+            "column" | "vertical" | "vstack" | "stack" | "flex" => Some("column"),
+            _ => None,
+        };
+        if let Some(d) = dir {
+            o.remove("layout");
+            o.entry("flexDirection").or_insert_with(|| d.into());
+        }
+    }
     // CSS `overflow` is Figma's clipsContent.
     if let Some(v) = o.remove("overflow") {
         o.entry("clipsContent").or_insert((v != "visible").into());

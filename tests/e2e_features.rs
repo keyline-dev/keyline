@@ -908,3 +908,72 @@ fn web_fonts_a_scene_file_names_are_fetched_before_it_is_checked() {
     assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
     assert!(dir.join("out").join("200x100-v0.png").is_file());
 }
+
+#[tokio::test]
+async fn css_written_where_the_scene_has_its_own_form_is_accepted() {
+    let mcp = Mcp::start("css-slips").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 600, "height": 400, "sizes": [{"id": "s", "width": 600, "height": 400}]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    // Every slip here was a whole batch refused in the versus-browser runs.
+    let reply = mcp
+        .ok("layer_add", json!({"sceneId": id, "layers": [
+            {"id": "page", "type": "stack", "width": "fill", "height": "fill", "padding": "48px 40px",
+             "fill": {"gradient": {"type": "radial", "stops": [{"position": 0, "color": "#2A1F6B"}, {"position": 1, "color": "#0F1226"}]}},
+             "children": [
+                {"id": "rule", "type": "rectangle", "width": 80, "height": 4, "fill": "#7C5CFF"},
+                {"id": "title", "type": "text", "text": "Shipping at the speed of trust", "fontSize": "48px", "color": "#fff"},
+                {"id": "cta", "type": "frame", "flexDirection": "row", "paddingTop": 14, "paddingBottom": 14, "paddingLeft": 28, "paddingRight": 28,
+                 "borderRadius": "999px", "fill": "#7C5CFF", "shadow": "0 12px 32px rgba(124,92,255,0.35)", "border": "2px solid #ffffff33",
+                 "children": [{"id": "ctaText", "type": "text", "text": "Get tickets", "fontSize": 24, "color": "#fff"}]}]},
+            {"id": "footer", "type": "frame", "width": "fill", "y": 320, "padding": 24,
+             "children": [{"id": "paid", "type": "text", "text": "Paid for by Willowmere Forward", "color": "#fff"}]}]}))
+        .await;
+    assert!(reply.starts_with("added page,footer"), "{reply}");
+    assert!(!reply.contains(" !"), "{reply}");
+    mcp.stop().await;
+}
+
+#[tokio::test]
+async fn an_update_replaces_children_and_moves_layers() {
+    let mcp = Mcp::start("tree-edits").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 400, "height": 300, "sizes": [{"id": "s", "width": 400, "height": 300}]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    mcp.ok("layer_add", json!({"sceneId": id, "layers": [
+        {"id": "bg", "type": "frame", "width": "fill", "height": "fill", "fill": "#0F1226", "children": []},
+        {"id": "glow", "type": "ellipse", "x": 250, "y": -50, "width": 200, "height": 200, "fill": "#7C5CFF55"},
+        {"id": "col", "type": "frame", "layout": "vertical", "x": 20, "y": 20, "gap": 8, "children": [
+            {"id": "old", "type": "text", "text": "Old", "color": "#fff"}]}]}))
+        .await;
+    // What benchmark agents tried, refused before: new children, and a move.
+    let reply = mcp
+        .ok("layer_update", json!({"sceneId": id, "ops": [
+            {"target": {"id": "col"}, "set": {"children": [
+                {"id": "title", "type": "text", "text": "New title", "fontSize": 32, "color": "#fff"},
+                {"id": "sub", "type": "text", "text": "and a line", "color": "#fff"}]}},
+            {"target": {"id": "glow"}, "set": {"parent": "bg", "opacity": 0.6}}]}))
+        .await;
+    assert!(reply.starts_with("changed col,glow"), "{reply}");
+    let full = mcp
+        .ok("scene_describe", json!({"sceneId": id, "full": true}))
+        .await;
+    assert!(full.contains("  title text"), "{full}");
+    assert!(!full.contains("old text"), "{full}");
+    assert!(full.contains("  glow ellipse"), "inside bg now: {full}");
+    mcp.stop().await;
+}
