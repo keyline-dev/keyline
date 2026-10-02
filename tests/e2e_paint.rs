@@ -185,6 +185,19 @@ async fn a_band_too_short_for_its_photo_is_a_defect() {
         reply.starts_with("changed photo-band v") && !reply.contains("warn"),
         "{reply}"
     );
+    // Back in the short band, picking its middle by hand keeps too little
+    // of the photo: the same defect, by the crop.
+    let reply = mcp
+        .ok(
+            "layer_update",
+            json!({"sceneId": id, "ops": [{"target": {"id": "photo-band"}, "set": {"height": 238,
+                "crop": {"x": 0, "y": 0.28, "width": 1, "height": 0.36}}}]}),
+        )
+        .await;
+    assert!(
+        reply.contains("!crop keeps 35% of the image's height"),
+        "{reply}"
+    );
     mcp.stop().await;
 }
 

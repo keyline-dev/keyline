@@ -35,14 +35,23 @@ fn a_band_that_cuts_over_half_its_photo_is_a_defect() {
     assert!(band(238, json!({"focus": [0.3, 0.2]})).contains(
         "!crop cuts the area around its focus (focus 30%,20%): needs 162px more here (height 400"
     ),);
-    // Contain never crops; a crop picks its part on purpose.
+    // Contain never crops. A crop picks its part on purpose, but one that
+    // keeps under half the height cuts the subject all the same.
     assert_eq!(band(238, json!({"fit": "contain"})), "");
-    assert_eq!(
+    assert!(
         band(
             238,
             json!({"crop": {"x": 0, "y": 0.3, "width": 1, "height": 0.3}})
-        ),
-        ""
+        )
+        .contains("!crop keeps 30% of the image's height")
+    );
+    // Half kept, in a box that shows all of it: unjudged.
+    assert!(
+        !band(
+            400,
+            json!({"crop": {"x": 0, "y": 0.25, "width": 1, "height": 0.5}})
+        )
+        .contains("!crop")
     );
 }
 
@@ -856,4 +865,27 @@ fn only_an_opaque_layer_covers_text() {
         d.contains("name text") && d.contains("!covered by glow"),
         "{d}"
     );
+}
+
+#[test]
+fn a_hand_picked_crop_that_keeps_under_half_is_a_defect_too() {
+    // A benchmark agent's way past !crop: the band's middle 36%, picked by
+    // hand, in a band too short for more. The house was still cut in half.
+    let band = |crop: serde_json::Value| {
+        let s = scene(
+            json!([{"id": "band", "type": "image", "asset": "img", "width": 400, "height": 100, "crop": crop}]),
+        );
+        describe(&s, Some("wide"), false, None).unwrap()
+    };
+    let d = band(json!({"x": 0, "y": 0.28, "width": 1, "height": 0.36}));
+    assert!(d.contains("!crop keeps 25% of the image's height"), "{d}");
+    // Keeping half or more is a choice keyline leaves alone.
+    let d = band(json!({"x": 0, "y": 0.2, "width": 1, "height": 0.25}));
+    assert!(d.contains("!crop keeps"), "{d}");
+    let s = scene(
+        json!([{"id": "band", "type": "image", "asset": "img", "width": 400, "height": 400,
+        "crop": {"x": 0, "y": 0.2, "width": 1, "height": 0.6}}]),
+    );
+    let d = describe(&s, Some("wide"), false, None).unwrap();
+    assert!(!d.contains("crop keeps") && !d.contains("!crop"), "{d}");
 }

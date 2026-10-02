@@ -326,7 +326,7 @@ pub(super) fn motion_cut(p: &Placed, shown: Rect, clip: &super::Clip) -> Option<
 /// The layers above and below `p` in its parent, tallest first, by id and
 /// height at this size: `; above and below it: headline 220, steps 202`.
 /// They share its column, so one of them gives the room it needs.
-fn column(p: &Placed, siblings: &[Placed]) -> String {
+pub(super) fn column(p: &Placed, siblings: &[Placed]) -> String {
     let r = p.rect;
     let mut beside: Vec<&Placed> = siblings
         .iter()

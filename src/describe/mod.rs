@@ -41,7 +41,7 @@ use crate::scene::{Fit, Kind, Position, Scene};
 use contrast::contrast;
 use group::{grouped, named, shown};
 use overlap::{covers, ink, overlaps, tight};
-use parts::{crop_warning, motion, motion_cut, shadow_cut, text_cut};
+use parts::{column, crop_warning, motion, motion_cut, shadow_cut, text_cut};
 use views::{hide, knockout_frames, unplayed, views};
 
 pub use facts::{
@@ -455,6 +455,15 @@ fn line(
                         let _ = write!(out, " {s}");
                     }
                 }
+                // A crop chosen by hand that, with what cover takes, keeps
+                // less than half the image's height: the band's own problem
+                // by another route (a benchmark agent's way past !crop).
+                let kept = crop.filter(|_| fit == Fit::Cover).map(|c| {
+                    // The region covers the box; what of the whole image's
+                    // height shows: the box, or the region, whichever is less.
+                    let s = (r.w / (a.width * c.width)).max(r.h / (a.height * c.height));
+                    (r.h / (a.height * s)).min(c.height)
+                });
                 let up = image_scale(r, a.width, a.height, fit, crop, tile_scale * p.k);
                 if !a.svg && up > 1.005 {
                     let _ = write!(out, " upscaled {up:.1}x");
@@ -470,6 +479,14 @@ fn line(
                 if fit == Fit::Cover && crop.is_none() && !bleeds {
                     let focus = kind.focus().unwrap_or([0.5, 0.5]);
                     crop_warning(&mut out, (p, siblings), (a.width, a.height), focus);
+                }
+                if let Some(kept) = kept.filter(|k| *k < 0.495 && !bleeds) {
+                    let _ = write!(
+                        out,
+                        " !crop keeps {}% of the image's height: a crop height of 0.5 or more, in a box tall enough for it{}",
+                        (kept * 100.0).round(),
+                        column(p, siblings)
+                    );
                 }
             }
         }
