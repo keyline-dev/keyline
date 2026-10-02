@@ -35,13 +35,13 @@ use std::path::Path;
 use skia_safe::Pixmap;
 
 use crate::layout::{Placed, Rect, layout};
-use crate::render::{image_crop, image_scale, render_image};
+use crate::render::{image_scale, render_image};
 use crate::scene::{Fit, Kind, Position, Scene};
 
 use contrast::contrast;
 use group::{grouped, named, shown};
-use overlap::{covers, ink, overlaps, tight};
-use parts::{column, crop_warning, motion, motion_cut, shadow_cut, text_cut};
+use overlap::{covers, ink, overlaps};
+use parts::{motion, motion_cut, shadow_cut, text_cut};
 use views::{hide, knockout_frames, unplayed, views};
 
 pub use facts::{
@@ -139,7 +139,6 @@ fn check(
             let checks = Checks {
                 scene,
                 full,
-                canvas: (size.width, size.height),
                 shots: crate::anim::shots::timeline(scene)
                     .iter()
                     .map(|&(i, start, dur, _)| (scene.layers[i].id.as_str(), (start, start + dur)))
@@ -152,7 +151,6 @@ fn check(
                 }),
                 overlaps: overlaps(&placed),
                 covers: covers(scene, &placed),
-                tight: tight(&placed),
                 backdrop: backdrop.as_ref().and_then(skia_safe::Image::peek_pixels),
                 through: through.as_ref().and_then(skia_safe::Image::peek_pixels),
             };
@@ -178,7 +176,7 @@ fn check(
                 line(
                     &mut lines,
                     &checks,
-                    (p, &placed),
+                    p,
                     clip,
                     1,
                     (1.0, &skia_safe::Matrix::new_identity()),
@@ -188,6 +186,16 @@ fn check(
                 let _ = writeln!(out, "{} {}×{}", size.id, n(size.width), n(size.height));
                 for l in lines {
                     let _ = writeln!(out, "{l}");
+                }
+                if first && let Some((a, b)) = parts::empty_band(&placed, (size.width, size.height))
+                {
+                    let _ = writeln!(
+                        out,
+                        " empty y {}–{} ({}%)",
+                        n(a),
+                        n(b),
+                        ((b - a) / size.height * 100.0).round()
+                    );
                 }
             } else {
                 problems
@@ -215,8 +223,6 @@ struct Checks<'s, 'i> {
     scene: &'s Scene,
     /// Listing every layer (`full`), with its motion.
     full: bool,
-    /// The size's width and height, px.
-    canvas: (f32, f32),
     /// Each shot's frame id and when it plays, seconds.
     shots: HashMap<&'s str, (f32, f32)>,
     /// The part of the canvas the platform doesn't cover, when it covers any.
@@ -225,8 +231,6 @@ struct Checks<'s, 'i> {
     overlaps: HashMap<&'s str, Vec<&'s str>>,
     /// Text ids whose ink a later layer or highlight covers, and how much.
     covers: HashMap<&'s str, Vec<(String, f32)>>,
-    /// Text ids whose ink nearly touches a neighbour's: the gap and who.
-    tight: HashMap<&'s str, (f32, &'s str)>,
     /// The size rendered without text: what each text is read against.
     backdrop: Option<Pixmap<'i>>,
     /// The size without text or the frames knockout text cuts through:
@@ -307,11 +311,11 @@ impl<'a> Clip<'a> {
 }
 
 /// `opacity` is the product of the ancestors' opacities, `m` their visual
-/// transforms; `siblings` are `p` and the layers beside it in its parent.
+/// transforms.
 fn line(
     lines: &mut Vec<String>,
     checks: &Checks,
-    (p, siblings): (&Placed, &[Placed]),
+    p: &Placed,
     clip: Clip,
     depth: usize,
     (opacity, m): (f32, &skia_safe::Matrix),
@@ -414,9 +418,6 @@ fn line(
                 let more = if short.len() < left.len() { "…" } else { "" };
                 let _ = write!(out, " !leader \"{short}{more}\" meets \"{right}\"");
             }
-            if let Some((gap, other)) = checks.tight.get(l.id.as_str()).filter(|_| !clip.quiet) {
-                let _ = write!(out, " warn ink {}px from {other}", n(*gap));
-            }
             if let (Some(backdrop), Some(ink)) = (&checks.backdrop, ink(p))
                 && let Some((ratio, min)) =
                     contrast(p, ink, (backdrop, checks.through.as_ref()), (opacity, m))
@@ -426,67 +427,38 @@ fn line(
         }
         kind if let Some((asset, fit, crop, tile_scale)) = kind.picture() => {
             if let Some(a) = checks.scene.assets.get(asset) {
-                let (cw, ch) = image_crop(r, a.width, a.height, fit, crop);
                 out.push_str(match fit {
                     Fit::Cover => " cover",
                     Fit::Contain => " contain",
                     Fit::Stretch => " fill",
                     Fit::Tile => " tile",
                 });
-                // Which side a cover crop takes most from: it hides `focus`
-                // of the overflow before the focus and the rest after.
-                let focus = kind.focus().unwrap_or([0.5, 0.5]);
-                let side = |f: f32, before: &'static str, after: &'static str| match crop {
-                    None if fit == Fit::Cover && f <= 1.0 / 3.0 => after,
-                    None if fit == Fit::Cover && f >= 2.0 / 3.0 => before,
-                    _ => "",
-                };
-                if cw >= 0.005 {
-                    let _ = write!(out, " crop {}%w", (cw * 100.0).round());
-                    let s = side(focus[0], "left", "right");
-                    if !s.is_empty() {
-                        let _ = write!(out, " {s}");
-                    }
+                // What part of the image is in view, as the agent's eyes:
+                // no verdict, it knows what's in its photo.
+                if fit == Fit::Cover {
+                    let focus = kind.focus().unwrap_or([0.5, 0.5]);
+                    let c = crop.map_or([0.0, 0.0, 1.0, 1.0], |c| [c.x, c.y, c.width, c.height]);
+                    let (rw, rh) = (a.width * c[2], a.height * c[3]);
+                    let s = (r.w / rw).max(r.h / rh);
+                    let (vw, vh) = (r.w / s, r.h / s);
+                    let x0 = c[0] + (rw - vw) * focus[0] / a.width;
+                    let y0 = c[1] + (rh - vh) * focus[1] / a.height;
+                    // In the image's own pixels: the region drawn, from
+                    // where, of how much.
+                    let _ = write!(
+                        out,
+                        " shows {}×{} from {},{} of {}×{}",
+                        n(vw),
+                        n(vh),
+                        n(x0 * a.width),
+                        n(y0 * a.height),
+                        n(a.width),
+                        n(a.height)
+                    );
                 }
-                if ch >= 0.005 {
-                    let _ = write!(out, " crop {}%h", (ch * 100.0).round());
-                    let s = side(focus[1], "top", "bottom");
-                    if !s.is_empty() {
-                        let _ = write!(out, " {s}");
-                    }
-                }
-                // A crop chosen by hand that, with what cover takes, keeps
-                // less than half the image's height: the band's own problem
-                // by another route (a benchmark agent's way past !crop).
-                let kept = crop.filter(|_| fit == Fit::Cover).map(|c| {
-                    // The region covers the box; what of the whole image's
-                    // height shows: the box, or the region, whichever is less.
-                    let s = (r.w / (a.width * c.width)).max(r.h / (a.height * c.height));
-                    (r.h / (a.height * s)).min(c.height)
-                });
                 let up = image_scale(r, a.width, a.height, fit, crop, tile_scale * p.k);
                 if !a.svg && up > 1.005 {
                     let _ = write!(out, " upscaled {up:.1}x");
-                }
-                // A photo filling the canvas can't be made bigger, and its
-                // crop keeps the focus where it's set: nothing to warn.
-                let drawn = overlap::mapped(m, r);
-                let (cw, ch) = checks.canvas;
-                let bleeds = drawn.x <= 0.5
-                    && drawn.y <= 0.5
-                    && drawn.right() >= cw - 0.5
-                    && drawn.bottom() >= ch - 0.5;
-                if fit == Fit::Cover && crop.is_none() && !bleeds {
-                    let focus = kind.focus().unwrap_or([0.5, 0.5]);
-                    crop_warning(&mut out, (p, siblings), (a.width, a.height), focus);
-                }
-                if let Some(kept) = kept.filter(|k| *k < 0.495 && !bleeds) {
-                    let _ = write!(
-                        out,
-                        " !crop keeps {}% of the image's height: a crop height of 0.5 or more, in a box tall enough for it{}",
-                        (kept * 100.0).round(),
-                        column(p, siblings)
-                    );
                 }
             }
         }
@@ -563,14 +535,7 @@ fn line(
             cut: inner.cut || cut_here.is_some(),
             ..inner
         };
-        line(
-            lines,
-            checks,
-            (c, &p.children),
-            own,
-            depth + 1,
-            (opacity, m),
-        );
+        line(lines, checks, c, own, depth + 1, (opacity, m));
     }
 }
 

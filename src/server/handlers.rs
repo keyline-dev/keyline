@@ -326,8 +326,18 @@ impl Server {
                             let at = facts.rfind(", ").unwrap_or(facts.len());
                             facts.insert_str(at, &format!(", {shows}"));
                         }
+                        // What the agent would see: every layer where it
+                        // landed, what part of each photo shows, the empty
+                        // space, then how text wrapped.
+                        let layout: String =
+                            crate::describe::describe(&scene, Some(&size.id), true, None)
+                                .unwrap_or_default()
+                                .lines()
+                                .filter(|l| l.starts_with(' '))
+                                .map(|l| format!("{l}\n"))
+                                .collect();
                         anyhow::Ok((
-                            text_report(&scene, &size),
+                            layout + &text_report(&scene, &size),
                             size.id,
                             bytes,
                             format!(" ({facts}){note}"),

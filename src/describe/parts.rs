@@ -3,8 +3,8 @@
 
 use std::fmt::Write;
 
+use super::contains;
 use super::overlap::ink;
-use super::{contains, n};
 use crate::layout::{Placed, Rect};
 use crate::scene::Kind;
 
@@ -83,102 +83,6 @@ pub(super) fn text_cut(p: &Placed, m: &skia_safe::Matrix, visible: Rect) -> Opti
     });
     let shown = super::overlap::mapped(m, shown);
     (!contains(visible, shown)).then_some(shown)
-}
-
-/// `!crop` when a cover crop hides more than half the image top and bottom
-/// (a defect: agents fix those, and a `warn` here was left as it was), or
-/// `warn crop` when it does at the sides: with the focus at the center (the default), the box then can't
-/// hold the image's middle half, so a subject there is cut, e.g. a house
-/// in a band too short for it. (The focus lands at its own share of the
-/// box, like CSS `object-position`, whatever the crop.) The fix names the
-/// field to write, master px: the `height` that shows all of the image and
-/// the one that shows half (taller for a crop top and bottom, at most this
-/// tall for one at the sides), or the
-/// `minHeight` (`maxHeight`) for a layer whose height a stack or its
-/// parent gives or squeezes.
-pub(super) fn crop_warning(
-    out: &mut String,
-    (p, siblings): (&Placed, &[Placed]),
-    image: (f32, f32),
-    focus: [f32; 2],
-) {
-    let r = p.rect;
-    let (iw, ih) = image;
-    // Cover scales the image to fill the box; the other axis is cropped.
-    let s = (r.w / iw).max(r.h / ih);
-    let (drawn_w, drawn_h) = (iw * s, ih * s);
-    let vertical = drawn_h - r.h >= drawn_w - r.w;
-    let (shown, drawn) = if vertical {
-        (r.h, drawn_h)
-    } else {
-        (r.w, drawn_w)
-    };
-    if shown / drawn >= 0.495 {
-        return;
-    }
-    let what = if focus == [0.5, 0.5] {
-        "the image's middle"
-    } else {
-        "the area around its focus"
-    };
-    let l = p.layer;
-    // Its height comes from its parent: `fill`, a share, `flexGrow`, or a
-    // stretch constraint that drew it at another height than it asks.
-    let fixed = l.height.and_then(crate::scene::Length::px).map(|h| h * p.k);
-    let given = |len: Option<crate::scene::Length>| {
-        matches!(
-            len,
-            Some(crate::scene::Length::Fill | crate::scene::Length::Pct(_))
-        ) || l.grow.is_some_and(|g| g > 0.0)
-            || fixed.is_some_and(|h| (h - r.h).abs() > 0.5)
-    };
-    // Taller shows more of a tall crop; a wide crop's box is usually as
-    // wide as it can be, so shorter shows more of it.
-    // A fixed height a stretch constraint shrank: setting the height
-    // again changes nothing; a minHeight stops the squeeze.
-    let squeezed = fixed.filter(|h| *h > r.h + 0.5 && l.min_height.is_none());
-    // The value to write, in master px like every field (a size's
-    // `scale` multiplies it): taller shows more of a crop top and bottom;
-    // a crop at the sides is usually as wide as it can be, so shorter
-    // shows more of it.
-    let fix = if vertical {
-        let all = (drawn / p.k).ceil();
-        let min = ((drawn / 2.0) / p.k).ceil();
-        // What it takes at this size, in px, and who shares the column:
-        // the agent picks what gives way.
-        let more = (drawn / 2.0 - r.h).ceil();
-        let field = match squeezed {
-            Some(h) => format!(
-                "squeezed from {} to {}: minHeight {min} shows half, {all} all",
-                n(h),
-                n(r.h)
-            ),
-            None if given(l.height) => format!("minHeight {min} shows half, {all} all"),
-            None => format!("height {min} shows half, {all} all"),
-        };
-        format!(
-            "needs {}px more here ({field}){}",
-            n(more),
-            column(p, siblings)
-        )
-    } else {
-        let all = ((r.w * ih / iw) / p.k).floor();
-        let max = ((2.0 * r.w * ih / iw) / p.k).floor();
-        if given(l.height) {
-            format!("maxHeight {all} shows all, {max} half")
-        } else {
-            format!("height at most {all} shows all, {max} half")
-        }
-    };
-    let _ = write!(
-        out,
-        " {} cuts {what} (focus {}%,{}%): {fix}",
-        // A band too short for its photo cuts the subject (a defect); a
-        // crop at the sides, a landscape photo in a tall box, is common.
-        if vertical { "!crop" } else { "warn crop" },
-        (focus[0] * 100.0).round(),
-        (focus[1] * 100.0).round()
-    );
 }
 
 /// Whether a frame that clips its content cuts `p`'s drop shadow: where
@@ -289,7 +193,7 @@ pub(super) fn motion_cut(p: &Placed, shown: Rect, clip: &super::Clip) -> Option<
             .map(|i| past[i])
             .fold(0.0, f32::max);
         // A pixel or two of a moment's overshoot doesn't show.
-        if px <= 2.0 || worst.as_ref().is_some_and(|(w, _)| px <= *w) {
+        if px <= 0.5 || worst.as_ref().is_some_and(|(w, _)| px <= *w) {
             continue;
         }
         // The edges it fills at rest aren't said either.
@@ -323,29 +227,40 @@ pub(super) fn motion_cut(p: &Placed, shown: Rect, clip: &super::Clip) -> Option<
     worst.map(|(_, line)| line)
 }
 
-/// The layers above and below `p` in its parent, tallest first, by id and
-/// height at this size: `; above and below it: headline 220, steps 202`.
-/// They share its column, so one of them gives the room it needs.
-pub(super) fn column(p: &Placed, siblings: &[Placed]) -> String {
-    let r = p.rect;
-    let mut beside: Vec<&Placed> = siblings
-        .iter()
-        .filter(|s| !std::ptr::eq(*s, p) && s.rect.h >= 1.0)
-        .filter(|s| {
-            let o = s.rect;
-            o.x < r.right()
-                && o.right() > r.x
-                && (o.bottom() <= r.y + 0.5 || o.y >= r.bottom() - 0.5)
-        })
-        .collect();
-    if beside.is_empty() {
-        return String::new();
+/// The tallest horizontal band of the canvas with no text, image or icon
+/// in it, as the agent's eyes would see empty space. A photo filling the
+/// canvas is the background, not content.
+pub(super) fn empty_band(placed: &[Placed], (cw, ch): (f32, f32)) -> Option<(f32, f32)> {
+    fn spans(placed: &[Placed], (cw, ch): (f32, f32), out: &mut Vec<(f32, f32)>) {
+        for p in placed {
+            let l = p.layer;
+            if l.hidden || l.opacity <= 0.0 {
+                continue;
+            }
+            let r = match &l.kind {
+                Kind::Text { .. } => super::overlap::ink(p).or(Some(p.rect)),
+                Kind::Image { .. } | Kind::Video { .. } | Kind::Icon { .. }
+                    if !(p.rect.w >= cw - 1.0 && p.rect.h >= ch - 1.0) =>
+                {
+                    Some(p.rect)
+                }
+                _ => None,
+            };
+            if let Some(r) = r.filter(|r| r.h > 0.0) {
+                out.push((r.y.max(0.0), r.bottom().min(ch)));
+            }
+            spans(&p.children, (cw, ch), out);
+        }
     }
-    beside.sort_by(|a, b| b.rect.h.total_cmp(&a.rect.h));
-    let list: Vec<String> = beside
-        .iter()
-        .take(4)
-        .map(|s| format!("{} {}", s.layer.id, n(s.rect.h)))
-        .collect();
-    format!("; above and below it: {}", list.join(", "))
+    let mut s = Vec::new();
+    spans(placed, (cw, ch), &mut s);
+    s.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let (mut at, mut best) = (0.0_f32, None::<(f32, f32)>);
+    for (a, b) in s.into_iter().chain(std::iter::once((ch, ch))) {
+        if a > at && best.is_none_or(|(x, y)| a - at > y - x) {
+            best = Some((at, a));
+        }
+        at = at.max(b);
+    }
+    best.filter(|(a, b)| b - a >= 1.0)
 }

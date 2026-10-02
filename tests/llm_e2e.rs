@@ -21,7 +21,7 @@ mod common;
 
 use std::process::Stdio;
 
-use common::{CHECK_SVG, MAIL_SVG, Mcp, ad_sizes, b64, photo_png};
+use common::{CHECK_SVG, MAIL_SVG, Mcp, ad_sizes, b64};
 use serde_json::{Value, json};
 
 const TOKEN_TARGET: usize = 2000;
@@ -32,7 +32,7 @@ const SYSTEM: &str =
 
 const TASK: &str = "Build a vote-by-mail flyer in scene {scene} and render it.
 
-Assets already in the scene: photo (1600×900 landscape photo), mail (white envelope icon, 56×44 SVG), \
+Assets already in the scene: photo (1600×1000 photo: a farmhouse in a field at sunrise), mail (white envelope icon, 56×44 SVG), \
 check (red check-circle icon, 40×40 SVG).
 Sizes: portrait 1080×1350 (master), wide 1200×1000 at scale 0.85, sky 300×600 at scale 0.28.
 
@@ -63,7 +63,10 @@ async fn claude_builds_the_reference_ad() {
         .await;
     let scene = created.split(' ').next().unwrap().to_owned();
     for (id, bytes) in [
-        ("photo", photo_png()),
+        (
+            "photo",
+            std::fs::read("bench/photos/farmhouse.jpg").expect("bench/photos/farmhouse.jpg"),
+        ),
         ("mail", MAIL_SVG.as_bytes().to_vec()),
         ("check", CHECK_SVG.as_bytes().to_vec()),
     ] {

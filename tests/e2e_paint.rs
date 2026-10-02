@@ -146,7 +146,7 @@ async fn torn_edges_rough_strokes_and_halftone_look_hand_made() {
 }
 
 #[tokio::test]
-async fn a_band_too_short_for_its_photo_is_a_defect() {
+async fn a_band_says_which_part_of_its_photo_is_drawn() {
     let mcp = Mcp::start("crop-warn").await;
     let id = mcp
         .ok(
@@ -163,7 +163,9 @@ async fn a_band_too_short_for_its_photo_is_a_defect() {
         json!({"sceneId": id, "id": "photo", "base64": b64(&photo_png())}),
     )
     .await;
-    // A 1600×900 photo in a 1200×238 band: cover hides 65% of its height.
+    // A 1600×900 photo in a 1200×238 band: cover keeps 338 px of its height.
+    // A crop is the agent's choice, so the edit is clean, and the layout says
+    // which part of the photo is drawn, in its own px.
     let reply = mcp
         .ok(
             "layer_add",
@@ -171,32 +173,23 @@ async fn a_band_too_short_for_its_photo_is_a_defect() {
         )
         .await;
     assert!(
-        reply.contains("wide photo-band image 0,235 1200×238 cover crop 65%h !crop cuts the image's middle (focus 50%,50%): needs 100px more here (height 338 shows half, 675 all)"),
+        reply.starts_with("added photo-band v") && !reply.contains(" !"),
         "{reply}"
     );
-    // A taller band keeps most of it: the edit is clean.
-    let reply = mcp
-        .ok(
-            "layer_update",
-            json!({"sceneId": id, "ops": [{"target": {"id": "photo-band"}, "set": {"height": 420}}]}),
-        )
+    let layout = mcp
+        .ok("scene_describe", json!({"sceneId": id, "full": true}))
         .await;
     assert!(
-        reply.starts_with("changed photo-band v") && !reply.contains("warn"),
-        "{reply}"
+        layout.contains(
+            "photo-band image 0,235 1200×238 cover shows 1600×317 from 0,291 of 1600×900"
+        ),
+        "{layout}"
     );
-    // Back in the short band, picking its middle by hand keeps too little
-    // of the photo: the same defect, by the crop.
-    let reply = mcp
-        .ok(
-            "layer_update",
-            json!({"sceneId": id, "ops": [{"target": {"id": "photo-band"}, "set": {"height": 238,
-                "crop": {"x": 0, "y": 0.28, "width": 1, "height": 0.36}}}]}),
-        )
-        .await;
+    // So does render, the agent's look at the result.
+    let rendered = mcp.ok("render", json!({"sceneId": id})).await;
     assert!(
-        reply.contains("!crop keeps 35% of the image's height"),
-        "{reply}"
+        rendered.contains(" photo-band image 0,235 1200×238 cover shows 1600×317"),
+        "{rendered}"
     );
     mcp.stop().await;
 }

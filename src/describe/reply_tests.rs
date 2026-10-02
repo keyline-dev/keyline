@@ -1,73 +1,9 @@
-//! Tests of the later checks (crops, covers, tight ink, grouped and named
-//! lines, firstFit reasons), facts and the render report.
+//! Tests of the later checks (covers, grouped and named lines, firstFit
+//! reasons), what the layout says of photos, facts and the render report.
 
 use super::tests::scene;
 use super::*;
 use serde_json::json;
-
-#[test]
-fn a_band_that_cuts_over_half_its_photo_is_a_defect() {
-    let band = |h: u32, extra: serde_json::Value| {
-        let mut l =
-            json!({"id": "band", "type": "image", "asset": "photo", "width": 1200, "height": h});
-        l.as_object_mut()
-            .unwrap()
-            .extend(extra.as_object().unwrap().clone());
-        let mut s = scene(json!([l]));
-        s.width = 1200.0;
-        s.height = 800.0;
-        s.sizes.truncate(1);
-        s.sizes[0].width = 1200.0;
-        s.sizes[0].height = 800.0;
-        s.assets.insert(
-            "photo".into(),
-            serde_json::from_value(json!({"sha256": "x", "width": 1200, "height": 800})).unwrap(),
-        );
-        warnings(&s, None).unwrap_or_default()
-    };
-    // A 1200×800 photo in a 1200×238 band: 70% of its height hidden.
-    assert_eq!(
-        band(238, json!({})),
-        "wide band image 0,0 1200×238 cover crop 70%h !crop cuts the image's middle (focus 50%,50%): needs 162px more here (height 400 shows half, 800 all)\n"
-    );
-    // Less than half hidden (crop 48%h): the subject fits.
-    assert_eq!(band(420, json!({})), "");
-    assert!(band(238, json!({"focus": [0.3, 0.2]})).contains(
-        "!crop cuts the area around its focus (focus 30%,20%): needs 162px more here (height 400"
-    ),);
-    // Contain never crops. A crop picks its part on purpose, but one that
-    // keeps under half the height cuts the subject all the same.
-    assert_eq!(band(238, json!({"fit": "contain"})), "");
-    assert!(
-        band(
-            238,
-            json!({"crop": {"x": 0, "y": 0.3, "width": 1, "height": 0.3}})
-        )
-        .contains("!crop keeps 30% of the image's height")
-    );
-    // Half kept, in a box that shows all of it: unjudged.
-    assert!(
-        !band(
-            400,
-            json!({"crop": {"x": 0, "y": 0.25, "width": 1, "height": 0.5}})
-        )
-        .contains("!crop")
-    );
-}
-
-#[test]
-fn a_crop_at_the_sides_names_the_height_that_shows_half() {
-    let s = scene(
-        json!([{"id": "strip", "type": "image", "asset": "img", "width": 100, "height": 400}]),
-    );
-    let w = describe(&s, Some("wide"), false, None).unwrap();
-    assert!(
-        w.contains(
-            "crop 75%w warn crop cuts the image's middle (focus 50%,50%): height at most 100 shows all, 200 half"
-        ),
-        "{w}"
-    );
-}
 
 #[test]
 fn a_halftone_on_a_dark_page_is_hinted() {
@@ -194,55 +130,6 @@ fn a_shrunk_text_says_which_side_bound_it() {
 }
 
 #[test]
-fn a_photo_sized_by_its_stack_is_told_its_min_height() {
-    // A column gives the photo what its fixed siblings leave: 100 px of a
-    // 400×400 photo 400 wide. The fix is a minHeight, in master px (the
-    // half-scale size shows half at 100 px, a minHeight of 200).
-    let s = scene(
-        json!([{"id": "col", "type": "frame", "width": 400, "height": 200, "flexDirection": "column", "children": [
-        {"id": "photo", "type": "image", "asset": "img", "width": "fill", "height": "fill"},
-        {"id": "copy", "type": "rect", "width": "fill", "height": 100, "fill": "#000000"}]}]),
-    );
-    let w = warnings(&s, None).unwrap();
-    assert!(
-        w.contains("wide photo image 0,0 400×100 cover crop 75%h !crop cuts the image's middle (focus 50%,50%): needs 100px more here (minHeight 200 shows half, 400 all); above and below it: copy 100"),
-        "{w}"
-    );
-}
-
-#[test]
-fn the_crop_fix_is_the_field_value_in_master_px() {
-    // A 400×400 photo in a band 100 tall: at the half-scale size the box
-    // is 50 tall, yet the height to write is 200 at both sizes.
-    let s = scene(
-        json!([{"id": "band", "type": "image", "asset": "img", "width": 400, "height": 100}]),
-    );
-    let w = warnings(&s, None).unwrap();
-    assert!(w.contains("wide band image 0,0 400×100 cover crop 75%h !crop cuts the image's middle (focus 50%,50%): needs 100px more here (height 200 shows half, 400 all)"), "{w}");
-    assert!(w.contains("small band image 0,0 200×50 cover crop 75%h !crop cuts the image's middle (focus 50%,50%): needs 50px more here (height 200 shows half, 400 all)"), "{w}");
-}
-
-#[test]
-fn a_squeezed_photo_is_told_the_min_height_that_stops_the_squeeze() {
-    // A stretch constraint shrinks the band with a shorter size: setting
-    // its height again does nothing; a minHeight holds it.
-    let band = |extra: serde_json::Value| {
-        let mut l = json!({"id": "band", "type": "image", "asset": "img", "y": 20, "width": 400, "height": 160,
-            "constraints": {"horizontal": "stretch", "vertical": "stretch"}});
-        l.as_object_mut()
-            .unwrap()
-            .extend(extra.as_object().unwrap().clone());
-        let mut s = scene(json!([l]));
-        s.sizes[0].height = 100.0;
-        describe(&s, Some("wide"), false, None).unwrap()
-    };
-    let w = band(json!({}));
-    assert!(w.contains("400×60 cover crop 85%h !crop cuts the image's middle (focus 50%,50%): needs 140px more here (squeezed from 160 to 60: minHeight 200 shows half, 400 all)"), "{w}");
-    let w = band(json!({"minHeight": 200}));
-    assert!(!w.contains("crop cuts"), "following it fixes it: {w}");
-}
-
-#[test]
 fn facts_read_every_shot_and_skip_shots_a_size_hides() {
     let shots = |media: serde_json::Value| {
         let mut s2 = json!({"id": "s2", "type": "frame", "width": "fill", "height": "fill", "shot": {"duration": 1}, "children": [
@@ -266,22 +153,12 @@ fn facts_read_every_shot_and_skip_shots_a_size_hides() {
         "{}",
         facts(&s)
     );
-    assert!(
-        warnings(&s, None)
-            .unwrap()
-            .contains("wide wide-photo image")
-    );
     // Hidden at the small size: neither its text nor its crop counts there.
     let s = shots(json!({"small": {"hidden": true}}));
     assert!(
         facts(&s).starts_with("smallest text: wide 12px (fine), small 30px (big)"),
         "{}",
         facts(&s)
-    );
-    let w = warnings(&s, None).unwrap();
-    assert!(
-        w.contains("wide wide-photo") && !w.contains("small wide-photo"),
-        "{w}"
     );
 }
 
@@ -334,26 +211,6 @@ fn text_under_a_later_layer_or_highlight_is_covered() {
         d.contains("wide meet text") && d.contains("!covered by name highlight "),
         "{d}"
     );
-}
-
-#[test]
-fn ink_that_nearly_touches_a_neighbour_is_an_advisory() {
-    let pair = |gap_y: f32| {
-        let s = scene(json!([
-            {"id": "eyebrow", "type": "text", "text": "LINEUP", "x": 10, "y": 10, "fontSize": 40, "fontWeight": 900},
-            {"id": "head", "type": "text", "text": "VELVET", "x": 10, "y": gap_y, "fontSize": 60, "fontWeight": 900, "lineHeight": 0.8}
-        ]));
-        describe(&s, Some("wide"), false, None).unwrap()
-    };
-    // Caps 60 px tall at lineHeight 0.8 overshoot their box: a few px of ink
-    // between the two lines.
-    let d = pair(58.0);
-    assert!(
-        d.contains("wide eyebrow text") && d.contains(" warn ink 3px from head"),
-        "{d}"
-    );
-    // Comfortably apart: nothing.
-    assert_eq!(pair(70.0), "ok");
 }
 
 #[test]
@@ -423,25 +280,6 @@ fn the_full_listing_says_what_moves_when() {
             .unwrap()
             .contains("enter ")
     );
-}
-
-#[test]
-fn a_crop_says_which_side_it_takes_most_from() {
-    let band = |focus: serde_json::Value| {
-        let s = scene(
-            json!([{"id": "p", "type": "image", "asset": "img", "width": 400, "height": 100, "focus": focus}]),
-        );
-        describe(&s, Some("wide"), true, None).unwrap()
-    };
-    // Focus near the top: most of the crop comes off the bottom.
-    assert!(
-        band(json!([0.5, 0.1])).contains("cover crop 75%h bottom "),
-        "{}",
-        band(json!([0.5, 0.1]))
-    );
-    assert!(band(json!([0.5, 0.9])).contains("cover crop 75%h top "));
-    // Centered: both sides alike, no side named.
-    assert!(band(json!([0.5, 0.5])).contains("cover crop 75%h !crop"));
 }
 
 #[test]
@@ -582,28 +420,6 @@ fn an_outline_covers_text_only_where_its_stroke_runs() {
 }
 
 #[test]
-fn a_photo_filling_the_canvas_gets_no_crop_warning() {
-    // A landscape photo filling a tall canvas crops its sides by over half:
-    // it can't grow, and its focus shows where it's set.
-    let mut s = scene(
-        json!([{"id": "bg", "type": "image", "asset": "img", "width": "fill", "height": "fill"}]),
-    );
-    s.sizes.truncate(1);
-    s.sizes[0].width = 60.0;
-    let d = describe(&s, None, false, None).unwrap();
-    assert_eq!(d, "ok");
-    // Not filling it, the same crop warns.
-    let s = scene(
-        json!([{"id": "band", "type": "image", "asset": "img", "x": 10, "width": 60, "height": 200}]),
-    );
-    assert!(
-        describe(&s, Some("wide"), false, None)
-            .unwrap()
-            .contains("warn crop")
-    );
-}
-
-#[test]
 fn a_cut_only_while_it_moves_says_when() {
     let card = |child: serde_json::Value| {
         let s = scene(
@@ -634,7 +450,7 @@ fn a_cut_only_while_it_moves_says_when() {
             json!({"id": "photo", "type": "image", "asset": "img", "width": 300, "height": 120,
             "animate": {"scale": [1, 1.1], "duration": 6}})
         ),
-        "wide photo image 20,20 300×120 cover crop 60%h !crop cuts the image's middle (focus 50%,50%): needs 30px more here (height 150 shows half, 300 all)\n"
+        "ok"
     );
 }
 
@@ -758,38 +574,6 @@ fn an_outline_with_no_fill_given_covers_only_by_its_stroke() {
 }
 
 #[test]
-fn ink_that_touches_is_never_left_unsaid() {
-    // Sliding an eyebrow down onto tall caps: from far apart to touching to
-    // overlapping, each step is ok, `warn ink` or `!overlaps`, and touching
-    // reads `warn ink 0px`.
-    let mut touched = false;
-    let mut far = false;
-    // Far apart first, then a tenth of a pixel at a time across touching,
-    // where `!overlaps` (over a pixel) and `warn ink` (a gap) meet.
-    for step in 0..=170 {
-        let y = if step == 0 {
-            20.0
-        } else {
-            50.0 + step as f32 * 0.1
-        };
-        let s = scene(json!([
-            {"id": "eyebrow", "type": "text", "text": "HEADLINING", "x": 40, "y": y, "fontSize": 24},
-            {"id": "caps", "type": "text", "text": "VOLTA", "x": 20, "y": 100, "fontSize": 100, "fontWeight": 900, "lineHeight": 0.7}
-        ]));
-        let d = describe(&s, Some("wide"), false, None).unwrap();
-        // Once touching, it never reads ok again: closer only gets worse.
-        assert!(!(touched && d == "ok"), "{y}: touching, but nothing said");
-        far |= d == "ok";
-        touched |= d.contains("warn ink 0px from caps");
-        assert!(
-            d == "ok" || d.contains("warn ink") || d.contains("!overlaps"),
-            "{y}: {d}"
-        );
-    }
-    assert!(far && touched, "the slide spans apart to touching");
-}
-
-#[test]
 fn a_first_fit_in_a_crowded_column_keeps_its_shortest_option() {
     let s = scene(
         json!([{"id": "col", "type": "frame", "width": 300, "height": 200, "flexDirection": "column", "children": [
@@ -868,24 +652,54 @@ fn only_an_opaque_layer_covers_text() {
 }
 
 #[test]
-fn a_hand_picked_crop_that_keeps_under_half_is_a_defect_too() {
-    // A benchmark agent's way past !crop: the band's middle 36%, picked by
-    // hand, in a band too short for more. The house was still cut in half.
-    let band = |crop: serde_json::Value| {
-        let s = scene(
-            json!([{"id": "band", "type": "image", "asset": "img", "width": 400, "height": 100, "crop": crop}]),
+fn the_layout_says_which_part_of_a_photo_is_drawn() {
+    // A 1200×800 photo in bands and boxes: the region drawn, in its own px,
+    // and no verdict: a crop is the agent's choice.
+    let photo = |layer: serde_json::Value| {
+        let mut s = scene(json!([layer]));
+        s.assets.insert(
+            "photo".into(),
+            serde_json::from_value(json!({"sha256": "x", "width": 1200, "height": 800})).unwrap(),
         );
+        let d = describe(&s, Some("wide"), true, None).unwrap();
+        assert!(!d.contains(" !") && !d.contains("warn"), "{d}");
+        d
+    };
+    let band = json!({"id": "band", "type": "image", "asset": "photo", "width": 400, "height": 80});
+    // Cover takes the middle by default; `focus` moves the window.
+    assert!(
+        photo(band.clone())
+            .contains("band image 0,0 400×80 cover shows 1200×240 from 0,280 of 1200×800")
+    );
+    let mut top = band.clone();
+    top["focus"] = json!([0.5, 0.1]);
+    assert!(photo(top).contains("cover shows 1200×240 from 0,56 of 1200×800"));
+    // A tall box crops the sides.
+    let tall =
+        json!({"id": "tall", "type": "image", "asset": "photo", "width": 100, "height": 200});
+    assert!(photo(tall).contains("cover shows 400×800 from 400,0 of 1200×800"));
+    // A crop by hand: the region it keeps, then what cover takes of that.
+    let mut hand = band.clone();
+    hand["crop"] = json!({"x": 0, "y": 0.25, "width": 1, "height": 0.5});
+    assert!(photo(hand).contains("cover shows 1200×240 from 0,280 of 1200×800"));
+    // Contain draws the whole photo: nothing to say.
+    let mut contain = band;
+    contain["fit"] = json!("contain");
+    assert!(!photo(contain).contains("shows"));
+}
+
+#[test]
+fn ink_on_ink_is_a_defect_and_ink_apart_is_not_judged() {
+    let pair = |y: f32| {
+        let s = scene(json!([
+            {"id": "eyebrow", "type": "text", "text": "HEADLINING", "x": 40, "y": y, "fontSize": 24},
+            {"id": "caps", "type": "text", "text": "VOLTA", "x": 20, "y": 100, "fontSize": 100, "fontWeight": 900, "lineHeight": 0.7}
+        ]));
         describe(&s, Some("wide"), false, None).unwrap()
     };
-    let d = band(json!({"x": 0, "y": 0.28, "width": 1, "height": 0.36}));
-    assert!(d.contains("!crop keeps 25% of the image's height"), "{d}");
-    // Keeping half or more is a choice keyline leaves alone.
-    let d = band(json!({"x": 0, "y": 0.2, "width": 1, "height": 0.25}));
-    assert!(d.contains("!crop keeps"), "{d}");
-    let s = scene(
-        json!([{"id": "band", "type": "image", "asset": "img", "width": 400, "height": 400,
-        "crop": {"x": 0, "y": 0.2, "width": 1, "height": 0.6}}]),
-    );
-    let d = describe(&s, Some("wide"), false, None).unwrap();
-    assert!(!d.contains("crop keeps") && !d.contains("!crop"), "{d}");
+    // Well apart, or a hair apart: how close is the design's call.
+    assert_eq!(pair(20.0), "ok");
+    assert!(!pair(55.0).contains("warn"), "{}", pair(55.0));
+    // Overlapping ink is always wrong.
+    assert!(pair(80.0).contains("!overlaps"), "{}", pair(80.0));
 }

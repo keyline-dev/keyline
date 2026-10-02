@@ -19,10 +19,11 @@ fn one_line_per_layer_per_size() {
         json!([{"id": "photo", "type": "image", "asset": "img", "width": 400, "height": 200}, {"id": "bar", "type": "frame", "y": 150, "width": 400, "height": 50, "children": [{"id": "r", "type": "rect", "width": 400, "height": 50, "fill": "#FF0000"}]}]),
     );
     let d = describe(&s, None, true, None).unwrap();
-    assert_eq!(d.lines().count(), 9, "{d}");
+    // Per size: its line, a line per layer, its largest empty band.
+    assert_eq!(d.lines().count(), 11, "{d}");
     assert!(
         d.starts_with(
-            "assets img 400×400\nwide 400×200\n photo image 0,0 400×200 cover crop 50%h\n"
+            "assets img 400×400\nwide 400×200\n photo image 0,0 400×200 cover shows 400×200 from 0,100 of 400×400\n"
         ),
         "{d}"
     );
@@ -33,7 +34,7 @@ fn one_line_per_layer_per_size() {
             .unwrap()
             .lines()
             .count(),
-        5
+        6
     );
     assert!(describe(&s, Some("nope"), true, None).is_err());
     // A clean layout costs two characters by default.
@@ -176,20 +177,15 @@ fn small_text_and_upscaling_are_facts_not_warnings() {
         // A 400 px image covering 800 px; at half scale it's drawn 1:1.
         {"id": "big", "type": "image", "asset": "img", "y": 45, "width": 800, "height": 100}
     ]));
-    // The crop of an image this wide is a defect of its own.
-    let w = warnings(&s, None).unwrap();
-    assert!(
-        w.lines()
-            .all(|l| l.contains(" big image ") && l.contains("!crop")),
-        "{w}"
-    );
+    // A crop is described, not judged: nothing to fix.
+    assert!(warnings(&s, None).is_none());
     assert_eq!(
         facts(&s),
         "smallest text: wide 14px (fine), small 7px (fine); upscaled: wide big 2.0x"
     );
     let d = describe(&s, Some("wide"), true, None).unwrap();
     assert!(
-        d.contains("big image 0,45 800×100 cover crop 88%h upscaled 2.0x"),
+        d.contains("big image 0,45 800×100 cover shows 400×50 from 0,175 of 400×400 upscaled 2.0x"),
         "{d}"
     );
 }
@@ -408,5 +404,8 @@ fn a_video_is_cropped_and_scaled_like_an_image() {
         serde_json::from_value(json!({"duration": 2, "fps": 30, "audio": true})).unwrap();
     let d = describe(&s, Some("wide"), true, None).unwrap();
     assert!(d.contains("assets img 400×400 2s sound"), "{d}");
-    assert!(d.contains(" clip video 0,0 400×200 cover crop 50%h"), "{d}");
+    assert!(
+        d.contains(" clip video 0,0 400×200 cover shows 400×200 from 0,100 of 400×400"),
+        "{d}"
+    );
 }

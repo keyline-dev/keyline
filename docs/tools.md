@@ -73,10 +73,6 @@ A **layer line** is `id type x,y w×h`, in px at that size, then:
 | `!leader "<left…>" meets "<right>"` | defect | In a `leader` line, the text before the tab runs into the text after it |
 | `!unsafe` | defect | Text's letters, as drawn (a rotation included), reach under the size's `safeArea` |
 | `warn contrast R:1 (WCAG N)` | advisory | Text contrast against what's behind it is below the WCAG level for its size. Knockout text is judged by what shows through its letters against the frame around them |
-| `!crop cuts the image's middle (focus X%,Y%): needs Npx more here (height A shows half, B all); above and below it: <id> H, …` | defect | A cover crop hides more than half the image top and bottom, so whatever sits in its middle is cut (a house in a band too short for it). `N` is how much taller the box must be at this size (px). In brackets, the field to write and its values in master px, like every field (the size's `scale` multiplies it): the height that shows half the image and the one that shows all of it; `minHeight` when the parent sets the height (`fill`, a share, `flexGrow`, a stretch constraint), and `squeezed from C to D: minHeight …` when a stretch constraint shrank a fixed height (C and D px at that size). Then the layers above and below it in its parent, tallest first, by id and px height: what shares its column, one of which gives the room. A photo filling the canvas gets none: it can't grow, and its focus shows where it's set. Names "the area around its focus" when `focus` isn't the center |
-| `!crop keeps N% of the image's height: a crop height of 0.5 or more, in a box tall enough for it; above and below it: …` | defect | A hand-picked `crop`, with what cover then takes, shows less than half the image's height: the same cut subject, by the crop. Keeping half or more is the agent's choice, unjudged |
-| `warn crop cuts the image's middle (focus X%,Y%): height at most A shows all, B half` | advisory | The same at the sides (a landscape photo in a tall box, common in skyscraper ads): `height at most N`, or `maxHeight N` when the parent sets the height |
-| `warn ink Npx from <id>` | advisory | This text's ink comes within N px of a neighbour's, above or beside it, closer than 15% of the smaller font size, touching included (`0px`) up to the overlap `!overlaps` reports (caps overshooting a tight `lineHeight`); on the upper or left text |
 | `warn shadow clipped by <frame>` | advisory | A frame that clips its content (`clipsContent`, on by default) cuts the layer's drop shadow; give it room (padding) or set `clipsContent: false` |
 
 Defects need fixing; advisories need judgment ([concepts](concepts.md#checks-defects-advisories-facts)). In a scene of [shots](scene.md#shots-and-transitions), every shot is checked, each with the layers around it.
@@ -258,10 +254,13 @@ Reply: `ok`, or one [problem line](#problem-lines) per problem. With `full`, the
 ```text
 assets photo 864×530
 instagram-portrait 1080×1350
- photo image 0,0 1080×810 cover crop 18%w upscaled 1.5x
+ photo image 0,0 1080×810 cover shows 708×530 from 78,0 of 864×530 upscaled 1.5x
  headline text 60,900 960×174 72px 2L
  cta text 60,1180 600×60 48px
+ empty y 1240–1350 (8%)
 ```
+
+An image drawn with `cover` says which region of the photo is in its box, in the photo's own pixels: `shows 708×530 from 78,0 of 864×530`, so the agent, which knows what's in its photo, can tell what's in view. That's a description, not a verdict: a crop is the design's choice. The last line per size is its tallest band with no text, image, video or icon in it (a photo filling the canvas is the background): `empty y 1240–1350 (8%)`.
 
 ## render
 
@@ -277,7 +276,7 @@ instagram-portrait 1080×1350
 | `muted` | boolean | false | `true` leaves all sound out of `mp4` and `webm`: the soundtrack and every clip's (a clip's own `muted` leaves out one) |
 | `rows` | array of objects | | [Variants](#templates-and-variants): one render per row of token values |
 
-Reply: per size, the size id, the file's path ([Output files](#output-files)) and, in parentheses, what the file holds, then its [drawn-text lines](#drawn-text-lines):
+Reply: per size, the size id, the file's path ([Output files](#output-files)) and, in parentheses, what the file holds, then its layout as drawn (as [`scene_describe` with `full`](#scene_describe), a line per layer with any defect on it, the region of each photo drawn and the largest empty band), then its [drawn-text lines](#drawn-text-lines). The layout is the agent's eyes: it judges the design from it rather than by opening the files.
 
 ```text
 wide /…/renders/s1a2b3c4d5/wide-v3.png (1200×628, 212 KB)

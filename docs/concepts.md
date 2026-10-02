@@ -45,8 +45,9 @@ The server measures; the agent decides. Every edit's reply checks the design at 
 | Defect | `!truncated needs 400×124`, `!overflow needs 1080×1400`, `!clipped by head: bottom 8px`, `!overlaps` | Fix it: it's objectively wrong |
 | Advisory | `warn contrast 2.1:1 (WCAG 4.5)` | Judge it |
 | Fact | `smallest text: sky 8.4px (footer)`, `upscaled: photo 1.5x` | Decide whether it suits where the design runs |
+| Description | `photo image 0,206 1200×300 cover shows 1600×400 from 0,320 of 1600×1000`, `empty y 890–960 (7%)` | See the design: which part of each photo is drawn, where space is left. `render` returns the whole layout this way |
 
-Defects carry the measurement that fixes them, so the agent corrects them in one step instead of guessing. Taste stays with the model: whether 8 px text is fine print or unreadable depends on the medium, so the server reports the size and doesn't judge it.
+A defect is only what's wrong in every design: text cut, hidden or drawn on other text, an opaque layer over text, text under a platform's bars. Defects carry the measurement that fixes them, so the agent corrects them in one step instead of guessing. Everything else is taste and stays with the model: whether 8 px text is fine print or unreadable depends on the medium, and whether a photo is cropped well depends on what's in it, so the server reports the size, or the part of the photo drawn, and doesn't judge it. There are no thresholds of the server's own; contrast's are WCAG's.
 
 Previews are opt-in. They cost more tokens and catch less: in testing, a model approved 7 px text from a 512 px preview, which the measurements catch. `render` also reports how each wrapped, shrunk or cut text was actually drawn. The markers and reply lines are listed in [tools.md](tools.md#replies).
 

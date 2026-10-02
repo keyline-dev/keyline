@@ -323,12 +323,9 @@ async fn styles_icons_shapes_masks_and_focus_work_end_to_end() {
                 {"id": "rule", "type": "line", "x": 40, "y": 290, "width": 880, "constraints": {"horizontal": "stretch", "vertical": "bottom"}, "stroke": {"width": 2, "color": "#CFD3DA"}},
                 {"id": "steps", "type": "frame", "y": 320, "width": 960, "height": 190, "constraints": {"horizontal": "stretch", "vertical": "bottom"}, "flexDirection": "row", "alignItems": "flex-start", "justifyContent": "space-evenly", "children": [step("mail", "lucide", "MAIL IT"), step("location-dot", "solid", "DROP IT"), step("landmark", "lucide", "HAND IT IN")]}]}))
         .await;
-    // One defect: the band is short for its photo, and says by how much and
-    // what shares its column (the rule, a line, takes no height).
+    // A short band crops its photo: the agent's choice, nothing to fix.
     assert!(
-        reply.lines().nth(1).unwrap().ends_with(
-            "!crop cuts the area around its focus (focus 50%,20%): needs 10px more here (height 270 shows half, 540 all); above and below it: steps 190"
-        ) && reply.matches(" !").count() == 1,
+        reply.starts_with("added photo,rule,steps v2 ok") && !reply.contains(" !"),
         "{reply}"
     );
 
@@ -725,9 +722,12 @@ fn render_draws_a_scene_file_and_fails_on_a_defect() {
     ]);
     assert_eq!(check_code, Some(1), "{checked}");
     assert!(files.is_empty(), "{files:?}");
+    // A render also lists its layout, the agent's eyes (a line per layer,
+    // indented); --check draws nothing, so it has the checks alone.
+    assert!(text.contains("\n h text 180,76 40×48 40px\n"), "{text}");
     let checks: Vec<&str> = text
         .lines()
-        .filter(|l| !l.contains(".png (") && !l.starts_with("fonts:"))
+        .filter(|l| !l.contains(".png (") && !l.starts_with("fonts:") && !l.starts_with(' '))
         .collect();
     assert_eq!(checked.lines().collect::<Vec<_>>(), checks, "{checked}");
     // Render flags without render are a mistake.

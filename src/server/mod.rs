@@ -38,8 +38,8 @@ for you to judge. It also states each size's smallest text and any upscaled phot
 where the design will be used, and adapt a size with media. A stack's or grid's !overflow means its children don't fit: \
 make one shorter at that size (media) or let it grow less. A top-level frame with width and height \"fill\" \
 already covers the canvas and clips at every size. \
-The server's checks are the verification: render once at the end, and its reply shows how wrapped, shrunk or \
-cut text came out. To judge the look, render with preview, not by opening the files. \
+Defects are always wrong; nothing else is judged for you. render's reply is the design as drawn, per size: every layer's box, \
+the region of each photo drawn (its px, from where), the largest empty band, how text wrapped. Judge the look from it, not by opening files. \
 An animation's reply states its length, frames and looping; opened, it shows only its first frame. \
 Omit fields that match defaults. When done, reply in one short line.";
 
@@ -208,8 +208,8 @@ fadeOut}}} changes the scene."
     }
 
     #[tool(
-        description = "Problems per size, or ok. Defects: !truncated|!overflow (W×H) !clipped !hidden !overlaps !covered !crop !unsafe \
-(safeArea). Advisory: warn contrast|crop|ink. full: one line per layer per size: id type x,y w×h, px, lines, crop, upscale, motion."
+        description = "Problems per size, or ok. Defects: !truncated|!overflow (W×H) !clipped !hidden !overlaps !covered !unsafe \
+(safeArea). Advisory: warn contrast. full: the layout, a line per layer per size."
     )]
     async fn scene_describe(&self, Parameters(a): Parameters<SceneDescribeArgs>) -> CallToolResult {
         let scene = self.store.load(&a.scene_id).map_err(err);
