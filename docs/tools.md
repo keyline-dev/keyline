@@ -186,7 +186,7 @@ song sound 184.3s v3
 | Input | Type | Default | Meaning |
 |---|---|---|---|
 | `sceneId` | string, required | | The scene |
-| `layers` | array, required | | [Layer](scene.md#layers) objects, added on top in order. A layer with `parent` goes inside that frame |
+| `layers` | array, required | | [Layer](scene.md#layers) objects, added on top in order. A layer with `parent` goes inside that frame; with `index`, at that place among its parent's (or the scene's) layers, from 0 at the bottom or first in a stack |
 | `styles` | object | | [Styles](scene.md#styles) to add or replace: `{name: {fields}}` |
 | `tokens` | object | | [Tokens](scene.md#tokens) to add or replace: `{name: value}` |
 | `components` | object | | [Components](scene.md#components) to add or replace |

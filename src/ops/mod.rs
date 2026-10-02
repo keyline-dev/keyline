@@ -178,6 +178,19 @@ pub fn add_layers(
             Some(Value::String(p)) => Some(p),
             Some(_) => return Err(at("parent must be a frame id".into())),
         };
+        // Where among its parent's children, from 0 (CSS `order` reads as
+        // it): on top, or last in a stack, when not given.
+        let index = match v
+            .as_object_mut()
+            .and_then(|o| o.remove("index").or_else(|| o.remove("order")))
+        {
+            None | Some(Value::Null) => None,
+            Some(i) => Some(
+                i.as_u64()
+                    .and_then(|n| usize::try_from(n).ok())
+                    .ok_or_else(|| at("index is a position from 0".into()))?,
+            ),
+        };
         guesses::dollar::whole(&mut v, &next.tokens);
         crate::reuse::tokens::bind(&mut v, &next.tokens).map_err(at)?;
         let mut layer = parse_layer(&v).map_err(|e| match culprit(&v) {
@@ -187,20 +200,22 @@ pub fn add_layers(
         })?;
         resolve_assets(&mut layer, &next.assets);
         reserve_ids(&layer, &mut taken);
-        parsed.push((i, parent, layer));
+        parsed.push((i, parent, index, layer));
     }
     let mut added = Vec::new();
-    for (i, parent, mut layer) in parsed {
+    for (i, parent, index, mut layer) in parsed {
         let at = |e: String| format!("layers[{i}]: {e}");
         assign_ids(&mut layer, &mut taken);
         added.push(layer.id.clone());
-        match parent {
-            None => next.layers.push(layer),
+        let list = match parent {
+            None => &mut next.layers,
             Some(p) => match find_frame(&mut next.layers, &p) {
-                Some(children) => children.push(layer),
+                Some(children) => children,
                 None => return Err(at(format!("no frame with id {p}"))),
             },
-        }
+        };
+        let at = index.map_or(list.len(), |i| i.min(list.len()));
+        list.insert(at, layer);
     }
     next.validate()?;
     next.version += 1;
@@ -272,7 +287,7 @@ pub fn update_layers(scene: &mut Scene, shared: Shared, ops: &[Op]) -> Result<Ve
         // place. Any other fields in the same set apply after.
         let mut rest = None;
         if let Some(set) = &op.set
-            && ["children", "parent", "index"]
+            && ["children", "parent", "index", "order"]
                 .iter()
                 .any(|k| set.contains_key(*k))
         {
@@ -283,7 +298,9 @@ pub fn update_layers(scene: &mut Scene, shared: Shared, ops: &[Op]) -> Result<Ve
             if let Some(kids) = set.remove("children") {
                 tree::set_children(&mut next, id, kids).map_err(at)?;
             }
-            let (parent, index) = (set.remove("parent"), set.remove("index"));
+            // CSS `order` reads as `index`.
+            let index = set.remove("index").or_else(|| set.remove("order"));
+            let parent = set.remove("parent");
             if parent.is_some() || index.is_some() {
                 tree::move_layer(&mut next, id, parent, index).map_err(at)?;
             }

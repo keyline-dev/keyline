@@ -250,5 +250,35 @@ mod tests {
             )
             .is_err()
         );
+        // CSS `order` reads as `index`.
+        update(
+            &mut s,
+            json!([{"target": {"id": "a2"}, "set": {"order": 0}}]),
+        )
+        .unwrap();
+        assert_eq!(tree(&s), "bg[a2 a1] glow col[old]");
+    }
+
+    #[test]
+    fn a_layer_is_added_at_its_index() {
+        let mut s = scene();
+        let add = |s: &mut Scene, v: Value| crate::ops::add_layers(s, Shared::default(), vec![v]);
+        // First in its parent, by `index` or by CSS `order` (a benchmark
+        // agent's divider at the top of its footer).
+        add(
+            &mut s,
+            json!({"id": "first", "type": "rect", "parent": "bg", "index": 0}),
+        )
+        .unwrap();
+        add(
+            &mut s,
+            json!({"id": "rule", "type": "rect", "parent": "col", "order": 0}),
+        )
+        .unwrap();
+        // Past the end, on top; at the top level too.
+        add(&mut s, json!({"id": "top", "type": "rect", "index": 99})).unwrap();
+        add(&mut s, json!({"id": "under", "type": "rect", "index": 0})).unwrap();
+        assert_eq!(tree(&s), "under bg[first a1 a2] glow col[rule old] top");
+        assert!(add(&mut s, json!({"id": "x", "type": "rect", "index": "first"})).is_err());
     }
 }

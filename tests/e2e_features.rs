@@ -976,5 +976,22 @@ async fn an_update_replaces_children_and_moves_layers() {
     assert!(full.contains("  title text"), "{full}");
     assert!(!full.contains("old text"), "{full}");
     assert!(full.contains("  glow ellipse"), "inside bg now: {full}");
+    // A divider first in the column, as CSS `order` would put it.
+    mcp.ok("layer_add", json!({"sceneId": id, "layers": [
+        {"id": "rule", "type": "rect", "parent": "col", "order": 0, "width": "fill", "height": 2, "fill": "#7C5CFF"}]}))
+        .await;
+    let full = mcp
+        .ok("scene_describe", json!({"sceneId": id, "full": true}))
+        .await;
+    let col: Vec<&str> = full
+        .lines()
+        .skip_while(|l| !l.contains(" col frame"))
+        .skip(1)
+        .take(2)
+        .collect();
+    assert!(
+        col[0].contains("rule rect") && col[1].contains("title text"),
+        "{full}"
+    );
     mcp.stop().await;
 }
