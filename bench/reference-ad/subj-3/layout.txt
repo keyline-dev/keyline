@@ -1,0 +1,105 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×1000
+portrait 1080×1350
+ root frame 0,0 1080×1350
+  headline text 0,0 1080×242 74px 2L
+  photoband image 0,242 1080×487 cover shows 1600×721 from 0,125 of 1600×1000
+  cands frame 0,729 1080×161
+   c1 frame 40,763 327×93
+    text1 text 40,763 327×44 36px
+    frame1 frame 180,817 46×4
+    text2 text 40,831 327×25 21px
+   c2 frame 377,763 327×93
+    text3 text 377,763 327×44 36px
+    frame2 frame 517,817 46×4
+    text4 text 377,831 327×25 21px
+   c3 frame 713,763 327×93
+    text5 text 713,763 327×44 36px
+    frame3 frame 854,817 46×4
+    text6 text 713,831 327×25 21px
+  cta frame 0,890 1080×106
+   image1 image 313,921 56×44 cover shows 56×44 from 0,0 of 56×44
+   text7 text 393,914 375×58 48px
+  steps frame 0,996 1080×220
+   frame4 frame 60,1030 960×40
+    image2 image 60,1030 40×40 cover shows 40×40 from 0,0 of 40×40
+    text8 text 120,1032 900×36 30px
+   frame5 frame 60,1090 960×40
+    image3 image 60,1090 40×40 cover shows 40×40 from 0,0 of 40×40
+    text9 text 120,1092 900×36 30px
+   frame6 frame 60,1150 960×40
+    image4 image 60,1150 40×40 cover shows 40×40 from 0,0 of 40×40
+    text10 text 120,1152 900×36 30px
+  spacer1 spacer 0,1216 1080×67
+  frame7 frame 0,1283 1080×67
+   text11 text 40,1303 1000×27 22px
+ empty y 1190–1307 (9%)
+wide 1200×1000
+ root frame 0,0 1200×1000
+  headline text 0,0 1200×207 70px 2L
+  photoband image 0,207 1200×281 cover shows 1600×374 from 0,282 of 1600×1000
+  cands frame 0,488 1200×124
+   c1 frame 48,510 363×79
+    text1 text 48,510 363×37 31px
+    frame1 frame 209,555 39×3
+    text2 text 48,567 363×22 18px
+   c2 frame 419,510 363×79
+    text3 text 419,510 363×37 31px
+    frame2 frame 580,555 39×3
+    text4 text 419,567 363×22 18px
+   c3 frame 790,510 363×79
+    text5 text 790,510 363×37 31px
+    frame3 frame 952,555 39×3
+    text6 text 790,567 363×22 18px
+  cta frame 0,611 1200×82
+   image1 image 407,633 48×37 cover shows 56×44 from 0,0 of 56×44
+   text7 text 475,628 319×49 41px
+  steps frame 0,693 1200×168
+   frame4 frame 68,715 1064×34
+    image2 image 68,715 34×34 cover shows 40×40 from 0,0 of 40×40
+    text8 text 119,717 1013×31 26px
+   frame5 frame 68,763 1064×34
+    image3 image 68,763 34×34 cover shows 40×40 from 0,0 of 40×40
+    text9 text 119,764 1013×31 26px
+   frame6 frame 68,810 1064×34
+    image4 image 68,810 34×34 cover shows 40×40 from 0,0 of 40×40
+    text10 text 119,812 1013×31 26px
+  spacer1 spacer 0,861 1200×82
+  frame7 frame 0,943 1200×57
+   text11 text 34,960 1132×23 19px
+ empty y 844–964 (12%)
+sky 300×600
+ root frame 0,0 300×600
+  headline text 0,0 300×113 26px 3L
+  photoband image 0,113 300×170 cover shows 1600×905 from 0,43 of 1600×1000
+  cands frame 0,283 300×66
+   c1 frame 4,296 96×39
+    text1 text 4,296 96×16 13px
+    frame1 frame 41,316 22×2
+    text2 text 4,322 96×13 11px
+   c2 frame 102,296 96×39
+    text3 text 102,296 96×16 13px
+    frame2 frame 139,316 22×2
+    text4 text 102,322 96×13 11px
+   c3 frame 200,296 96×39
+    text5 text 200,296 96×16 13px
+    frame3 frame 236,316 22×2
+    text6 text 200,322 96×13 11px
+  cta frame 0,348 300×48
+   image1 image 47,362 26×20 cover shows 56×44 from 0,0 of 56×44
+   text7 text 82,359 171×26 22px
+  steps frame 0,396 300×101
+   frame4 frame 13,411 274×18
+    image2 image 13,411 18×18 cover shows 40×40 from 0,0 of 40×40
+    text8 text 40,412 247×17 14px
+   frame5 frame 13,439 274×18
+    image3 image 13,439 18×18 cover shows 40×40 from 0,0 of 40×40
+    text9 text 40,440 247×17 14px
+   frame6 frame 13,467 274×18
+    image4 image 13,467 18×18 cover shows 40×40 from 0,0 of 40×40
+    text10 text 40,468 247×17 14px
+  spacer1 spacer 0,497 300×52
+  frame7 frame 0,549 300×51
+   text11 text 8,558 283×32 13px 2L
+ empty y 486–561 (13%)

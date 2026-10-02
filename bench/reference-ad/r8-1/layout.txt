@@ -1,0 +1,114 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×900
+portrait 1080×1350
+ root frame 0,0 1080×1350
+  header frame 0,0 1080×323
+   eyebrow frame 304,52 473×47
+    eyebrow-t text 326,62 429×27 22px
+   headline text 60,117 960×162 78px 2L
+  photo-band frame 0,323 1080×385
+   photo-img image 0,323 1080×385 cover crop 37%h
+   photo-tint frame 0,702 1080×6
+  cands frame 0,708 1080×175
+   c1 frame 48,744 312×99
+    c1-rule frame 181,744 46×5
+    c1-name text 48,761 312×44 40px
+    c1-role text 48,817 312×26 22px
+   c2 frame 384,744 312×99
+    c2-rule frame 517,744 46×5
+    c2-name text 384,761 312×44 40px
+    c2-role text 384,817 312×26 22px
+   c3 frame 720,744 312×99
+    c3-rule frame 853,744 46×5
+    c3-name text 720,761 312×44 40px
+    c3-role text 720,817 312×26 22px
+  cta frame 0,883 1080×114
+   cta-icon image 265,916 62×49 contain
+   cta-t text 353,909 463×62 62px
+  steps frame 0,997 1080×266
+   s1 frame 56,1037 968×44
+    s1-i image 56,1038 42×42 contain
+    s1-t text 120,1037 904×44 35px
+   s2 frame 56,1107 968×44
+    s2-i image 56,1108 42×42 contain
+    s2-t text 120,1107 904×44 35px
+   s3 frame 56,1177 968×44
+    s3-i image 56,1178 42×42 contain
+    s3-t text 120,1177 904×44 35px
+  footer frame 0,1263 1080×87
+   foot-t text 48,1289 984×31 24px
+wide 1200×1000
+ root frame 0,0 1200×1000
+  header frame 0,0 1200×227
+   eyebrow frame 399,29 401×40
+    eyebrow-t text 418,37 364×23 19px
+   headline text 51,81 1098×124 60px 2L
+  photo-band frame 0,227 1200×350
+   photo-img image 0,227 1200×350 cover crop 48%h
+   photo-tint frame 0,572 1200×5
+  cands frame 0,577 1200×135
+   c1 frame 41,601 359×84
+    c1-rule frame 201,601 39×4
+    c1-name text 41,615 359×37 34px
+    c1-role text 41,662 359×22 19px
+   c2 frame 420,601 359×84
+    c2-rule frame 580,601 39×4
+    c2-name text 420,615 359×37 34px
+    c2-role text 420,662 359×22 19px
+   c3 frame 800,601 359×84
+    c3-rule frame 960,601 39×4
+    c3-name text 800,615 359×37 34px
+    c3-role text 800,662 359×22 19px
+  cta frame 0,712 1200×97
+   cta-icon image 366,739 53×42 contain
+   cta-t text 440,734 394×53 53px
+  steps frame 0,809 1200×127
+   s1 frame 41,834 356×74
+    s1-i image 41,834 36×36 contain
+    s1-t text 95,834 301×74 30px 2L
+   s2 frame 422,834 356×37
+    s2-i image 422,834 36×36 contain
+    s2-t text 476,834 301×37 30px
+   s3 frame 803,834 356×74
+    s3-i image 803,834 36×36 contain
+    s3-t text 858,834 301×74 30px 2L
+  footer frame 0,936 1200×64
+   foot-t text 41,953 1118×27 20px
+sky 300×600
+ root frame 0,0 300×600
+  header frame 0,0 300×166
+   eyebrow frame 42,21 216×21
+    eyebrow-t text 51,25 198×13 11px
+   headline text 15,49 270×99 31px 3L
+  photo-band frame 0,166 300×171
+   photo-img image 0,166 300×171 cover crop 1%w
+   photo-tint frame 0,335 300×2
+  cands frame 0,336 300×63
+   c1 frame 10,350 90×34
+    c1-rule frame 44,350 22×2
+    c1-name text 10,356 90×14 13px
+    c1-role text 10,373 90×11 9px
+   c2 frame 105,350 90×34
+    c2-rule frame 139,350 22×2
+    c2-name text 105,356 90×14 13px
+    c2-role text 105,373 90×11 9px
+   c3 frame 200,350 90×34
+    c3-rule frame 234,350 22×2
+    c3-name text 200,356 90×14 13px
+    c3-role text 200,373 90×11 9px
+  cta frame 0,399 300×46
+   cta-icon image 42,413 25×19 contain
+   cta-t text 76,410 182×25 25px
+  steps frame 0,446 300×104
+   s1 frame 14,461 272×17
+    s1-i image 14,461 17×17 contain
+    s1-t text 39,461 247×17 14px
+   s2 frame 14,489 272×17
+    s2-i image 14,489 17×17 contain
+    s2-t text 39,489 247×17 14px
+   s3 frame 14,517 272×17
+    s3-i image 14,517 17×17 contain
+    s3-t text 39,517 247×17 14px
+  footer frame 0,550 300×50
+   foot-t text 11,561 278×26 10px 2L

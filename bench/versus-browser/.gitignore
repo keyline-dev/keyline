@@ -1,3 +1,5 @@
 tooling/node_modules/
 # The owner's blind-review sets are copies of committed PNGs.
 review/*/set-*/
+# Keyline-only experiment runs between benchmark versions: kept locally, never in a table.
+experiments/

@@ -1,0 +1,102 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×1000
+portrait 1080×1350
+ root frame 0,0 1080×1350
+  headBand frame 0,0 1080×238
+   headline text 56,46 968×162 76px 2L
+  photoBand image 0,238 1080×519 cover shows 1600×769 from 0,104 of 1600×1000
+  candidates frame 0,757 1080×178
+   use1 frame 44,793 317×106
+    use1.frame0 frame 171,793 64×7
+    use1.cand-name text 44,810 317×46 42px
+    use1.cand-role text 44,866 317×33 27px
+   use2 frame 381,793 317×106
+    use2.frame0 frame 508,793 64×7
+    use2.cand-name text 381,810 317×46 42px
+    use2.cand-role text 381,866 317×33 27px
+   use3 frame 719,793 317×106
+    use3.frame0 frame 845,793 64×7
+    use3.cand-name text 719,810 317×46 42px
+    use3.cand-role text 719,866 317×33 27px
+  ctaBar frame 0,935 1080×124
+   image1 image 280,975 56×44 contain
+   ctaText text 362,963 438×68 56px
+  steps frame 0,1059 1080×226
+   use4 frame 60,1093 960×42
+    use4.image0 image 60,1094 40×40 contain
+    use4.step-text text 120,1093 900×42 34px
+   use5 frame 60,1155 960×42
+    use5.image0 image 60,1156 40×40 contain
+    use5.step-text text 120,1155 900×42 34px
+   use6 frame 60,1217 960×42
+    use6.image0 image 60,1218 40×40 contain
+    use6.step-text text 120,1217 900×42 34px
+  footer text 0,1285 1080×65 24px
+ empty y 892–975 (6%)
+wide 1200×1000
+ root frame 0,0 1200×1000
+  headBand frame 0,0 1200×201
+   headline text 48,39 1105×136 65px 2L
+  photoBand image 0,201 1200×292 cover shows 1600×389 from 0,275 of 1600×1000
+  candidates frame 0,493 1200×151
+   use1 frame 37,523 364×90
+    use1.frame0 frame 192,523 54×6
+    use1.cand-name text 37,538 364×39 36px
+    use1.cand-role text 37,585 364×28 23px
+   use2 frame 418,523 364×90
+    use2.frame0 frame 573,523 54×6
+    use2.cand-name text 418,538 364×39 36px
+    use2.cand-role text 418,585 364×28 23px
+   use3 frame 799,523 364×90
+    use3.frame0 frame 954,523 54×6
+    use3.cand-name text 799,538 364×39 36px
+    use3.cand-role text 799,585 364×28 23px
+  ctaBar frame 0,644 1200×106
+   image1 image 379,678 48×37 contain
+   ctaText text 448,668 373×58 48px
+  steps frame 0,749 1200×193
+   use4 frame 51,778 1098×36
+    use4.image0 image 51,779 34×34 contain
+    use4.step-text text 102,778 1047×36 29px
+   use5 frame 51,831 1098×36
+    use5.image0 image 51,832 34×34 contain
+    use5.step-text text 102,831 1047×36 29px
+   use6 frame 51,884 1098×36
+    use6.image0 image 51,885 34×34 contain
+    use6.step-text text 102,884 1047×36 29px
+  footer text 0,942 1200×58 22px
+ empty y 607–678 (7%)
+sky 300×600
+ root frame 0,0 300×600
+  headBand frame 0,0 300×69
+   headline text 16,13 269×48 23px 2L
+  photoBand image 0,96 300×213 cover shows 1410×1000 from 95,0 of 1600×1000
+  candidates frame 0,336 300×54
+   use1 frame 12,346 88×34
+    use1.frame0 frame 47,346 18×2
+    use1.cand-name text 12,351 88×14 12px
+    use1.cand-role text 12,367 88×12 10px
+   use2 frame 106,346 88×34
+    use2.frame0 frame 141,346 18×2
+    use2.cand-name text 106,351 88×14 12px
+    use2.cand-role text 106,367 88×12 10px
+   use3 frame 200,346 88×34
+    use3.frame0 frame 235,346 18×2
+    use3.cand-name text 200,351 88×14 12px
+    use3.cand-role text 200,367 88×12 10px
+  ctaBar frame 0,416 300×35
+   image1 image 77,428 16×12 contain
+   ctaText text 100,424 123×19 16px
+  steps frame 0,478 300×73
+   use4 frame 17,488 266×15
+    use4.image0 image 17,488 13×13 contain
+    use4.step-text text 36,488 247×15 12px
+   use5 frame 17,508 266×15
+    use5.image0 image 17,509 13×13 contain
+    use5.step-text text 36,508 247×15 12px
+   use6 frame 17,529 266×15
+    use6.image0 image 17,530 13×13 contain
+    use6.step-text text 36,529 247×15 12px
+  footer text 0,578 300×22 10px
+ empty y 378–428 (8%)
