@@ -6,7 +6,7 @@ use super::*;
 use serde_json::json;
 
 #[test]
-fn a_cover_crop_that_hides_over_half_the_image_is_an_advisory() {
+fn a_band_that_cuts_over_half_its_photo_is_a_defect() {
     let band = |h: u32, extra: serde_json::Value| {
         let mut l =
             json!({"id": "band", "type": "image", "asset": "photo", "width": 1200, "height": h});
@@ -28,14 +28,13 @@ fn a_cover_crop_that_hides_over_half_the_image_is_an_advisory() {
     // A 1200×800 photo in a 1200×238 band: 70% of its height hidden.
     assert_eq!(
         band(238, json!({})),
-        "wide band image 0,0 1200×238 cover crop 70%h warn crop cuts the image's middle (focus 50%,50%): height 400 shows half\n"
+        "wide band image 0,0 1200×238 cover crop 70%h !crop cuts the image's middle (focus 50%,50%): needs 162px more here (height 400 shows half, 800 all)\n"
     );
     // Less than half hidden (crop 48%h): the subject fits.
     assert_eq!(band(420, json!({})), "");
-    assert!(
-        band(238, json!({"focus": [0.3, 0.2]}))
-            .contains("warn crop cuts the area around its focus (focus 30%,20%): height 400"),
-    );
+    assert!(band(238, json!({"focus": [0.3, 0.2]})).contains(
+        "!crop cuts the area around its focus (focus 30%,20%): needs 162px more here (height 400"
+    ),);
     // Contain never crops; a crop picks its part on purpose.
     assert_eq!(band(238, json!({"fit": "contain"})), "");
     assert_eq!(
@@ -55,7 +54,7 @@ fn a_crop_at_the_sides_names_the_height_that_shows_half() {
     let w = describe(&s, Some("wide"), false, None).unwrap();
     assert!(
         w.contains(
-            "crop 75%w warn crop cuts the image's middle (focus 50%,50%): height at most 200 shows half"
+            "crop 75%w warn crop cuts the image's middle (focus 50%,50%): height at most 100 shows all, 200 half"
         ),
         "{w}"
     );
@@ -197,7 +196,7 @@ fn a_photo_sized_by_its_stack_is_told_its_min_height() {
     );
     let w = warnings(&s, None).unwrap();
     assert!(
-        w.contains("wide photo image 0,0 400×100 cover crop 75%h warn crop cuts the image's middle (focus 50%,50%): minHeight 200 shows half"),
+        w.contains("wide photo image 0,0 400×100 cover crop 75%h !crop cuts the image's middle (focus 50%,50%): needs 100px more here (minHeight 200 shows half, 400 all); above and below it: copy 100"),
         "{w}"
     );
 }
@@ -210,8 +209,8 @@ fn the_crop_fix_is_the_field_value_in_master_px() {
         json!([{"id": "band", "type": "image", "asset": "img", "width": 400, "height": 100}]),
     );
     let w = warnings(&s, None).unwrap();
-    assert!(w.contains("wide band image 0,0 400×100 cover crop 75%h warn crop cuts the image's middle (focus 50%,50%): height 200 shows half"), "{w}");
-    assert!(w.contains("small band image 0,0 200×50 cover crop 75%h warn crop cuts the image's middle (focus 50%,50%): height 200 shows half"), "{w}");
+    assert!(w.contains("wide band image 0,0 400×100 cover crop 75%h !crop cuts the image's middle (focus 50%,50%): needs 100px more here (height 200 shows half, 400 all)"), "{w}");
+    assert!(w.contains("small band image 0,0 200×50 cover crop 75%h !crop cuts the image's middle (focus 50%,50%): needs 50px more here (height 200 shows half, 400 all)"), "{w}");
 }
 
 #[test]
@@ -229,9 +228,9 @@ fn a_squeezed_photo_is_told_the_min_height_that_stops_the_squeeze() {
         describe(&s, Some("wide"), false, None).unwrap()
     };
     let w = band(json!({}));
-    assert!(w.contains("400×60 cover crop 85%h warn crop cuts the image's middle (focus 50%,50%): squeezed from 160 to 60: minHeight 200 shows half"), "{w}");
+    assert!(w.contains("400×60 cover crop 85%h !crop cuts the image's middle (focus 50%,50%): needs 140px more here (squeezed from 160 to 60: minHeight 200 shows half, 400 all)"), "{w}");
     let w = band(json!({"minHeight": 200}));
-    assert!(!w.contains("warn crop"), "following it fixes it: {w}");
+    assert!(!w.contains("crop cuts"), "following it fixes it: {w}");
 }
 
 #[test]
@@ -433,7 +432,7 @@ fn a_crop_says_which_side_it_takes_most_from() {
     );
     assert!(band(json!([0.5, 0.9])).contains("cover crop 75%h top "));
     // Centered: both sides alike, no side named.
-    assert!(band(json!([0.5, 0.5])).contains("cover crop 75%h warn"));
+    assert!(band(json!([0.5, 0.5])).contains("cover crop 75%h !crop"));
 }
 
 #[test]
@@ -626,7 +625,7 @@ fn a_cut_only_while_it_moves_says_when() {
             json!({"id": "photo", "type": "image", "asset": "img", "width": 300, "height": 120,
             "animate": {"scale": [1, 1.1], "duration": 6}})
         ),
-        "wide photo image 20,20 300×120 cover crop 60%h warn crop cuts the image's middle (focus 50%,50%): height 150 shows half\n"
+        "wide photo image 20,20 300×120 cover crop 60%h !crop cuts the image's middle (focus 50%,50%): needs 30px more here (height 150 shows half, 300 all)\n"
     );
 }
 

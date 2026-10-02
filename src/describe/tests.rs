@@ -176,11 +176,11 @@ fn small_text_and_upscaling_are_facts_not_warnings() {
         // A 400 px image covering 800 px; at half scale it's drawn 1:1.
         {"id": "big", "type": "image", "asset": "img", "y": 45, "width": 800, "height": 100}
     ]));
-    // The crop of an image this wide is an advisory of its own.
+    // The crop of an image this wide is a defect of its own.
     let w = warnings(&s, None).unwrap();
     assert!(
         w.lines()
-            .all(|l| l.contains(" big image ") && l.contains("warn crop")),
+            .all(|l| l.contains(" big image ") && l.contains("!crop")),
         "{w}"
     );
     assert_eq!(

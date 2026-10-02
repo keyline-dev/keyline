@@ -39,18 +39,19 @@ fn golden_check_tolerates_glyph_edges_but_not_changed_content() {
     assert!(why.starts_with("10000 of 1458000 pixels past"), "{why}");
 }
 
-/// The reference ad's advisories: its photo band cropped past half in the
-/// wide and sky sizes.
-const REFERENCE_CROPS: &str = "wide photo image 0,187 1200×244 cover crop 64%h warn crop cuts the image's middle (focus 50%,50%): squeezed from 391 to 244: minHeight 398 shows half\n\
-sky photo image 0,62 300×351 cover crop 52%w warn crop cuts the image's middle (focus 50%,50%): maxHeight 1205 shows half\n";
+/// The reference ad's crop problems: its photo band, squeezed in the wide
+/// size, cuts the photo's middle top and bottom (a defect, with what it
+/// needs and who shares its column); the sky size crops it at the sides.
+const REFERENCE_CROPS: &str = "wide photo image 0,187 1200×244 cover crop 64%h !crop cuts the image's middle (focus 50%,50%): needs 94px more here (squeezed from 391 to 244: minHeight 398 shows half, 795 all); above and below it: steps 247, headline 132, names 94, cta 85\n\
+sky photo image 0,62 300×351 cover crop 52%w warn crop cuts the image's middle (focus 50%,50%): maxHeight 602 shows all, 1205 half\n";
 
 #[tokio::test]
-async fn reference_ad_renders_all_sizes_without_defects() {
+async fn reference_ad_renders_all_sizes_with_its_crop_reported() {
     let mcp = Mcp::start("reference").await;
     let id = build_reference_ad(&mcp).await;
 
-    // No defects; the photo band's stretch constraint squeezes it in the
-    // wide and sky sizes, and cover then hides over half the photo.
+    // Only the photo band's crops: its stretch constraint squeezes it in
+    // the wide and sky sizes, and cover then hides over half the photo.
     let described = mcp.ok("scene_describe", json!({"sceneId": id})).await;
     assert_eq!(described, REFERENCE_CROPS);
     let described = mcp

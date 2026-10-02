@@ -146,7 +146,7 @@ async fn torn_edges_rough_strokes_and_halftone_look_hand_made() {
 }
 
 #[tokio::test]
-async fn a_band_too_short_for_its_photo_is_an_advisory() {
+async fn a_band_too_short_for_its_photo_is_a_defect() {
     let mcp = Mcp::start("crop-warn").await;
     let id = mcp
         .ok(
@@ -171,7 +171,7 @@ async fn a_band_too_short_for_its_photo_is_an_advisory() {
         )
         .await;
     assert!(
-        reply.contains("wide photo-band image 0,235 1200×238 cover crop 65%h warn crop cuts the image's middle (focus 50%,50%): height 338 shows half"),
+        reply.contains("wide photo-band image 0,235 1200×238 cover crop 65%h !crop cuts the image's middle (focus 50%,50%): needs 100px more here (height 338 shows half, 675 all)"),
         "{reply}"
     );
     // A taller band keeps most of it: the edit is clean.

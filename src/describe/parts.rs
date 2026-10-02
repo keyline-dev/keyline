@@ -330,7 +330,7 @@ fn column(p: &Placed, siblings: &[Placed]) -> String {
     let r = p.rect;
     let mut beside: Vec<&Placed> = siblings
         .iter()
-        .filter(|s| !std::ptr::eq(*s, p))
+        .filter(|s| !std::ptr::eq(*s, p) && s.rect.h >= 1.0)
         .filter(|s| {
             let o = s.rect;
             o.x < r.right()

@@ -438,13 +438,15 @@ fn a_styles_flex_direction_counts_for_the_frames_own_alignment() {
     });
     let stack = stack.expect("chip is a row");
     assert_eq!(stack.align, crate::scene::StackAlign::Center);
-    // Without a direction from anywhere, the frame at fault is named.
+    // Without a direction from anywhere, and a child placed by coordinates
+    // (so not read as a column), the frame at fault is named.
     let e = add_layers(
         &mut s,
         Shared::default(),
         vec![
             json!({"id": "outer", "type": "frame", "flexDirection": "column", "children": [
-            {"id": "lost", "type": "frame", "alignItems": "center"}]}),
+            {"id": "lost", "type": "frame", "alignItems": "center",
+             "children": [{"type": "text", "text": "Placed", "x": 4}]}]}),
         ],
     )
     .unwrap_err();
