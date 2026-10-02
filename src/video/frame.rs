@@ -62,6 +62,7 @@ pub fn at(scene: &Scene, t: f32, assets_dir: &Path) -> (Scene, Vec<Needed>) {
                     crop: *crop,
                     tile_scale: 1.0,
                     focus: *focus,
+                    subject: None,
                     adjust: *adjust,
                 };
             }

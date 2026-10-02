@@ -6,7 +6,15 @@ impl Kind {
     /// Keys a layer of this kind may carry, besides the common ones.
     fn keys(&self) -> &'static [&'static str] {
         match self {
-            Kind::Image { .. } => &["asset", "fit", "crop", "tileScale", "focus", "filter"],
+            Kind::Image { .. } => &[
+                "asset",
+                "fit",
+                "crop",
+                "tileScale",
+                "focus",
+                "subject",
+                "filter",
+            ],
             Kind::Video { .. } => &[
                 "asset",
                 "fit",

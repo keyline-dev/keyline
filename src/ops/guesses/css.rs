@@ -8,6 +8,27 @@ use serde_json::{Map, Value, json};
 /// The fields of a layer, a style or a `media` change.
 pub(super) fn fields(o: &mut Map<String, Value>) {
     padding(o);
+    margin(o);
+    // `place` in CSS's words: `bottom-center`, `center-left`, `middle`.
+    if let Some(Value::String(p)) = o.get_mut("place") {
+        let words: Vec<&str> = p.split(['-', ' ']).collect();
+        let v = words.iter().find(|w| matches!(**w, "top" | "bottom"));
+        let h = words.iter().find(|w| matches!(**w, "left" | "right"));
+        let known = words.iter().all(|w| {
+            matches!(
+                *w,
+                "top" | "bottom" | "left" | "right" | "center" | "centre" | "middle"
+            )
+        });
+        if known {
+            *p = match (v, h) {
+                (Some(v), Some(h)) => format!("{v}-{h}"),
+                (Some(v), None) => (*v).to_owned(),
+                (None, Some(h)) => (*h).to_owned(),
+                (None, None) => "center".to_owned(),
+            };
+        }
+    }
     for k in ["gap", "borderRadius", "fontSize"] {
         if let Some(n) = o.get(k).and_then(Value::as_str).and_then(px) {
             o.insert(k.into(), n.into());
@@ -78,6 +99,34 @@ fn padding(o: &mut Map<String, Value>) {
         }
     }
     o.insert("padding".into(), json!(sides));
+}
+
+/// CSS's margin, `[top, right, bottom, left]` (or one to four values in a
+/// string), on a placed layer: the scene's `[x, y]`, the sides facing its
+/// `place` edges (left unless placed right; top unless placed bottom).
+fn margin(o: &mut Map<String, Value>) {
+    let Some(place) = o.get("place").and_then(Value::as_str).map(str::to_owned) else {
+        return;
+    };
+    let sides: Option<Vec<f64>> = match o.get("margin") {
+        Some(Value::Array(a)) if a.len() > 2 => a.iter().map(Value::as_f64).collect(),
+        Some(Value::String(s)) => s.split_whitespace().map(px).collect(),
+        _ => return,
+    };
+    let [t, r, b, l] = match sides.as_deref() {
+        Some(&[a]) => [a; 4],
+        Some(&[v, h]) => [v, h, v, h],
+        Some(&[t, h, b]) => [t, h, b, h],
+        Some(&[t, r, b, l]) => [t, r, b, l],
+        _ => return,
+    };
+    let x = if place.ends_with("right") || place == "right" {
+        r
+    } else {
+        l
+    };
+    let y = if place.starts_with("bottom") { b } else { t };
+    o.insert("margin".into(), json!([x, y]));
 }
 
 /// Splits at the commas outside parentheses, as in `rgba(…)`.
@@ -162,13 +211,41 @@ fn border(s: &str) -> Option<Value> {
 fn stops(v: &mut Value) {
     match v {
         Value::Object(m) => {
-            if let Some(Value::Array(list)) = m.get_mut("stops") {
-                for stop in list.iter_mut().filter_map(Value::as_object_mut) {
-                    if !stop.contains_key("offset")
-                        && let Some(p) = stop.remove("position")
+            // A gradient's own fields written beside it: `{gradient: {…}, angle}`.
+            if m.get("gradient").is_some_and(Value::is_object) {
+                for k in ["angle", "type", "from", "to", "center", "radius"] {
+                    if let Some(v) = m.remove(k)
+                        && let Some(Value::Object(g)) = m.get_mut("gradient")
                     {
-                        stop.insert("offset".into(), p);
+                        g.entry(k).or_insert(v);
                     }
+                }
+            }
+            if let Some(Value::Array(list)) = m.get_mut("stops") {
+                // `[offset, color]` pairs.
+                for stop in list.iter_mut() {
+                    if let Value::Array(pair) = stop
+                        && let [o, c] = &pair[..]
+                        && o.is_number()
+                        && c.is_string()
+                    {
+                        *stop = json!({"offset": o, "color": c});
+                    }
+                }
+                for stop in list.iter_mut().filter_map(Value::as_object_mut) {
+                    for from in ["position", "at"] {
+                        if !stop.contains_key("offset")
+                            && let Some(p) = stop.remove(from)
+                        {
+                            stop.insert("offset".into(), p);
+                        }
+                    }
+                }
+                // `type: "linear-gradient"`, the CSS function's name.
+                if let Some(Value::String(t)) = m.get_mut("type")
+                    && let Some(kind) = t.strip_suffix("-gradient")
+                {
+                    *t = kind.to_owned();
                 }
             }
             m.values_mut().for_each(stops);
@@ -245,5 +322,62 @@ mod tests {
         assert_eq!(read(same.clone()), same);
         // Not a length: left for the scene's own error.
         assert_eq!(read(json!({"padding": "auto"})), json!({"padding": "auto"}));
+    }
+
+    #[test]
+    fn round_two_spellings_read_as_meant() {
+        // From the subject-test runs: CSS place names, an angle beside its
+        // gradient, stops as [offset, color] pairs.
+        assert_eq!(
+            read(json!({"place": "bottom-center"})),
+            json!({"place": "bottom"})
+        );
+        assert_eq!(
+            read(json!({"place": "center-left"})),
+            json!({"place": "left"})
+        );
+        assert_eq!(read(json!({"place": "middle"})), json!({"place": "center"}));
+        assert_eq!(
+            read(json!({"place": "left-top"})),
+            json!({"place": "top-left"})
+        );
+        assert_eq!(
+            read(json!({"place": "nowhere"})),
+            json!({"place": "nowhere"})
+        );
+        assert_eq!(
+            read(json!({"fill": {"gradient": {"stops": ["#000", "#fff"]}, "angle": 180}})),
+            json!({"fill": {"gradient": {"stops": ["#000", "#fff"], "angle": 180}}})
+        );
+        assert_eq!(
+            read(
+                json!({"fill": {"gradient": {"stops": [[0, "rgba(246,239,227,0)"], [1, "#F6EFE3"]]}}})
+            ),
+            json!({"fill": {"gradient": {"stops": [{"offset": 0, "color": "rgba(246,239,227,0)"}, {"offset": 1, "color": "#F6EFE3"}]}}})
+        );
+        assert_eq!(
+            read(
+                json!({"fill": {"type": "linear-gradient", "stops": [{"at": 0, "color": "#000"}, "#fff"]}})
+            ),
+            json!({"fill": {"type": "linear", "stops": [{"offset": 0, "color": "#000"}, "#fff"]}})
+        );
+    }
+
+    #[test]
+    fn a_css_margin_on_a_placed_layer_reads_as_its_x_y() {
+        // From the subject-test runs.
+        assert_eq!(
+            read(json!({"place": "bottom", "margin": [0, 0, 215, 90]})),
+            json!({"place": "bottom", "margin": [90.0, 215.0]})
+        );
+        assert_eq!(
+            read(json!({"place": "top-right", "margin": "40px 56px 0 0"})),
+            json!({"place": "top-right", "margin": [56.0, 40.0]})
+        );
+        // Not placed: left for its error, which says what to do instead.
+        assert_eq!(
+            read(json!({"margin": [34, 0, 0, 0]})),
+            json!({"margin": [34, 0, 0, 0]})
+        );
     }
 }

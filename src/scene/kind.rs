@@ -35,6 +35,11 @@ pub enum Kind {
         /// letterboxes, like CSS `object-position` (default center).
         #[serde(default = "center", skip_serializing_if = "is_center")]
         focus: [f32; 2],
+        /// What matters in the photo, `[x, y, width, height]`, 0–1 of its
+        /// width and height, as the agent saw it: a cover crop is aimed at it
+        /// at every size, over `focus`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        subject: Option<[f32; 4]>,
         /// Color adjustments (brightness, contrast, saturate, grayscale,
         /// sepia, hue, duotone, tint).
         #[serde(rename = "filter", default, skip_serializing_if = "Adjust::is_none")]
@@ -366,6 +371,14 @@ impl Kind {
             Kind::Video {
                 asset, fit, crop, ..
             } => Some((asset, *fit, crop.as_ref(), 1.0)),
+            _ => None,
+        }
+    }
+
+    /// An image's `subject`, in its px.
+    pub fn subject(&self) -> Option<[f32; 4]> {
+        match self {
+            Kind::Image { subject, .. } => *subject,
             _ => None,
         }
     }

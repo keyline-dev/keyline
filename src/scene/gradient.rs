@@ -106,7 +106,7 @@ fn stops<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Stop>, D::Error> 
                 };
                 Ok(Stop { at, color })
             }
-            other => Err(super::de::expected("a color or {at, color}", other)),
+            other => Err(super::de::expected("a color or {offset, color}", other)),
         })
         .collect()
 }

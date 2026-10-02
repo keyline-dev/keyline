@@ -6,28 +6,6 @@ use super::*;
 use serde_json::json;
 
 #[test]
-fn a_halftone_on_a_dark_page_is_hinted() {
-    let page = |bg: &str, layers: serde_json::Value| {
-        let mut s = scene(layers);
-        s.background = crate::scene::Color::parse(bg).unwrap();
-        halftone_hints(&s)
-    };
-    let dots = json!({"id": "photo", "type": "image", "asset": "img", "width": 100, "height": 100, "filter": {"halftone": 6}});
-    assert_eq!(
-        page("#141414", json!([dots.clone()])),
-        [
-            "hint: photo halftone draws black dots; on #141414 it barely shows (a light fill behind it, or duotone instead)"
-        ]
-    );
-    assert!(page("#FFFFFF", json!([dots.clone()])).is_empty());
-    // A light frame between the photo and the dark page.
-    assert!(
-        page("#141414", json!([{"type": "frame", "width": 200, "height": 200, "fill": "#F4EFE6", "children": [dots]}]))
-            .is_empty()
-    );
-}
-
-#[test]
 fn an_advisory_at_every_size_is_one_line_naming_the_text() {
     // An unnamed dim text at both sizes: one line, its words for a name.
     let s = scene(json!([
@@ -702,4 +680,55 @@ fn ink_on_ink_is_a_defect_and_ink_apart_is_not_judged() {
     assert!(!pair(55.0).contains("warn"), "{}", pair(55.0));
     // Overlapping ink is always wrong.
     assert!(pair(80.0).contains("!overlaps"), "{}", pair(80.0));
+}
+
+#[test]
+fn unsafe_text_says_how_far_it_reaches_under_the_bars() {
+    // A story's bottom 340 px are the platform's: a button at 1600 reaches
+    // 32 px under them (its letters, as drawn).
+    let mut s = scene(json!([
+        {"id": "cta", "type": "text", "text": "Book your place", "x": 40, "y": 1560, "fontSize": 40}
+    ]));
+    s.width = 1080.0;
+    s.height = 1920.0;
+    s.sizes.truncate(1);
+    s.sizes[0].width = 1080.0;
+    s.sizes[0].height = 1920.0;
+    s.sizes[0].safe = [250.0, 0.0, 340.0, 0.0];
+    let d = describe(&s, Some("wide"), false, None).unwrap();
+    let px: f32 = d
+        .split("!unsafe bottom ")
+        .nth(1)
+        .and_then(|r| r.split("px").next())
+        .and_then(|n| n.parse().ok())
+        .unwrap_or_else(|| panic!("{d}"));
+    assert!((1.0..60.0).contains(&px), "{d}");
+}
+
+#[test]
+fn a_marked_subject_steers_the_crop_and_says_how_much_shows() {
+    let band = |subject: serde_json::Value, h: u32| {
+        let mut l =
+            json!({"id": "band", "type": "image", "asset": "photo", "width": 400, "height": h});
+        if !subject.is_null() {
+            l["subject"] = subject;
+        }
+        let mut s = scene(json!([l]));
+        s.assets.insert(
+            "photo".into(),
+            serde_json::from_value(json!({"sha256": "x", "width": 1200, "height": 800})).unwrap(),
+        );
+        describe(&s, Some("wide"), true, None).unwrap()
+    };
+    // The barn sits high: the band moves up to it, all of it in view.
+    let d = band(json!([0.1, 0.1, 0.4, 0.2]), 80);
+    assert!(
+        d.contains("cover shows 1200×240 from 0,40 of 1200×800 (subject 100%)"),
+        "{d}"
+    );
+    // Taller than the band can show: what fits, said as a share.
+    let d = band(json!([0.0, 0.2, 1.0, 0.6]), 80);
+    assert!(d.contains("(subject 50%)"), "{d}");
+    // No subject marked: nothing said of one.
+    assert!(!band(serde_json::Value::Null, 80).contains("subject"));
 }

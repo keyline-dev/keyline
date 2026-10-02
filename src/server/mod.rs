@@ -124,7 +124,7 @@ fitting), fontWeight, color, fontFamily (Inter or any Google Font), textAlign, t
 fontSize), letterSpacing (px), fill (paints the letters, wins over color), textTransform, fontStyle, textDecoration, maxLines, textWrap balance|pretty, trim \
 \"cap\", highlight, padding, curve, leader (\".\" fills a tab gap), knockout. Text box: width+height → shrinks to fit \
 (minimumScaleFactor 0.5) then ellipsis; width → wraps down; neither → one line. \
-image: asset, fit cover|contain|fill|tile, focus [x,y], crop {x,y,width,height} 0–1, filter {brightness, contrast, \
+image: asset, fit cover|contain|fill|tile, focus [x,y], subject [x,y,w,h] 0–1 for crops, crop {x,y,width,height} 0–1, filter {brightness, contrast, \
 saturate (1 = unchanged), grayscale, sepia, hueRotate, duotone [dark, light], tint, halftone px}. icon: name, set \
 lucide|solid|regular|brands, color (24 px). rect, ellipse (arc {start, end, inner}), polygon (sides, innerRadius → \
 star), path (d, or shape: ribbon, bubble, arrow, chevron, tag, arch, shield, heart, cloud, wave, burst, blob-1…6, \
@@ -209,9 +209,15 @@ fadeOut}}} changes the scene."
 
     #[tool(
         description = "Problems per size, or ok. Defects: !truncated|!overflow (W×H) !clipped !hidden !overlaps !covered !unsafe \
-(safeArea). Advisory: warn contrast. full: the layout, a line per layer per size."
+(safeArea). Advisory: warn contrast. full: the layout."
     )]
     async fn scene_describe(&self, Parameters(a): Parameters<SceneDescribeArgs>) -> CallToolResult {
+        if let Some(asset) = &a.view {
+            return match self.view_impl(&a.scene_id, asset) {
+                Ok(content) => CallToolResult::success(content),
+                Err(e) => CallToolResult::error(vec![ContentBlock::text(e)]),
+            };
+        }
         let scene = self.store.load(&a.scene_id).map_err(err);
         // Text is measured in its real font, even one another process fetched.
         let fonts = match &scene {
@@ -229,9 +235,8 @@ fadeOut}}} changes the scene."
     }
 
     #[tool(
-        description = "Render each size (PNG, or format jpeg|webp|pdf). Returns each size's path and how wrapped, \
-shrunk or cut text was drawn; maxKB lowers quality to fit and says so; rows renders a variant per row of tokens. preview \
-adds one small image of all sizes."
+        description = "Render each size (PNG, or format jpeg|webp|pdf). Returns each size's path and layout as \
+drawn; maxKB lowers quality to fit; rows renders a variant per row of tokens. preview adds a small image of all sizes."
     )]
     async fn render(&self, Parameters(a): Parameters<RenderArgs>) -> CallToolResult {
         match self.render_impl(a).await {
@@ -287,7 +292,6 @@ pub(crate) fn notes(raw: &Scene, scene: &Scene) -> String {
     for hint in crate::ops::dollar_hints(raw)
         .into_iter()
         .chain(crate::text::markup::tag_hints(raw))
-        .chain(crate::describe::halftone_hints(scene))
         .chain(crate::describe::fill_hints(scene))
     {
         out.push('\n');

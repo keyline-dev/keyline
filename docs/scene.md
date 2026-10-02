@@ -186,6 +186,7 @@ See [Text](#text).
 | `asset` | string | required | An asset id from `asset_add` |
 | `fit` | `cover`, `contain`, `fill`, `tile` | `cover` | CSS `object-fit`: cover the box (cropping), contain it (letterboxed), stretch to it; or repeat |
 | `focus` | Point | [0.5, 0.5] | The point that stays in view when `cover` crops |
+| `subject` | `[x, y, width, height]`, 0–1 of the photo | none | What matters in the photo, as the agent saw it ([`scene_describe` with `view`](tools.md#scene_describe) shows the photo with rulers in these tenths). A `cover` crop is centred on it at every size, over `focus`, and the layout says how much of it is drawn: `(subject 94%)` |
 | `crop` | `{x, y, width, height}`, 0–1 of the image | none | Show only that part |
 | `tileScale` | number | 1 | Tile size for `tile`, × the image's size |
 | `filter` | Filter | none | [Filters](#filters) |

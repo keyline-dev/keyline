@@ -71,7 +71,7 @@ A **layer line** is `id type x,y w×h`, in px at that size, then:
 | `!overlaps <ids>` | defect | Text ink overlaps other text |
 | `!covered by <id> N%, …` | defect | An opaque layer drawn after the text (a filled frame, a shape, a photo; an outline with no fill, by its stroke only) covers this share of its ink. A layer made transparent at all, by its opacity, its fill's alpha or a parent's, doesn't count: a glow or tint is a choice, and `warn contrast` judges what it does to the text, or another text's highlight does (`name highlight 30%`); each one named once, the largest first |
 | `!leader "<left…>" meets "<right>"` | defect | In a `leader` line, the text before the tab runs into the text after it |
-| `!unsafe` | defect | Text's letters, as drawn (a rotation included), reach under the size's `safeArea` |
+| `!unsafe <side> <px>` | defect | Text's letters, as drawn (a rotation included), reach under the size's `safeArea`: how far past each edge they go, so one move fixes it (`!unsafe bottom 32px`) |
 | `warn contrast R:1 (WCAG N)` | advisory | Text contrast against what's behind it is below the WCAG level for its size. Knockout text is judged by what shows through its letters against the frame around them |
 | `warn shadow clipped by <frame>` | advisory | A frame that clips its content (`clipsContent`, on by default) cuts the layer's drop shadow; give it room (padding) or set `clipsContent: false` |
 
@@ -93,13 +93,7 @@ After the facts, one line per text that writes a token as `$name` rather than [`
 hint: did you mean {{price}}? (cta says $price)
 ```
 
-`scene_create` adds one per size at least twice the master's width with no `scale` (a print preset for a screen-sized master). A smaller difference gets no hint (a 1280 px size for a 1080 px master is laid out as is); if it doesn't fit, `!overflow` gives the size it needs:
-
-```text
-hint: a4-portrait is 2.3× the master's width; give it "scale": 2.3 to keep the layout's proportions
-```
-
-And an edit, one per style used as a markup tag whose fields a tag can't carry (a tag carries `color`, `fontWeight`, `fontStyle`, `fontSize`, `fontFamily`, `textDecoration` and `highlight`). A dropped `media` adds what to do instead: `; set per-size text in the layer's media`.
+An edit adds one per style used as a markup tag whose fields a tag can't carry (a tag carries `color`, `fontWeight`, `fontStyle`, `fontSize`, `fontFamily`, `textDecoration` and `highlight`). A dropped `media` adds what to do instead: `; set per-size text in the layer's media`.
 
 ```text
 hint: <accent> drops letterSpacing (a tag carries color, fontWeight, fontStyle, fontSize, fontFamily, textDecoration, highlight)
@@ -109,12 +103,6 @@ One per text with both a `color` and a different plain `fill`, since the fill pa
 
 ```text
 hint: chip fill paints the letters (its color is unused); a box behind text is a frame with a fill
-```
-
-One per image drawn as a `halftone` over a dark background (its closest frame's plain fill, else the canvas), since the dots are black:
-
-```text
-hint: photo halftone draws black dots; on #141414 it barely shows (a light fill behind it, or duotone instead)
 ```
 
 ### Drawn-text lines
@@ -248,6 +236,7 @@ smallest text: instagram-portrait 48px (cta), sky 19px (cta)
 | `sceneId` | string, required | | The scene |
 | `size` | string | all sizes | One size id |
 | `full` | boolean | false | Every layer's box, not just the problems |
+| `view` | string | | An image asset's id: returns that photo, 512 px wide, with rulers and faint lines at each tenth of its width and height, the units [`subject`](scene.md#image) takes. The way to see what's in a photo, and where, before framing it |
 
 Reply: `ok`, or one [problem line](#problem-lines) per problem. With `full`, the assets (a clip with its length and `sound`), then each size and every [layer line](#problem-lines) at it, indented by nesting:
 

@@ -123,9 +123,8 @@ async fn edits_are_batched_atomic_and_terse() {
     // agent to judge.
     let (status, rest) = reply.split_once('\n').expect("status and facts");
     assert!(status.len() < 60, "{reply}");
-    let facts = rest;
     assert_eq!(
-        facts,
+        rest,
         "smallest text: portrait 30px (text2), wide 26px (text2), sky 8.4px (text2)"
     );
 

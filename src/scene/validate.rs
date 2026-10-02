@@ -419,7 +419,7 @@ fn check_lengths(l: &Layer) -> Result<(), String> {
         return Err("flexGrow must be >= 0".into());
     }
     if l.inset.is_some() && l.place.is_none() {
-        return Err("margin needs place; in a stack, space children with gap or padding".into());
+        return Err("margin is [x, y] from a place edge; a stack child takes none: use the stack's gap or padding, or wrap it in a frame with padding".into());
     }
     if let Kind::Spacer { min_length } = l.kind
         && min_length < 0.0

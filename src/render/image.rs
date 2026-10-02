@@ -207,6 +207,39 @@ pub(super) fn svg_image(bytes: &[u8], pw: u32, ph: u32) -> Result<Image> {
         .ok_or_else(|| anyhow!("can't wrap SVG raster"))
 }
 
+/// `focus` aimed at `subject` (0–1 of the image) for a cover crop in `bx`:
+/// the window, the box's shape as large as the image (or its `crop`)
+/// allows, centred on the subject and kept inside the image. Without a
+/// subject, or when nothing is cropped on an axis, `focus` as given.
+pub fn aim(
+    focus: [f32; 2],
+    subject: Option<[f32; 4]>,
+    bx: Rect,
+    (iw, ih): (f32, f32),
+    crop: Option<&Crop>,
+) -> [f32; 2] {
+    let Some([sx, sy, sw, sh]) = subject else {
+        return focus;
+    };
+    let (sx, sy, sw, sh) = (sx * iw, sy * ih, sw * iw, sh * ih);
+    let (rx, ry, rw, rh) = crop.map_or((0.0, 0.0, iw, ih), |c| {
+        (c.x * iw, c.y * ih, c.width * iw, c.height * ih)
+    });
+    let s = (bx.w / rw).max(bx.h / rh);
+    let (vw, vh) = (bx.w / s, bx.h / s);
+    let along = |f: f32, region: f32, view: f32, centre: f32| {
+        if region - view > 0.5 {
+            ((centre - view / 2.0) / (region - view)).clamp(0.0, 1.0)
+        } else {
+            f
+        }
+    };
+    [
+        along(focus[0], rw, vw, sx + sw / 2.0 - rx),
+        along(focus[1], rh, vh, sy + sh / 2.0 - ry),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,5 +317,44 @@ mod tests {
         let svg = br#"<svg xmlns="http://www.w3.org/2000/svg" width="50" height="40"><rect width="50" height="40"/></svg>"#;
         assert_eq!(svg_size(svg).unwrap(), (50.0, 40.0));
         assert!(svg_size(b"not svg").is_err());
+    }
+
+    #[test]
+    fn a_crop_is_aimed_at_the_subject() {
+        // A 1600×1000 photo in a 1200×300 band shows 1600×400 of it.
+        let band = r(0.0, 0.0, 1200.0, 300.0);
+        let photo = (1600.0, 1000.0);
+        // No subject: focus as given.
+        assert_eq!(aim([0.5, 0.5], None, band, photo, None), [0.5, 0.5]);
+        // A subject from 30% to 60% down: the window centres on 45%.
+        let f = aim([0.5, 0.5], Some([0.0, 0.3, 1.0, 0.3]), band, photo, None);
+        let top = (1000.0 - 400.0) * f[1];
+        assert!((top + 200.0 - 450.0).abs() < 0.5, "{f:?}");
+        // Near an edge, the window stops at the photo's edge.
+        assert_eq!(
+            aim([0.5, 0.5], Some([0.0, 0.0, 1.0, 0.1]), band, photo, None)[1],
+            0.0
+        );
+        // Nothing is cropped across: focus x stays.
+        assert_eq!(
+            aim([0.2, 0.5], Some([0.6, 0.3, 0.2, 0.3]), band, photo, None)[0],
+            0.2
+        );
+        // Within a hand-picked crop (the bottom half), the window slides only
+        // inside it: low as it goes, 600–1000, to hold a subject at 800–900.
+        let c = Crop {
+            x: 0.0,
+            y: 0.5,
+            width: 1.0,
+            height: 0.5,
+        };
+        let f = aim(
+            [0.5, 0.5],
+            Some([0.0, 0.8, 1.0, 0.1]),
+            band,
+            photo,
+            Some(&c),
+        );
+        assert_eq!(f[1], 1.0, "{f:?}");
     }
 }

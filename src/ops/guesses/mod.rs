@@ -43,9 +43,10 @@ pub(crate) fn normalize(v: &mut Value) {
     }
     line_ends(o);
     shot(o);
-    flow(o);
     let kind = o.get("type").and_then(Value::as_str).map(str::to_owned);
     fields(o, kind.as_deref());
+    // After the CSS forms, so `paddingTop` and the like count as padding.
+    flow(o);
     if let Some(Value::Object(media)) = o.get_mut("media") {
         for patch in media.values_mut().filter_map(Value::as_object_mut) {
             fields(patch, kind.as_deref());

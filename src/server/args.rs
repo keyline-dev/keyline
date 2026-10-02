@@ -88,6 +88,8 @@ pub struct SceneDescribeArgs {
     /// Every layer's box, not just warnings.
     #[serde(default)]
     pub(super) full: bool,
+    /// Image id: the photo, with px rulers.
+    pub(super) view: Option<String>,
 }
 
 #[derive(Deserialize, schemars::JsonSchema)]

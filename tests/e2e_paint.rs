@@ -233,3 +233,62 @@ async fn a_css_radial_glow_sits_where_css_puts_it() {
     assert!(at(40, 360) < 10, "dark in the far corner: {}", at(40, 360));
     mcp.stop().await;
 }
+
+#[tokio::test]
+async fn an_agent_looks_at_a_photo_and_marks_its_subject() {
+    let mcp = Mcp::start("subject").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 1200, "height": 600, "sizes": [{"id": "wide", "width": 1200, "height": 600}]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    mcp.ok(
+        "asset_add",
+        json!({"sceneId": id, "id": "photo", "base64": b64(&photo_png())}),
+    )
+    .await;
+    // The look: the photo, with rulers in the tenths `subject` reads.
+    let view = serde_json::to_value(
+        mcp.call_raw("scene_describe", json!({"sceneId": id, "view": "photo"}))
+            .await,
+    )
+    .unwrap();
+    let content = view["content"].as_array().unwrap();
+    assert!(
+        content[0]["text"]
+            .as_str()
+            .unwrap()
+            .starts_with("photo 1600×900; rulers in tenths"),
+        "{view}"
+    );
+    assert_eq!(content[1]["mimeType"], "image/png", "{view}");
+    // A band 1200×240 shows 1600×320 of the photo; its subject, marked high,
+    // pulls the window up.
+    mcp.ok(
+        "layer_add",
+        json!({"sceneId": id, "layers": [{"id": "band", "type": "image", "asset": "photo", "width": 1200, "height": 240,
+            "subject": [0.2, 0.05, 0.5, 0.25]}]}),
+    )
+    .await;
+    let full = mcp
+        .ok("scene_describe", json!({"sceneId": id, "full": true}))
+        .await;
+    assert!(
+        full.contains(
+            "band image 0,0 1200×240 cover shows 1600×320 from 0,0 of 1600×900 (subject 100%)"
+        ),
+        "{full}"
+    );
+    assert!(
+        mcp.call("scene_describe", json!({"sceneId": id, "view": "nope"}))
+            .await
+            .unwrap_err()
+            .contains("no asset nope")
+    );
+    mcp.stop().await;
+}

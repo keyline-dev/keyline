@@ -59,9 +59,6 @@ impl Server {
             // template (and the CLI) gets them too.
             out.push_str(&super::notes(&scene, &resolved));
         }
-        for hint in crate::describe::scale_hints(&scene) {
-            let _ = write!(out, "\n{hint}");
-        }
         // Said up front, so the agent doesn't plan a video it can't make;
         // looked up now, since ffmpeg can be installed while the server runs.
         if self.motion && crate::video::ffmpeg().is_err() {
@@ -141,6 +138,70 @@ impl Server {
             svg,
             clip,
         })
+    }
+
+    /// Photo `asset` as the agent can look at it: 512 px wide, with
+    /// rulers and faint lines every step of its own px, so what it sees can
+    /// be told back as a `subject` box.
+    // ponytail: built as a small scene and rendered, rulers and all.
+    pub(super) fn view_impl(
+        &self,
+        scene_id: &str,
+        asset: &str,
+    ) -> Result<Vec<ContentBlock>, String> {
+        let scene = self.store.load(scene_id).map_err(err)?;
+        let a = scene
+            .assets
+            .get(asset)
+            .ok_or_else(|| format!("no asset {asset}"))?;
+        let (iw, ih) = (a.width, a.height);
+        let k = 512.0 / iw;
+        let (left, top) = (44.0_f32, 22.0_f32);
+        let (w, h) = ((left + 512.0 + 24.0).round(), (top + ih * k + 10.0).round());
+        // Tenths of the photo's width and height, as `subject` reads them.
+        let label = |t: f32| {
+            if t == 0.0 || t >= 1.0 {
+                format!("{}", t.round())
+            } else {
+                format!("{t:.1}")
+            }
+        };
+        let mut layers = vec![
+            serde_json::json!({"type": "rect", "width": "fill", "height": "fill", "fill": "#FFFFFF"}),
+            serde_json::json!({"type": "image", "asset": asset, "x": left, "y": top, "width": 512, "height": ih * k, "fit": "fill"}),
+        ];
+        for i in 0..=10 {
+            let t = i as f32 / 10.0;
+            let x = left + t * 512.0;
+            layers.push(serde_json::json!({"type": "rect", "x": x, "y": top, "width": 1, "height": ih * k, "fill": "#FFFFFF66"}));
+            layers.push(serde_json::json!({"type": "text", "text": label(t), "x": x - 20.0, "y": 3, "width": 40, "fontSize": 11, "textAlign": "center", "color": "#111111"}));
+        }
+        for i in 0..=10 {
+            let t = i as f32 / 10.0;
+            let y = top + t * ih * k;
+            layers.push(serde_json::json!({"type": "rect", "x": left, "y": y, "width": 512, "height": 1, "fill": "#FFFFFF66"}));
+            layers.push(serde_json::json!({"type": "text", "text": label(t), "x": 0, "y": y - 7.0, "width": left - 4.0, "fontSize": 11, "textAlign": "right", "color": "#111111"}));
+        }
+        let view: Scene = serde_json::from_value(serde_json::json!({
+            "width": w, "height": h,
+            "sizes": [{"id": "view", "width": w, "height": h}],
+            "assets": {asset: a},
+            "layers": layers,
+        }))
+        .map_err(|e| e.to_string())?;
+        let size = view.sizes.first().ok_or("no size")?.clone();
+        let image =
+            render_image(&view, &size, 1.0, &self.store.assets_dir(), false).map_err(err)?;
+        let png = encode(&image, Format::Png, 90, None).map_err(err)?.bytes;
+        Ok(vec![
+            ContentBlock::text(format!(
+                "{asset} {iw}×{ih}; rulers in tenths of its width and height, as subject reads them"
+            )),
+            ContentBlock::image(
+                base64::engine::general_purpose::STANDARD.encode(png),
+                "image/png",
+            ),
+        ])
     }
 
     /// The tool's reply, and the files it wrote.

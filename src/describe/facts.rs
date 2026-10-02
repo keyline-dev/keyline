@@ -75,61 +75,6 @@ fn px_label(px: f32) -> String {
     }
 }
 
-/// A hint per size at least twice the master's width with no `scale`
-/// (a print preset for a screen-sized master): laid out in master px, the
-/// design would sit small in its corner.
-pub fn scale_hints(scene: &Scene) -> Vec<String> {
-    scene
-        .sizes
-        .iter()
-        .filter(|s| (s.scale - 1.0).abs() < 1e-6 && s.width >= 2.0 * scene.width)
-        .map(|s| {
-            let k = (s.width / scene.width * 100.0).round() / 100.0;
-            format!(
-                "hint: {} is {k}× the master's width; give it \"scale\": {k} to keep the layout's proportions",
-                s.id
-            )
-        })
-        .collect()
-}
-
-/// A hint per image drawn as a halftone over a dark background (its
-/// closest frame's plain fill, else the canvas): the dots are black, so
-/// the picture all but vanishes.
-pub fn halftone_hints(scene: &Scene) -> Vec<String> {
-    fn go(layers: &[crate::scene::Layer], under: crate::scene::Color, out: &mut Vec<String>) {
-        for l in layers {
-            if let Kind::Image { adjust, .. } = &l.kind
-                && adjust.halftone > 0.0
-            {
-                let [_, r, g, b] = under.0.to_be_bytes();
-                if super::contrast::luminance([r, g, b]) < 0.2 {
-                    out.push(format!(
-                        "hint: {} halftone draws black dots; on {under} it barely shows (a light fill behind it, or duotone instead)",
-                        l.id
-                    ));
-                }
-            }
-            if let Some(children) = l.kind.children() {
-                let fill = l
-                    .look
-                    .fills
-                    .as_ref()
-                    .and_then(|f| match f.as_slice().last() {
-                        Some(crate::scene::Paint::Solid(s)) if s.color.0 >> 24 == 0xFF => {
-                            Some(s.color)
-                        }
-                        _ => None,
-                    });
-                go(children, fill.unwrap_or(under), out);
-            }
-        }
-    }
-    let mut out = Vec::new();
-    go(&scene.layers, scene.background, &mut out);
-    out
-}
-
 /// The lowest resolution of `scene`'s photos on a page `pt` points per
 /// px, dots per inch, as embedded (300 at most): what print cares about. `None` without one.
 pub fn image_dpi(scene: &Scene, size: &Size, pt: f32) -> Option<f32> {

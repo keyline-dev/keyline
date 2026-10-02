@@ -100,7 +100,7 @@ impl<'de> Deserialize<'de> for Inset {
         super::de::float(&v)
             .map(Inset::Both)
             .or_else(|| super::de::floats(&v).map(Inset::Axes))
-            .ok_or_else(|| super::de::expected("margin px or [x, y]", &v))
+            .ok_or_else(|| super::de::expected("margin px or [x, y] from a place edge (a stack child takes none: the stack's gap or padding, or a frame with padding around it)", &v))
     }
 }
 

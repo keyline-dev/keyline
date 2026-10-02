@@ -44,9 +44,7 @@ use overlap::{covers, ink, overlaps};
 use parts::{motion, motion_cut, shadow_cut, text_cut};
 use views::{hide, knockout_frames, unplayed, views};
 
-pub use facts::{
-    facts, facts_for, fill_hints, fonts_line, halftone_hints, image_dpi, scale_hints, text_report,
-};
+pub use facts::{facts, facts_for, fill_hints, fonts_line, image_dpi, text_report};
 
 /// `assets` enables the contrast check, which renders each size without its
 /// text and samples what lies behind every text. `None` skips it.
@@ -400,8 +398,19 @@ fn line(
             // What the platform's bars would cover: the letters, where
             // they're drawn (rotated, scaled or moved, the box around them).
             let letters = overlap::mapped(m, ink(p).unwrap_or(r));
-            if checks.safe.is_some_and(|safe| !contains(safe, letters)) {
+            // How far its letters reach under each bar, so the fix is one move.
+            if let Some(safe) = checks.safe.filter(|safe| !contains(*safe, letters)) {
                 out.push_str(" !unsafe");
+                for (side, px) in [
+                    ("top", safe.y - letters.y),
+                    ("bottom", letters.bottom() - safe.bottom()),
+                    ("left", safe.x - letters.x),
+                    ("right", letters.right() - safe.right()),
+                ] {
+                    if px > 0.5 {
+                        let _ = write!(out, " {side} {}px", px.ceil());
+                    }
+                }
             }
             if let Some(others) = checks.overlaps.get(l.id.as_str()).filter(|_| !clip.quiet) {
                 let _ = write!(out, " !overlaps {}", others.join(","));
@@ -436,7 +445,13 @@ fn line(
                 // What part of the image is in view, as the agent's eyes:
                 // no verdict, it knows what's in its photo.
                 if fit == Fit::Cover {
-                    let focus = kind.focus().unwrap_or([0.5, 0.5]);
+                    let focus = crate::render::aim(
+                        kind.focus().unwrap_or([0.5, 0.5]),
+                        kind.subject(),
+                        r,
+                        (a.width, a.height),
+                        crop,
+                    );
                     let c = crop.map_or([0.0, 0.0, 1.0, 1.0], |c| [c.x, c.y, c.width, c.height]);
                     let (rw, rh) = (a.width * c[2], a.height * c[3]);
                     let s = (r.w / rw).max(r.h / rh);
@@ -455,6 +470,17 @@ fn line(
                         n(a.width),
                         n(a.height)
                     );
+                    // How much of the subject the agent marked is drawn.
+                    if let Some([sx, sy, sw, sh]) = kind
+                        .subject()
+                        .map(|[x, y, w, h]| [x * a.width, y * a.height, w * a.width, h * a.height])
+                    {
+                        let (wx, wy) = (x0 * a.width, y0 * a.height);
+                        let ix = (sx + sw).min(wx + vw) - sx.max(wx);
+                        let iy = (sy + sh).min(wy + vh) - sy.max(wy);
+                        let share = ix.max(0.0) * iy.max(0.0) / (sw * sh).max(1.0);
+                        let _ = write!(out, " (subject {}%)", (share * 100.0).round());
+                    }
                 }
                 let up = image_scale(r, a.width, a.height, fit, crop, tile_scale * p.k);
                 if !a.svg && up > 1.005 {

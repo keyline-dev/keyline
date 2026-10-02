@@ -355,21 +355,6 @@ fn text_cut_at_max_lines_says_a_height_would_shrink_it() {
 }
 
 #[test]
-fn a_print_size_for_a_screen_master_hints_at_a_scale() {
-    let s: Scene = serde_json::from_value(json!({"width": 1080, "height": 1350,
-        "sizes": [{"id": "a4-portrait", "width": 2480, "height": 3508},
-            {"id": "a4-scaled", "width": 2480, "height": 3508, "scale": 2.3},
-            {"id": "post", "width": 1080, "height": 1350}], "layers": []}))
-    .unwrap();
-    assert_eq!(
-        super::scale_hints(&s),
-        [
-            r#"hint: a4-portrait is 2.3× the master's width; give it "scale": 2.3 to keep the layout's proportions"#
-        ]
-    );
-}
-
-#[test]
 fn text_report_shows_only_wrapped_shrunk_or_cut_text() {
     let s = scene(json!([
         {"id": "plain", "type": "text", "text": "Short", "fontSize": 20},

@@ -196,7 +196,7 @@ fn bad_clamps_and_ratios_are_rejected() {
     assert!(bad(json!({"minWidth": 50, "maxWidth": 10})).contains("minWidth must be <= maxWidth"));
     assert!(bad(json!({"aspectRatio": 0})).contains("aspectRatio must be > 0"));
     assert!(bad(json!({"width": -5})).contains("width and height must be >= 0"));
-    assert!(bad(json!({"margin": 4})).contains("margin needs place; in a stack"));
+    assert!(bad(json!({"margin": 4})).contains("a stack child takes none"));
 }
 
 #[test]
