@@ -93,6 +93,12 @@ pub async fn references() -> PathBuf {
     std::fs::create_dir_all(root.join("chrome")).unwrap();
     let mcp = Mcp::start("vs-ref").await;
     let scene = common::build_reference_ad(&mcp).await;
+    // The same layout with the photo the agents get (an existing id is replaced).
+    mcp.ok(
+        "asset_add",
+        json!({"sceneId": scene, "id": "photo", "base64": common::b64(&crate::asset("photo"))}),
+    )
+    .await;
     let rendered = mcp.ok("render", json!({"sceneId": scene})).await;
     for (size, path) in common::files(&rendered) {
         std::fs::copy(path, root.join(format!("keyline/{size}.png"))).unwrap();

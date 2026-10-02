@@ -1,9 +1,9 @@
-//! The benchmark's prompts, frozen before the counted runs (written for
-//! `vs1`; `vs2` reran them unchanged on a newer keyline). Every arm gets the same system prompt and task body; only the
+//! The benchmark's prompts, frozen before the counted runs (`vs1` and `vs2`
+//! drew the flyer's photo; from `vs3` it is a real photo). Every arm gets the same system prompt and task body; only the
 //! tools paragraph differs.
 
 /// Prompt version; runs are compared only with runs on the same version.
-pub const VERSION: &str = "vs2";
+pub const VERSION: &str = "vs3";
 
 /// The system prompt, the same for every arm.
 pub const SYSTEM: &str = "You make images. Work autonomously; don't ask questions.";
@@ -83,7 +83,7 @@ impl Task {
     pub fn assets(self) -> &'static [(&'static str, &'static str)] {
         match self {
             Task::ReferenceAd => &[
-                ("photo", "photo.png"),
+                ("photo", "photo.jpg"),
                 ("mail", "mail.svg"),
                 ("check", "check.svg"),
             ],
@@ -146,7 +146,7 @@ browser tools and save {pngs} in this folder, at exactly those pixel sizes."
 const REFERENCE_AD: &str = "Build a vote-by-mail flyer at three sizes and produce one PNG per size.
 Sizes: portrait 1080×1350 (master), wide 1200×1000 with content at 0.85× the master's scale, \
 sky 300×600 with content at 0.28× scale.
-Assets: photo (1600×900 landscape photo), mail (white envelope icon, 56×44 SVG), \
+Assets: photo (1600×1000 photo: a farmhouse in a field at sunrise), mail (white envelope icon, 56×44 SVG), \
 check (red check-circle icon, 40×40 SVG). Font: Inter.
 
 {tools}
@@ -200,7 +200,7 @@ mod tests {
             assert!(task.content().contains("6. "));
         }
         let t = tools(Arm::BrowserCli, Task::ReferenceAd, "/w", 0);
-        assert!(t.contains("photo.png, mail.svg, check.svg and Inter.ttf"));
+        assert!(t.contains("photo.jpg, mail.svg, check.svg and Inter.ttf"));
         assert!(t.contains("portrait.png, wide.png and sky.png"));
         let t = tools(Arm::Keyline, Task::SpeakerCard, "s1", 0);
         assert!(t.contains("(ids logo, portrait)"));

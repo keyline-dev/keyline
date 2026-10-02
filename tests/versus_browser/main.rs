@@ -35,6 +35,9 @@ use std::process::Stdio;
 use std::time::Duration;
 
 use common::{CHECK_SVG, MAIL_SVG, Mcp, b64, photo_png};
+
+/// The flyer's photo: a real one (credits in `bench/photos/CREDITS.md`).
+const FARMHOUSE_JPG: &str = "bench/photos/farmhouse.jpg";
 use prompts::{Arm, SYSTEM, Task};
 use serde_json::{Value, json};
 use tokio::io::AsyncReadExt;
@@ -70,9 +73,10 @@ fn tooling_bin() -> PathBuf {
 }
 
 /// An asset's bytes, the same for every arm.
-fn asset(id: &str) -> Vec<u8> {
+pub fn asset(id: &str) -> Vec<u8> {
     match id {
-        "photo" => photo_png(),
+        "photo" => std::fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join(FARMHOUSE_JPG))
+            .expect("read the flyer's photo"),
         "mail" => MAIL_SVG.as_bytes().to_vec(),
         "check" => CHECK_SVG.as_bytes().to_vec(),
         "logo" => speaker::LOGO_SVG.as_bytes().to_vec(),
