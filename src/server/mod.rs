@@ -40,7 +40,6 @@ make one shorter at that size (media) or let it grow less. A top-level frame wit
 already covers the canvas and clips at every size. \
 The server's checks are the verification: render once at the end, and its reply shows how wrapped, shrunk or \
 cut text came out. To judge the look, render with preview, not by opening the files. \
-When checks pass, preview once and refine the design: depth, hierarchy, balance, space. \
 An animation's reply states its length, frames and looping; opened, it shows only its first frame. \
 Omit fields that match defaults. When done, reply in one short line.";
 

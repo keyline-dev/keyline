@@ -822,3 +822,38 @@ fn drawn_lines_cover_every_shot() {
     let r = text_report(&s, &s.sizes[0]);
     assert!(r.contains(r#" acts 40px: "Deep" / "Orchard""#), "{r}");
 }
+
+#[test]
+fn only_an_opaque_layer_covers_text() {
+    // The speaker-card agent's glow: a violet frame at 22% over the name,
+    // blurred. Reported as covering, it was moved, faded, then deleted.
+    let over = |glow: serde_json::Value| {
+        let mut layers = vec![
+            json!({"id": "name", "type": "text", "text": "Maya Okonkwo", "x": 40, "y": 40, "fontSize": 40}),
+        ];
+        let mut g =
+            json!({"id": "glow", "type": "frame", "x": 0, "y": 0, "width": 400, "height": 200});
+        g.as_object_mut()
+            .unwrap()
+            .extend(glow.as_object().unwrap().clone());
+        layers.push(g);
+        describe(&scene(json!(layers)), Some("wide"), false, None).unwrap()
+    };
+    // Made transparent at all, by its opacity, its fill or a parent's: the
+    // agent's choice, for the contrast check to judge.
+    for glow in [
+        json!({"fill": "#7C5CFF", "opacity": 0.22, "blur": 200}),
+        json!({"fill": "#7C5CFF", "opacity": 0.9}),
+        json!({"fill": "#7C5CFF80"}),
+        json!({"fill": "radial-gradient(#7C5CFFCC, #7C5CFF00)"}),
+    ] {
+        let d = over(glow.clone());
+        assert!(!d.contains("!covered"), "{glow}: {d}");
+    }
+    // Opaque, it hides the name.
+    let d = over(json!({"fill": "#7C5CFF"}));
+    assert!(
+        d.contains("name text") && d.contains("!covered by glow"),
+        "{d}"
+    );
+}

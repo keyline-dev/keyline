@@ -108,18 +108,29 @@ enum Over<'s> {
     Outline(&'s str, skia_safe::Path),
 }
 
+/// Opaque, allowing for an 8-bit alpha's rounding.
+const OPAQUE: f32 = 0.995;
+
 /// Texts whose ink a later-drawn layer covers by more than a pixel each
-/// way: a non-text layer with paint, or another text's highlight. Each
+/// way: a non-text layer with opaque paint, or another text's highlight.
+/// A layer made transparent at all (a glow, a tint, a scrim) was made so
+/// on purpose; the contrast check reads what it does to the text. Each
 /// coverer once, with the share of the text's ink box it covers, largest
 /// first: `toast 62%`, `name highlight 30%`. Text on text is `!overlaps`.
 pub(super) fn covers<'s>(
     scene: &crate::scene::Scene,
     placed: &[Placed<'s>],
 ) -> HashMap<&'s str, Vec<(String, f32)>> {
-    fn collect<'s>(order: &mut Vec<Over<'s>>, masks: &[String], placed: &[Placed<'s>], m: &Matrix) {
+    fn collect<'s>(
+        order: &mut Vec<Over<'s>>,
+        masks: &[String],
+        placed: &[Placed<'s>],
+        (m, alpha): (&Matrix, f32),
+    ) {
         for p in placed {
             let own = through(m, p);
             let l = p.layer;
+            let alpha = alpha * l.opacity;
             let shown = !l.hidden && l.opacity > 0.0 && !masks.contains(&l.id);
             if shown && let Some(ink) = ink(p).filter(|_| visible(p)) {
                 order.push(Over::Text(
@@ -127,7 +138,7 @@ pub(super) fn covers<'s>(
                     mapped(&own, ink),
                     highlight_boxes(p, &own),
                 ));
-            } else if shown && painted(p) {
+            } else if shown && painted(p) && alpha * paint_alpha(p) >= OPAQUE {
                 match outline_only(p)
                     .then(|| crate::render::stroke_ink(p))
                     .flatten()
@@ -137,7 +148,7 @@ pub(super) fn covers<'s>(
                 }
             }
             if shown {
-                collect(order, masks, &p.children, &own);
+                collect(order, masks, &p.children, (&own, alpha));
             }
         }
     }
@@ -152,7 +163,7 @@ pub(super) fn covers<'s>(
         }
     });
     let mut order = Vec::new();
-    collect(&mut order, &masks, placed, &Matrix::new_identity());
+    collect(&mut order, &masks, placed, (&Matrix::new_identity(), 1.0));
     let share = |ink: Rect, r: Rect| {
         intersect(ink, r)
             .filter(|x| x.w > 1.0 && x.h > 1.0)
@@ -230,6 +241,41 @@ fn painted(p: &Placed) -> bool {
         _ if shape(p) => filled || stroked,
         _ => true,
     }
+}
+
+/// How opaque a frame's or shape's own paint is at its most: its fills'
+/// strongest alpha (a gradient's strongest stop), 1 with a stroke. Other
+/// layers (a photo, an icon, a line) count as opaque.
+fn paint_alpha(p: &Placed) -> f32 {
+    use crate::scene::Paint;
+    let look = &p.layer.look;
+    let frame = matches!(p.layer.kind, crate::scene::Kind::Frame { .. });
+    let stroked = look
+        .strokes
+        .as_ref()
+        .is_some_and(|s| !s.as_slice().is_empty());
+    if !(frame || shape(p)) || stroked {
+        return 1.0;
+    }
+    let alpha =
+        |c: crate::scene::Color| f32::from(u8::try_from(c.0 >> 24).unwrap_or(u8::MAX)) / 255.0;
+    look.fills.as_ref().map_or(0.0, |f| {
+        f.as_slice()
+            .iter()
+            .map(|paint| match paint {
+                Paint::Solid(s) => alpha(s.color) * s.opacity,
+                Paint::Gradient(g) => {
+                    g.gradient
+                        .stops
+                        .iter()
+                        .map(|s| alpha(s.color))
+                        .fold(0.0, f32::max)
+                        * g.opacity
+                }
+                _ => 1.0,
+            })
+            .fold(0.0, f32::max)
+    })
 }
 
 /// Whether a shape draws only its stroke: no fill given, or clear ones.
