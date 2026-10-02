@@ -30,6 +30,7 @@ Server-side image composition engine driven by an AI agent over MCP.
 - No worktrees: finish the current work, then run anything else (benchmarks included) in the main tree.
 - No pull requests: commit straight to `main`; when work happens on a branch, squash it into one commit on `main`.
 - Run the reference-ad benchmark (3 runs, see Commands) before committing anything that changes what the agent sees: tool text, instructions, replies, field names. Report the numbers and wait for the owner's approval.
+- After any benchmark or sample run, read the agents' turns before the totals or the images: every call, what it sent, and what came back. Look for refused edits, fixes repeated on one value, replies the agent misread or ignored, and where it stopped. The numbers say how much a run cost; the turns say why.
 - Docs describe what exists: no roadmap, no v2/MVP/phase labels in docs, comments or test names.
 
 ## When you change…
