@@ -187,3 +187,43 @@ async fn a_band_too_short_for_its_photo_is_an_advisory() {
     );
     mcp.stop().await;
 }
+
+#[tokio::test]
+async fn a_css_radial_glow_sits_where_css_puts_it() {
+    let mcp = Mcp::start("glow").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"width": 400, "height": 400, "sizes": [{"id": "s", "width": 400, "height": 400}]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    // A corner glow, written as agents write it in CSS.
+    mcp.ok(
+        "layer_add",
+        json!({"sceneId": id, "layers": [
+        {"type": "rect", "width": "fill", "height": "fill",
+         "fill": "radial-gradient(40% 40% at 90% 10%, #ffffff 0%, #000000 100%)"}]}),
+    )
+    .await;
+    let reply = mcp.ok("render", json!({"sceneId": id})).await;
+    let (_, path) = common::file_of(reply.lines().next().unwrap()).unwrap();
+    let mut reader = png::Decoder::new(std::io::BufReader::new(std::fs::File::open(path).unwrap()))
+        .read_info()
+        .unwrap();
+    let mut buf = vec![0u8; reader.output_buffer_size().unwrap()];
+    let info = reader.next_frame(&mut buf).unwrap();
+    let n = info.color_type.samples();
+    let at = |x: usize, y: usize| buf[y * info.line_size + x * n];
+    assert!(at(360, 40) > 240, "bright at its center: {}", at(360, 40));
+    assert!(
+        at(200, 200) < 40,
+        "dark mid-box, past its radius: {}",
+        at(200, 200)
+    );
+    assert!(at(40, 360) < 10, "dark in the far corner: {}", at(40, 360));
+    mcp.stop().await;
+}

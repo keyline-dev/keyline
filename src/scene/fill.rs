@@ -340,9 +340,8 @@ mod tests {
         );
         assert_eq!(
             css("radial-gradient(circle at center, #000 40%, transparent)"),
-            obj(
-                json!({"type": "radial", "stops": [{"color": "#000", "offset": 0.4}, "transparent"]})
-            )
+            obj(json!({"type": "radial", "radius": [0.70710677, 0.70710677],
+                    "stops": [{"color": "#000", "offset": 0.4}, "transparent"]}))
         );
         let Paint::Gradient(g) = css("linear-gradient(to bottom right, #000, #fff)") else {
             panic!("not a gradient")

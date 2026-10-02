@@ -85,16 +85,23 @@ pub(super) fn text_cut(p: &Placed, m: &skia_safe::Matrix, visible: Rect) -> Opti
     (!contains(visible, shown)).then_some(shown)
 }
 
-/// `warn crop` when a cover crop hides more than half the image on an
-/// axis: with the focus at the center (the default), the box then can't
+/// `!crop` when a cover crop hides more than half the image top and bottom
+/// (a defect: agents fix those, and a `warn` here was left as it was), or
+/// `warn crop` when it does at the sides: with the focus at the center (the default), the box then can't
 /// hold the image's middle half, so a subject there is cut, e.g. a house
 /// in a band too short for it. (The focus lands at its own share of the
 /// box, like CSS `object-position`, whatever the crop.) The fix names the
-/// field to write, master px: the `height` that shows half (taller for a
-/// crop top and bottom, at most this tall for one at the sides), or the
+/// field to write, master px: the `height` that shows all of the image and
+/// the one that shows half (taller for a crop top and bottom, at most this
+/// tall for one at the sides), or the
 /// `minHeight` (`maxHeight`) for a layer whose height a stack or its
 /// parent gives or squeezes.
-pub(super) fn crop_warning(out: &mut String, p: &Placed, image: (f32, f32), focus: [f32; 2]) {
+pub(super) fn crop_warning(
+    out: &mut String,
+    (p, siblings): (&Placed, &[Placed]),
+    image: (f32, f32),
+    focus: [f32; 2],
+) {
     let r = p.rect;
     let (iw, ih) = image;
     // Cover scales the image to fill the box; the other axis is cropped.
@@ -135,27 +142,40 @@ pub(super) fn crop_warning(out: &mut String, p: &Placed, image: (f32, f32), focu
     // a crop at the sides is usually as wide as it can be, so shorter
     // shows more of it.
     let fix = if vertical {
+        let all = (drawn / p.k).ceil();
         let min = ((drawn / 2.0) / p.k).ceil();
-        match squeezed {
+        // What it takes at this size, in px, and who shares the column:
+        // the agent picks what gives way.
+        let more = (drawn / 2.0 - r.h).ceil();
+        let field = match squeezed {
             Some(h) => format!(
-                "squeezed from {} to {}: minHeight {min} shows half",
+                "squeezed from {} to {}: minHeight {min} shows half, {all} all",
                 n(h),
                 n(r.h)
             ),
-            None if given(l.height) => format!("minHeight {min} shows half"),
-            None => format!("height {min} shows half"),
-        }
+            None if given(l.height) => format!("minHeight {min} shows half, {all} all"),
+            None => format!("height {min} shows half, {all} all"),
+        };
+        format!(
+            "needs {}px more here ({field}){}",
+            n(more),
+            column(p, siblings)
+        )
     } else {
+        let all = ((r.w * ih / iw) / p.k).floor();
         let max = ((2.0 * r.w * ih / iw) / p.k).floor();
         if given(l.height) {
-            format!("maxHeight {max} shows half")
+            format!("maxHeight {all} shows all, {max} half")
         } else {
-            format!("height at most {max} shows half")
+            format!("height at most {all} shows all, {max} half")
         }
     };
     let _ = write!(
         out,
-        " warn crop cuts {what} (focus {}%,{}%): {fix}",
+        " {} cuts {what} (focus {}%,{}%): {fix}",
+        // A band too short for its photo cuts the subject (a defect); a
+        // crop at the sides, a landscape photo in a tall box, is common.
+        if vertical { "!crop" } else { "warn crop" },
         (focus[0] * 100.0).round(),
         (focus[1] * 100.0).round()
     );
@@ -301,4 +321,31 @@ pub(super) fn motion_cut(p: &Placed, shown: Rect, clip: &super::Clip) -> Option<
         worst = Some((px, format!("{cut} during {when}")));
     }
     worst.map(|(_, line)| line)
+}
+
+/// The layers above and below `p` in its parent, tallest first, by id and
+/// height at this size: `; above and below it: headline 220, steps 202`.
+/// They share its column, so one of them gives the room it needs.
+fn column(p: &Placed, siblings: &[Placed]) -> String {
+    let r = p.rect;
+    let mut beside: Vec<&Placed> = siblings
+        .iter()
+        .filter(|s| !std::ptr::eq(*s, p))
+        .filter(|s| {
+            let o = s.rect;
+            o.x < r.right()
+                && o.right() > r.x
+                && (o.bottom() <= r.y + 0.5 || o.y >= r.bottom() - 0.5)
+        })
+        .collect();
+    if beside.is_empty() {
+        return String::new();
+    }
+    beside.sort_by(|a, b| b.rect.h.total_cmp(&a.rect.h));
+    let list: Vec<String> = beside
+        .iter()
+        .take(4)
+        .map(|s| format!("{} {}", s.layer.id, n(s.rect.h)))
+        .collect();
+    format!("; above and below it: {}", list.join(", "))
 }

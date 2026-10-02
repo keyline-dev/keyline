@@ -40,6 +40,7 @@ make one shorter at that size (media) or let it grow less. A top-level frame wit
 already covers the canvas and clips at every size. \
 The server's checks are the verification: render once at the end, and its reply shows how wrapped, shrunk or \
 cut text came out. To judge the look, render with preview, not by opening the files. \
+When checks pass, preview once and refine the design: depth, hierarchy, balance, space. \
 An animation's reply states its length, frames and looping; opened, it shows only its first frame. \
 Omit fields that match defaults. When done, reply in one short line.";
 
@@ -128,7 +129,7 @@ image: asset, fit cover|contain|fill|tile, focus [x,y], crop {x,y,width,height} 
 saturate (1 = unchanged), grayscale, sepia, hueRotate, duotone [dark, light], tint, halftone px}. icon: name, set \
 lucide|solid|regular|brands, color (24 px). rect, ellipse (arc {start, end, inner}), polygon (sides, innerRadius → \
 star), path (d, or shape: ribbon, bubble, arrow, chevron, tag, arch, shield, heart, cloud, wave, burst, blob-1…6, \
-brush-stroke). line: from x,y by width,height; drawn by stroke. Fill: a CSS color or linear-gradient(), or \
+brush-stroke). line: from x,y by width,height; drawn by stroke. Fill: CSS color or linear-/radial-gradient(), or \
 {color|gradient|image|pattern|noise, opacity, blendMode}; a list stacks, [] none. gradient {type linear|radial|conic, \
 angle (default 180: top to bottom) or from/to, stops [colors] or [{offset, color}]}. Stroke: \"#000\" or {width (1), \
 color, align inside|center|outside, dash, cap, join, markerStart|markerEnd arrow|triangle|circle|diamond, \
@@ -208,8 +209,8 @@ fadeOut}}} changes the scene."
     }
 
     #[tool(
-        description = "Problems per size, or ok. Defects: !truncated|!overflow (W×H) !clipped !hidden !overlaps !covered !unsafe (under \
-safeArea). Advisory: warn contrast|crop|ink. full: one line per layer per size: id type x,y w×h, px, lines, crop, upscale, motion."
+        description = "Problems per size, or ok. Defects: !truncated|!overflow (W×H) !clipped !hidden !overlaps !covered !crop !unsafe \
+(safeArea). Advisory: warn contrast|crop|ink. full: one line per layer per size: id type x,y w×h, px, lines, crop, upscale, motion."
     )]
     async fn scene_describe(&self, Parameters(a): Parameters<SceneDescribeArgs>) -> CallToolResult {
         let scene = self.store.load(&a.scene_id).map_err(err);

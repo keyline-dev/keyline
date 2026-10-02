@@ -418,7 +418,7 @@ Frames, shapes, images, text and icons take the same paint fields.
 | Paint | Example |
 |---|---|
 | Color | `"#D0202E"`, `"rgba(208, 32, 46, 0.5)"`, a CSS name, or `{"color": "{{red}}", "opacity": 0.5}` |
-| Gradient | `{"gradient": {"type": "radial", "stops": ["#0000", "#000C"]}}`, or written flat: `{"type": "linear", "angle": 180, "stops": […]}`, or as a CSS string: `"linear-gradient(180deg, #fff 0%, #fff0 100%)"` (`radial-gradient` too, centered) |
+| Gradient | `{"gradient": {"type": "radial", "stops": ["#0000", "#000C"]}}`, or written flat: `{"type": "linear", "angle": 180, "stops": […]}`, or as a CSS string: `"linear-gradient(180deg, #fff 0%, #fff0 100%)"` (`radial-gradient` too, with its size and position: `radial-gradient(60% 50% at 90% 10%, #7C5CFF55, #0000)` is a corner glow) |
 | Image | `{"image": "photo", "fit": "cover", "focus": [0.5, 0.3], "filter": {"grayscale": 1}}`, with the [image](#image) fields |
 | Pattern | `{"pattern": "dots", "color": "#0002", "size": 12}` |
 | Grain | `{"noise": 0.08, "seed": 1}` |

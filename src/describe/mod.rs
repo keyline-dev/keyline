@@ -178,7 +178,7 @@ fn check(
                 line(
                     &mut lines,
                     &checks,
-                    p,
+                    (p, &placed),
                     clip,
                     1,
                     (1.0, &skia_safe::Matrix::new_identity()),
@@ -307,11 +307,11 @@ impl<'a> Clip<'a> {
 }
 
 /// `opacity` is the product of the ancestors' opacities, `m` their visual
-/// transforms.
+/// transforms; `siblings` are `p` and the layers beside it in its parent.
 fn line(
     lines: &mut Vec<String>,
     checks: &Checks,
-    p: &Placed,
+    (p, siblings): (&Placed, &[Placed]),
     clip: Clip,
     depth: usize,
     (opacity, m): (f32, &skia_safe::Matrix),
@@ -469,7 +469,7 @@ fn line(
                     && drawn.bottom() >= ch - 0.5;
                 if fit == Fit::Cover && crop.is_none() && !bleeds {
                     let focus = kind.focus().unwrap_or([0.5, 0.5]);
-                    crop_warning(&mut out, p, (a.width, a.height), focus);
+                    crop_warning(&mut out, (p, siblings), (a.width, a.height), focus);
                 }
             }
         }
@@ -546,7 +546,14 @@ fn line(
             cut: inner.cut || cut_here.is_some(),
             ..inner
         };
-        line(lines, checks, c, own, depth + 1, (opacity, m));
+        line(
+            lines,
+            checks,
+            (c, &p.children),
+            own,
+            depth + 1,
+            (opacity, m),
+        );
     }
 }
 

@@ -200,13 +200,121 @@ pub(super) fn from_css(s: &str) -> Option<serde_json::Value> {
     if let Some(a) = angle {
         g["angle"] = a.into();
     }
+    if kind == "radial" {
+        let (center, radius) = radial_head(if skip == 1 { first } else { "" })?;
+        g["center"] = serde_json::json!(center);
+        g["radius"] = serde_json::json!(radius);
+    }
     Some(g)
+}
+
+/// A CSS radial gradient's `[shape] [size] [at position]`, as the box
+/// fractions `center` and `radius`. CSS's default is an ellipse reaching the
+/// farthest corner from the center. `None` for what it can't read (lengths
+/// in px, which need the box's size).
+// ponytail: `circle` is drawn as an ellipse of the box's shape, since radii
+// are fractions of each axis; a true circle needs the long form's radius.
+fn radial_head(head: &str) -> Option<([f32; 2], [f32; 2])> {
+    let (size, at) = match head.split_once("at ") {
+        Some((s, p)) => (s, p),
+        None => (head, ""),
+    };
+    let pct = |t: &str| {
+        t.strip_suffix('%')?
+            .trim()
+            .parse::<f32>()
+            .ok()
+            .map(|v| v / 100.0)
+    };
+    // Position: percentages in x, y order, or keywords in any order.
+    let mut center = [0.5_f32, 0.5];
+    let mut axis = 0;
+    for t in at.split_whitespace() {
+        match t {
+            "left" | "right" => {
+                center[0] = if t == "left" { 0.0 } else { 1.0 };
+                axis = 1;
+            }
+            "top" => center[1] = 0.0,
+            "bottom" => center[1] = 1.0,
+            "center" => axis += 1,
+            _ => {
+                *center.get_mut(axis)? = pct(t)?;
+                axis += 1;
+            }
+        }
+    }
+    let side = |far: bool| {
+        let pick = |c: f32| if far { c.max(1.0 - c) } else { c.min(1.0 - c) };
+        [pick(center[0]), pick(center[1])]
+    };
+    let corner = |far: bool| side(far).map(|r| r * std::f32::consts::SQRT_2);
+    let mut radius = corner(true);
+    let mut given = Vec::new();
+    for t in size.split_whitespace() {
+        match t {
+            "circle" | "ellipse" => {}
+            "closest-side" => radius = side(false),
+            "farthest-side" => radius = side(true),
+            "closest-corner" => radius = corner(false),
+            "farthest-corner" => radius = corner(true),
+            _ => given.push(pct(t)?),
+        }
+    }
+    match given[..] {
+        [] => {}
+        [r] => radius = [r, r],
+        [x, y] => radius = [x, y],
+        _ => return None,
+    }
+    Some((center, radius))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Gradient, GradientKind};
+    use super::{Gradient, GradientKind, from_css};
     use serde_json::json;
+
+    fn radial(css: &str) -> ([f32; 2], [f32; 2]) {
+        let g: Gradient = serde_json::from_value(from_css(css).unwrap()).unwrap();
+        assert_eq!(g.kind, GradientKind::Radial);
+        (g.center, g.radius)
+    }
+
+    #[test]
+    fn a_css_radial_keeps_its_size_and_position() {
+        // A corner glow, as agents write it in CSS.
+        assert_eq!(
+            radial("radial-gradient(60% 55% at 92% 4%, rgba(124,92,255,0.3) 0%, transparent 70%)"),
+            ([0.92, 0.04], [0.6, 0.55])
+        );
+        assert_eq!(
+            radial("radial-gradient(circle at top right, #fff, #000)").0,
+            [1.0, 0.0]
+        );
+        assert_eq!(
+            radial("radial-gradient(at left 30%, #fff, #000)").0,
+            [0.0, 0.3]
+        );
+        // Sizes by keyword, measured from the center.
+        assert_eq!(
+            radial("radial-gradient(closest-side at 20% 50%, #fff, #000)"),
+            ([0.2, 0.5], [0.2, 0.5])
+        );
+        assert_eq!(
+            radial("radial-gradient(farthest-side at 20% 50%, #fff, #000)").1,
+            [0.8, 0.5]
+        );
+        // CSS's default reaches the farthest corner.
+        let (c, r) = radial("radial-gradient(#fff, #000)");
+        assert_eq!(c, [0.5, 0.5]);
+        assert!(
+            (r[0] - 0.5 * std::f32::consts::SQRT_2).abs() < 1e-6,
+            "{r:?}"
+        );
+        // A length in px needs the box: not read, so the caller's error shows.
+        assert!(from_css("radial-gradient(200px at 50% 50%, #fff, #000)").is_none());
+    }
 
     #[test]
     fn stops_take_offsets_and_percentages() {
