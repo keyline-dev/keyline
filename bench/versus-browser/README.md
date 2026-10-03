@@ -110,7 +110,7 @@ keyline won on both tasks with correctness at least as high, so a general claim 
 
 > keyline used 2× fewer tokens than a headless-browser agent (median of 5 runs on each of two tasks, Claude Opus 5, October 2026).
 
-And per task: 2× on the flyer, 3× on the speaker card.
+And per task: 2× on the flyer, 3× on the speaker card. Against browser-mcp alone, by the same rule (keyline won on both tasks, correct as often): 6× fewer tokens, 6× on the flyer and 7× on the speaker card.
 
 ## Prompt version vs2
 
