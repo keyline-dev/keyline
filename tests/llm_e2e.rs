@@ -10,9 +10,10 @@
 //! `KEYLINE_MCP_TEST_MODEL` picks the model (default: Claude Code's default).
 //!
 //! Benchmarking: with `KEYLINE_MCP_BENCH=<label>`, the run is kept in
-//! `bench/reference-ad/<label>/` (prompt, event log, final layout, renders,
-//! summary) and appended to `bench/reference-ad/results.tsv`, so runs on
-//! different commits can be compared.
+//! `reference-ad/<label>/` of the benchmark repo (prompt, event log, final
+//! layout, renders, summary) and appended to its `reference-ad/results.tsv`,
+//! so runs on different commits can be compared. The benchmark repo is
+//! `keyline-dev/keyline-bench`, checked out beside this one or at `KEYLINE_BENCH`.
 
 // Test support: a panic is how a test reports failure.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -21,7 +22,7 @@ mod common;
 
 use std::process::Stdio;
 
-use common::{CHECK_SVG, MAIL_SVG, Mcp, ad_sizes, b64};
+use common::{CHECK_SVG, FARMHOUSE_JPG, MAIL_SVG, Mcp, ad_sizes, b64, bench_dir};
 use serde_json::{Value, json};
 
 const TOKEN_TARGET: usize = 2000;
@@ -63,10 +64,7 @@ async fn claude_builds_the_reference_ad() {
         .await;
     let scene = created.split(' ').next().unwrap().to_owned();
     for (id, bytes) in [
-        (
-            "photo",
-            std::fs::read("bench/photos/farmhouse.jpg").expect("bench/photos/farmhouse.jpg"),
-        ),
+        ("photo", std::fs::read(FARMHOUSE_JPG).expect(FARMHOUSE_JPG)),
         ("mail", MAIL_SVG.as_bytes().to_vec()),
         ("check", CHECK_SVG.as_bytes().to_vec()),
     ] {
@@ -225,7 +223,7 @@ struct Run<'a> {
 
 impl Run<'_> {
     fn save(&self) -> std::path::PathBuf {
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("bench/reference-ad");
+        let root = bench_dir().join("reference-ad");
         let dir = root.join(self.label);
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();

@@ -7,7 +7,7 @@
 
 pub mod golden;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use base64::Engine;
 use rmcp::{
@@ -128,6 +128,18 @@ impl Mcp {
         self.data
     }
 }
+
+/// Where benchmark runs are kept: `KEYLINE_BENCH`, or the checkout of
+/// `keyline-dev/keyline-bench` beside this repo.
+pub fn bench_dir() -> PathBuf {
+    std::env::var_os("KEYLINE_BENCH").map_or_else(
+        || Path::new(env!("CARGO_MANIFEST_DIR")).join("../keyline-bench"),
+        PathBuf::from,
+    )
+}
+
+/// The flyer's photo: a real one (credits in `tests/fixtures/photos/CREDITS.md`).
+pub const FARMHOUSE_JPG: &str = "tests/fixtures/photos/farmhouse.jpg";
 
 pub fn text(r: &CallToolResult) -> String {
     r.content

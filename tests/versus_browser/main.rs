@@ -1,6 +1,7 @@
 //! Benchmark with a real model: keyline against a headless-browser agent.
 //! Claude Code (headless, on your Claude subscription) makes the same images
-//! three ways, and each run is kept in `bench/versus-browser/`:
+//! three ways, and each run is kept in `versus-browser/` of the benchmark
+//! repo (`keyline-dev/keyline-bench`, beside this one or at `KEYLINE_BENCH`):
 //!
 //! - `keyline`: only the keyline MCP server;
 //! - `browser-cli`: Bash, Write, Edit, Read and Playwright's screenshot CLI;
@@ -14,8 +15,8 @@
 //!
 //! `CLAUDE_BIN` and `KEYLINE_MCP_TEST_MODEL` work as in `llm_e2e`. The
 //! browser arms need `npm ci` and `npx playwright install
-//! chromium-headless-shell` in `bench/versus-browser/tooling/` first (see
-//! `bench/versus-browser/README.md`).
+//! chromium-headless-shell` in its `versus-browser/tooling/` first (see
+//! its `versus-browser/README.md`).
 
 // Test support: a panic is how a test reports failure.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -34,10 +35,7 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
 
-use common::{CHECK_SVG, MAIL_SVG, Mcp, b64, photo_png};
-
-/// The flyer's photo: a real one (credits in `bench/photos/CREDITS.md`).
-const FARMHOUSE_JPG: &str = "bench/photos/farmhouse.jpg";
+use common::{CHECK_SVG, FARMHOUSE_JPG, MAIL_SVG, Mcp, b64, bench_dir, photo_png};
 use prompts::{Arm, SYSTEM, Task};
 use serde_json::{Value, json};
 use tokio::io::AsyncReadExt;
@@ -48,7 +46,7 @@ const TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
 /// Where runs, prompts and tooling live.
 pub fn bench_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("bench/versus-browser")
+    bench_dir().join("versus-browser")
 }
 
 /// The `claude` CLI: `CLAUDE_BIN`, or `claude` on PATH.
@@ -67,7 +65,7 @@ fn tooling_bin() -> PathBuf {
     let bin = bench_root().join("tooling/node_modules/.bin");
     assert!(
         bin.join("playwright").exists(),
-        "run `npm ci` in bench/versus-browser/tooling first"
+        "run `npm ci` in versus-browser/tooling of the benchmark repo first"
     );
     bin
 }

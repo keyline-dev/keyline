@@ -61,7 +61,7 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 - **Semantic targets:** layers are addressed by `role`, so the agent never reads the scene to find an id.
 - **Verification without pixels:** defects to fix, advisories to judge and facts to weigh, each with the measurement that fixes it ([how](docs/concepts.md#checks-defects-advisories-facts)).
 - **Names, not inventions:** icons, shapes, styles, tokens and components by name. Icons alone took rebuilding a real flyer from $0.22–0.62 to $0.15–0.19 per run.
-- **Measured, not guessed:** every change is judged on several real-model runs, kept in [bench/](bench/reference-ad/).
+- **Measured, not guessed:** every change is judged on several real-model runs, kept in [keyline-bench](https://github.com/keyline-dev/keyline-bench).
 - **Taste stays with the model:** the server flags only objective defects and reports the rest as facts.
 
 ## Features
@@ -418,14 +418,14 @@ cargo test                                         # unit and end-to-end tests
 UPDATE_GOLDEN=1 cargo test --test e2e              # regenerate reference PNGs (deliberately; also e2e_features, e2e_paint, …)
 cargo test --test llm_e2e -- --ignored --nocapture # a real model builds an ad; prints cost
 cargo test -- --ignored web_fonts google_fonts     # web fonts download once and stay cached (network)
-KEYLINE_MCP_BENCH=<label> cargo test --test llm_e2e -- --ignored --nocapture       # keep the run in bench/reference-ad/
+KEYLINE_MCP_BENCH=<label> cargo test --test llm_e2e -- --ignored --nocapture       # keep the run in ../keyline-bench/reference-ad/
 KEYLINE_MCP_BENCH=<label> cargo test --test recreate_e2e -- --ignored --nocapture  # rebuild a local design from its image, scored
 ```
 
 - **Unit tests** cover layout, text fitting, rendering down to pixel checks, storage, URL safety and edits.
 - **Layout tests** check every layer's position and size after layout, without rendering.
 - **End-to-end tests** run the real server over stdio, build designs in several sizes, and compare the PNGs with reference images. The images are kept per OS, since glyph rasterization differs by platform, and compared with a small tolerance, since glyph edges also differ slightly between OS versions.
-- **The LLM tests** run Claude Code headless, so they use a Claude subscription and need no API key. They check that no defects remain and report tool calls, tokens and API-equivalent cost. With `KEYLINE_MCP_BENCH` they keep each run for comparison: the reference ad in [bench/reference-ad/](bench/reference-ad/), and a design rebuilt from its image (kept in the gitignored `bench/recreate/local/`, since references are often real people's material), scored by how close it looks.
+- **The LLM tests** run Claude Code headless, so they use a Claude subscription and need no API key. They check that no defects remain and report tool calls, tokens and API-equivalent cost. With `KEYLINE_MCP_BENCH` they keep each run for comparison: the reference ad in [keyline-bench](https://github.com/keyline-dev/keyline-bench) (checked out beside this repo, or at `KEYLINE_BENCH`), and a design rebuilt from its image (kept in the gitignored `bench/recreate/local/`, since references are often real people's material), scored by how close it looks.
 - **Releases:** pushing a `v*` tag builds the Linux `.deb` and tarball (amd64 and arm64) and attaches them to a GitHub release.
 
 Contributions follow [CLAUDE.md](CLAUDE.md): Rust only, `cargo fmt` and `clippy -D warnings` must pass, changes are reviewed against the [rust-skills](https://github.com/leonardomso/rust-skills) rules, new dependencies need approval and must be permissively licensed, and every feature comes with unit and end-to-end tests.
