@@ -22,7 +22,7 @@ Server-side image composition engine driven by an AI agent over MCP.
   3. `index.html`, whose facts are written by hand: the Install tabs (plugin, Homebrew, Docker, `.mcpb`, the action's `@v0` and inputs); the reply snippets in the hero and in "How it works" (real replies of this version); the feature cards and the Questions answers (tool count, output formats, clients, the Cursor snippet), repeated word for word in the FAQPage JSON-LD; and the SoftwareApplication JSON-LD `description` and `featureList`. `docs.mjs` copies that description into `llms.txt`, `llms-full.txt` and the install page. The version number isn't written anywhere: `site.js` reads it from GitHub.
   4. `docs.mjs`'s `FACTS` (clients, platforms, formats, benchmark figures) and its Cursor line for `llms.txt`.
   5. Only when `bench/versus-browser` has new runs: the benchmark table and `2×` / `5×` stat, the Puppeteer answer in Questions (text and JSON-LD) and `FACTS`, claimed only as the benchmark README's "What the rules allow" permits.
-  6. Check the page at 1440, 768 and 390px wide in light and dark, push (Cloudflare Pages deploys `main`), and check the live home page, a missing path (a 404) and `llms.txt`. Listings need nothing: the release workflow updates the MCP registry, which Glama and PulseMCP read.
+  6. Check the page at 1440, 768 and 390px wide in light and dark, push (Cloudflare Pages deploys `main`), and check the live home page, a missing path (a 404) and `llms.txt`. Listings need nothing beyond the Updates column of the Listings table below: the release workflow updates the MCP registry, which Glama and PulseMCP read.
 - Try a branch before releasing: the manual Preview workflow (`gh workflow run preview.yml --ref <branch>`) builds its Windows `.zip` and `.mcpb` as run artifacts, for testing on a machine or VM.
 
 ## Working agreements
@@ -45,6 +45,8 @@ The agent-facing text lives in `src/server/mod.rs` (instructions and tool descri
 | A tool's reply | `docs/tools.md`; the reply readers in `tests/common/mod.rs` (`file_of`) and `src/server/cli.rs`; the reply snippets on the site (hero and "How it works") |
 | A client or install channel | The README's Quick start; the site's Install tabs, its Questions answers and JSON-LD, and `FACTS` in its `docs.mjs` |
 | The one-line description | The GitHub repo description, `Cargo.toml`, `plugin/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `mcpb/manifest.json`, `server.json`, the `Dockerfile` label, `--help` in `src/options.rs`, the Homebrew formula in `keyline-dev/homebrew-tap`, the Glama listing and the site |
+| What keyline fetches, stores or runs (a new host, a new file location, a change to `plugin/scripts/launch.sh`) | `PRIVACY.md` (built into the site's `/privacy/`) and `plugin/README.md`: Anthropic's directory scans each commit and rejects behavior the README doesn't disclose |
+| A tool's effect (it starts deleting or only reads) | Its `annotations` in `src/server/mod.rs` and the check in `tool_surface_stays_small` |
 | Anything that changes pixels | The macOS and Windows goldens (see Commands), reviewed by eye |
 | A distribution file (`plugin/`, `mcpb/`, `server.json`, `action.yml`, `Dockerfile`, the workflows) | The release checks that exercise it in `release.yml`; `claude plugin validate --strict` and `mcpb validate` pass |
 
@@ -53,7 +55,21 @@ Other repos in the `keyline-dev` org:
 - `keyline-dev/keyline.dev`: the site. Static pages; its images are keyline scenes in `scenes/`, rendered into `assets/` by `render.sh`; the logo is in `logo/`. Its `/docs/`, `/benchmark/`, `llms.txt` and `sitemap.xml` are built from this repo's `README.md` Quick start, `docs/`, `bench/versus-browser/README.md` and `LICENSE` by `npm run docs` there: rerun it and commit the output whenever any of those change. Hosted on Cloudflare Pages from `main`.
 - `keyline-dev/homebrew-tap`: the Homebrew formula, bumped by the release workflow; edit it by hand only to change more than the version and checksum.
 
-Listings: the official MCP registry (from `server.json`, each release), Glama (claimed through `glama.json`), and awesome-mcp-servers. Contributions come under the agreement in `CONTRIBUTING.md`.
+Listings, and how each stays current (a listing marked *submitted* waits on its directory; once it's live, change the mark to *live*):
+
+| Listing | How it got there | Updates |
+|---|---|---|
+| Official MCP registry (`io.github.keyline-dev/keyline`), *live* | `server.json` | The release workflow, each release |
+| PulseMCP, *live* | Reads the official registry | Automatic |
+| Glama, *live* | Claimed through `glama.json` | Reads the repo |
+| GitHub MCP registry (github.com/mcp), which VS Code's MCP gallery reads; *not listed* | GitHub curates it from the official registry; there's no submission | Automatic once picked |
+| awesome-mcp-servers, *submitted* | Pull request to `punkpeye/awesome-mcp-servers` | Never: one line, no version |
+| Docker MCP Catalog | Pull request to `docker/mcp-registry` adding `servers/keyline/` (`server.yaml` pins a commit and uses our `ghcr.io/keyline-dev/keyline-mcp` image; `tools.json` lists the tools) | Docker's bot bumps the pinned commit; refresh `tools.json` when a tool is added or renamed |
+| Anthropic's directory (claude.ai/directory), one listing across Claude's apps; it no longer takes `.mcpb` extensions | The developer portal at claude.ai/directory/manage: a plugin bundle, path `plugin`, branch `main` | Follows `main` (push webhook), scans each commit; raise `version` each release |
+| Cline MCP Marketplace | An issue on `cline/mcp-marketplace`: the repo URL, a 400×400 PNG logo, and a check that Cline installs it from the README | Installs from the README |
+| Cursor directory, Smithery, mcp.so, mcpservers.org, mcpmarket.com, LobeHub | Each site's submit form (Smithery: a stdio listing with no hosting) | Read the repo |
+
+Install channels kept by the release workflow: GitHub releases, the plugin marketplace in this repo, the Homebrew tap, the Docker image on ghcr.io and the action's `v0` tag. Contributions come under the agreement in `CONTRIBUTING.md`.
 
 ## Language
 

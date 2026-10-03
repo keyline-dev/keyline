@@ -28,6 +28,7 @@ keyline-mcp exposes six tools. This page lists each tool's inputs and the exact 
 - **Unknown arguments are refused**, like unknown scene fields, so a misspelled one is never silently ignored.
 - **Replies are compact text, not JSON.** Their parts are described once, under [Replies](#replies).
 - **Errors are one line** that names what failed and how to fix it, and change nothing ([Errors](#errors)).
+- **Annotations tell the client what a tool does**: each has a `title`; only `scene_describe` is read-only, and only `layer_update` is destructive (a deleted layer can't be brought back).
 
 ## Replies
 

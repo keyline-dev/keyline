@@ -92,14 +92,20 @@ impl Server {
     }
 
     #[tool(
-        description = "Create a scene from sizes, or from a template by url or path with its tokens set. Returns its id."
+        description = "Create a scene from sizes, or from a template by url or path with its tokens set. Returns its id.",
+        annotations(
+            title = "Create scene",
+            read_only_hint = false,
+            destructive_hint = false
+        )
     )]
     async fn scene_create(&self, Parameters(a): Parameters<SceneCreateArgs>) -> CallToolResult {
         reply(self.scene_create_impl(a).await.map(|(_, text)| text))
     }
 
     #[tool(
-        description = "Add an image (PNG, JPEG, SVG) to a scene's assets from url, path or base64. Returns id and size."
+        description = "Add an image (PNG, JPEG, SVG) to a scene's assets from url, path or base64. Returns id and size.",
+        annotations(title = "Add image", read_only_hint = false, destructive_hint = false)
     )]
     async fn asset_add(&self, Parameters(a): Parameters<AssetAddArgs>) -> CallToolResult {
         reply(self.asset_add_impl(a).await)
@@ -135,7 +141,8 @@ color, align inside|center|outside, dash, cap, join, markerStart|markerEnd arrow
 roughness}. Shadow: {x, y, blur, spread, color, inset}. Mask: a gradient, shape name, \
 {path}, {layer: id} or {image}; mode luminance, invert. Shared: styles {name: {fields}}; tokens \
 {name: value} used as {{name}} in any field or text; components {card: {…, text: \"{{name}}\"}} (props win) placed by {type: use, component: \"card\", each: [{name: \
-\"Dana\"}, …]}."
+\"Dana\"}, …]}.",
+        annotations(title = "Add layers", read_only_hint = false, destructive_hint = false)
     )]
     async fn layer_add(&self, Parameters(a): Parameters<LayerAddArgs>) -> CallToolResult {
         let styles = Value::Object(a.styles.clone());
@@ -169,7 +176,12 @@ roughness}. Shadow: {x, y, blur, spread, color, inset}. Mask: a gradient, shape 
 set: {fields}} or {target, delete: true} or {target: {id}, detach: true} (a use becomes plain layers). A role targets \
 every layer with it; a style or component target changes it everywhere it's used. tokens {name: value} changes \
 tokens. null resets a field. {target: {scene: true}, set: {background, sizes, duration, fps, loop, audio {asset, volume, trimStart, fadeIn, \
-fadeOut}}} changes the scene."
+fadeOut}}} changes the scene.",
+        annotations(
+            title = "Change or delete layers",
+            read_only_hint = false,
+            destructive_hint = true
+        )
     )]
     async fn layer_update(&self, Parameters(a): Parameters<LayerUpdateArgs>) -> CallToolResult {
         let sets: Vec<Value> = a
@@ -209,7 +221,8 @@ fadeOut}}} changes the scene."
 
     #[tool(
         description = "Problems per size, or ok. Defects: !truncated|!overflow (W×H) !clipped !hidden !overlaps !covered !unsafe \
-(safeArea). Advisory: warn contrast. full: the layout."
+(safeArea). Advisory: warn contrast. full: the layout.",
+        annotations(title = "Check scene", read_only_hint = true, destructive_hint = false)
     )]
     async fn scene_describe(&self, Parameters(a): Parameters<SceneDescribeArgs>) -> CallToolResult {
         if let Some(asset) = &a.view {
@@ -236,7 +249,8 @@ fadeOut}}} changes the scene."
 
     #[tool(
         description = "Render each size (PNG, or format jpeg|webp|pdf). Returns each size's path and layout as \
-drawn; maxKB lowers quality to fit; rows renders a variant per row of tokens. preview adds a small image of all sizes."
+drawn; maxKB lowers quality to fit; rows renders a variant per row of tokens. preview adds a small image of all sizes.",
+        annotations(title = "Render", read_only_hint = false, destructive_hint = false)
     )]
     async fn render(&self, Parameters(a): Parameters<RenderArgs>) -> CallToolResult {
         match self.render_impl(a).await {

@@ -233,7 +233,18 @@ async fn tool_surface_stays_small() {
     let tools = mcp.tools().await;
     let names: Vec<&str> = tools.iter().map(|t| t.name.as_ref()).collect();
     assert_eq!(names.len(), 6, "{names:?}");
-    let size = serde_json::to_string(&tools).unwrap().len();
+    // Annotations steer the client (its approval prompts), not the model, so
+    // the budget counts the rest; Anthropic's directory needs all three.
+    let mut seen = tools.clone();
+    for t in &mut seen {
+        let a = t.annotations.take().unwrap();
+        assert!(a.title.is_some(), "{}: no title", t.name);
+        let read_only = a.read_only_hint.unwrap();
+        let destructive = a.destructive_hint.unwrap();
+        assert_eq!(read_only, t.name == "scene_describe", "{}", t.name);
+        assert_eq!(destructive, t.name == "layer_update", "{}", t.name);
+    }
+    let size = serde_json::to_string(&seen).unwrap().len();
     println!("tools/list: {size} chars (~{} tokens)", size / 4);
     assert!(size < TOOLS_LIST_MAX_CHARS, "tools/list is {size} chars");
     // Gemini rejects the whole list over one type list or `items: true`.
