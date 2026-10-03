@@ -8,7 +8,7 @@
   },
   "homepage": "https://keyline.dev",
   "repository": "https://github.com/keyline-dev/keyline",
-  "license": "LicenseRef-PolyForm-Shield-1.0.0",
+  "license": "FSL-1.1-ALv2",
   "keywords": ["design", "images", "mcp", "rendering", "ads"],
   "mcpServers": {
     "keyline": {

@@ -20,7 +20,7 @@ COPY bin/${TARGETARCH}/keyline-mcp /usr/local/bin/keyline-mcp
 
 LABEL org.opencontainers.image.source="https://github.com/keyline-dev/keyline" \
       org.opencontainers.image.description="Design engine for AI agents: images and video at every size, no Chrome needed" \
-      org.opencontainers.image.licenses="PolyForm-Shield-1.0.0" \
+      org.opencontainers.image.licenses="FSL-1.1-ALv2" \
       io.modelcontextprotocol.server.name="io.github.keyline-dev/keyline"
 
 VOLUME /data

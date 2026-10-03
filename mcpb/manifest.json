@@ -16,7 +16,7 @@
     "type": "git",
     "url": "https://github.com/keyline-dev/keyline"
   },
-  "license": "PolyForm-Shield-1.0.0",
+  "license": "FSL-1.1-ALv2",
   "keywords": ["design", "images", "ads", "social media", "render"],
   "server": {
     "type": "binary",

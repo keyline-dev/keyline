@@ -341,7 +341,7 @@ Contributions follow [CLAUDE.md](CLAUDE.md): Rust only, `cargo fmt` and `clippy 
 
 ## License
 
-[PolyForm Shield 1.0.0](LICENSE): free to use, modify and redistribute, commercially too, for any purpose **except providing a product that competes with keyline-mcp or with any product the author provides using it**, which includes offering it as a hosted service. For a license to do that, contact the author.
+[Functional Source License 1.1, Apache 2.0 future license](LICENSE) (FSL-1.1-ALv2): free to use, modify and redistribute, commercially too, for any purpose **except a competing use: making keyline available to others in a commercial product or service that substitutes for it or offers substantially the same functionality**, which includes offering it as a hosted service. Your own internal use, research, education and work for clients are all allowed. **Two years after each release, that release is also available under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).** For a license to compete, contact the author.
 
 Contributions are welcome under the [contributor agreement](CONTRIBUTING.md#contributor-agreement): contributors assign the copyright in their changes to the author.
 

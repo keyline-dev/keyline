@@ -61,9 +61,9 @@ Rust only. Stable toolchain, latest edition. Packaging and client setup files si
 
 ## License
 
-The project is source-available under PolyForm Shield 1.0.0 (`LICENSE`): anyone may use, modify and redistribute it, commercially too, for any purpose except providing a product that competes with it or with any product the owner provides using it (a hosted version counts). Keep it that way:
+The project is source-available under the Functional Source License 1.1 with the Apache 2.0 future license, FSL-1.1-ALv2 (`LICENSE`): anyone may use, modify and redistribute it, commercially too, for any purpose except a competing use (making it available to others in a commercial product or service that substitutes for it or offers substantially the same functionality; a hosted version counts), and each release also becomes Apache-2.0 two years after it ships. Keep it that way:
 
-- Only add dependencies and assets under permissive licenses (MIT, Apache-2.0, BSD, OFL, …); no GPL/AGPL/copyleft, which would conflict.
+- Only add dependencies and assets under permissive licenses (MIT, Apache-2.0, BSD, OFL, …); no GPL/AGPL/copyleft, which would conflict with the license and with its Apache-2.0 future.
 - Third-party assets keep their own license file next to them (e.g. `fonts/OFL.txt`).
 - Fonts or other files that may not be redistributed (e.g. Clash Display in `fonts/local/`) stay gitignored and are never committed.
 
