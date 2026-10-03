@@ -1,6 +1,6 @@
 # keyline-mcp
 
-**An AI-native design engine: agents design, keyline renders. No Chrome, no browser.** An AI agent (Claude Code, Cursor, Cline or any [MCP](https://modelcontextprotocol.io) client) describes a design once as a small JSON scene. A Rust renderer built on [Skia](https://skia.org) turns it into PNG, JPEG, WebP, vector PDF, animated PNG, GIF, MP4 or WebM at every size you need: portrait post, landscape banner and skyscraper ad from one master layout. Output is deterministic: no model generates pixels, so the same scene always renders the same design. There's no browser anywhere in the pipeline: no headless Chrome, Puppeteer or Playwright to install, run or keep patched on the server, just one native binary.
+**An AI-native design engine: agents design, keyline renders. No Chrome, no browser.** An AI agent (Claude Code, Codex, Gemini CLI, Cursor, Cline or any [MCP](https://modelcontextprotocol.io) client) describes a design once as a small JSON scene. A Rust renderer built on [Skia](https://skia.org) turns it into PNG, JPEG, WebP, vector PDF, animated PNG, GIF, MP4 or WebM at every size you need: portrait post, landscape banner and skyscraper ad from one master layout. Output is deterministic: no model generates pixels, so the same scene always renders the same design. There's no browser anywhere in the pipeline: no headless Chrome, Puppeteer or Playwright to install, run or keep patched on the server, just one native binary.
 
 Think of it as Figma or Canva for AI agents: a design tool whose only user is a language model, for social posts, display ads, flyers, banners and other marketing images.
 
@@ -213,6 +213,20 @@ command = "keyline-mcp"
 ```
 
 The ChatGPT app itself connects only to remote MCP servers over HTTP, so it can't start keyline, which runs on your machine; use Codex.
+</details>
+
+<details>
+<summary><b>Gemini CLI</b> (Google)</summary>
+
+```sh
+gemini mcp add --scope user keyline keyline-mcp
+```
+
+Or add to `~/.gemini/settings.json`, then check with `/mcp` in Gemini CLI: ([guide](https://geminicli.com/docs/tools/mcp-server/))
+
+```json
+{ "mcpServers": { "keyline": { "command": "keyline-mcp" } } }
+```
 </details>
 
 <details>
