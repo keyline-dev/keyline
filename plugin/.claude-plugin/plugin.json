@@ -6,7 +6,12 @@
     "name": "keyline",
     "url": "https://keyline.dev"
   },
+  "displayName": "keyline",
   "homepage": "https://keyline.dev",
+  "documentationUrl": "https://keyline.dev/docs/",
+  "supportUrl": "https://keyline.dev/security/",
+  "privacyPolicyUrl": "https://keyline.dev/privacy/",
+  "termsOfServiceUrl": "https://keyline.dev/license/",
   "repository": "https://github.com/keyline-dev/keyline",
   "license": "FSL-1.1-ALv2",
   "keywords": ["design", "images", "mcp", "rendering", "ads"],
