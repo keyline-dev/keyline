@@ -23,7 +23,7 @@ From Claude Code's `result` event (`modelUsage`, so Haiku side calls count too):
 
 - **Total tokens:** input + cache writes + cache reads + output, over every model. Caching doesn't change it. Thinking is part of output and is shown on its own, not added twice.
 - **Cost:** Claude Code's API-equivalent `total_cost_usd`, and a *cold* cost re-priced as if nothing had been cached (list-price ratios: cache read 0.1×, cache write 1.25× or 2×, output 5× the input price). Neither is what a subscription costs.
-- **Turns, tool calls by name, wall-clock** (`duration_ms`, setup excluded), **images the model saw** (image blocks in tool results, Read included), **fixed overhead** (the first request's input: system prompt plus tool definitions), **peak context** (the largest single request), and for the browser arms whether they measured with JavaScript (Playwright MCP's evaluate or run-code tools, or Node run from Bash).
+- **Turns** (Claude Code's `num_turns`, which is the tool calls plus one, not the model requests: one request can make several tool calls, and browser agents often do), **tool calls by name, wall-clock** (`duration_ms`, setup excluded), **images the model saw** (image blocks in tool results, Read included), **fixed overhead** (the first request's input: system prompt plus tool definitions), **peak context** (the largest single request), and for the browser arms whether they measured with JavaScript (Playwright MCP's evaluate or run-code tools, or Node run from Bash).
 
 ### Correctness, the same for every arm, from the final PNGs only
 
@@ -101,7 +101,7 @@ Every run is in `results.tsv`, and `judge_runs` prints the medians over correct 
 - **The stronger browser arm is browser-cli,** with the lower median total tokens on both tasks, so it's the comparison.
 - **Both tasks:** keyline used fewer tokens (2.5× and 3.5×) and was correct at least as often (5/5 and 5/5, against 5/5 and 4/5). The browser run that failed, `speaker-card/browser-cli-v3-4`, left the "Get tickets" button cut off at the square size.
 - **The ranges don't overlap:** keyline's most expensive run used fewer tokens than any browser run, on both tasks (163k against 261k, and 195k against 387k).
-- **Elsewhere:** keyline was faster on median time (120 s against 227 s, and 103 s against 265 s), took fewer turns and looked at fewer images. No keyline flyer run opened the photo or marked a subject; the default crop kept the farmhouse whole at every size.
+- **Elsewhere:** keyline was faster on median time (120 s against 227 s, and 103 s against 265 s), made fewer model requests and looked at fewer images. Model requests (distinct assistant messages in `events.jsonl`, median): flyer 9, 17 and 35; speaker card 10, 22 and 38 (keyline, browser-cli, browser-mcp). The Turns column counts tool calls plus one, so it reads higher for the browser arms, which often make several tool calls per request. No keyline flyer run opened the photo or marked a subject; the default crop kept the farmhouse whole at every size.
 - **From the turns:** in `speaker-card/keyline-v3-4` the model twice wrote a `layer_add` that wasn't valid JSON, which Claude Code refused before keyline saw it; in `speaker-card/keyline-v3-1` keyline refused gradient stops written as `[color, offset]`.
 
 ### What the rules allow
