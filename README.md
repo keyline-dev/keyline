@@ -157,7 +157,7 @@ Settings → Developer → Edit Config opens `claude_desktop_config.json`. Claud
 <details>
 <summary><b>Cursor</b></summary>
 
-[Add to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=keyline&config=eyJjb21tYW5kIjoia2V5bGluZS1tY3AifQ==), or add to `~/.cursor/mcp.json` (every project) or `.cursor/mcp.json` (one project). ([guide](https://cursor.com/docs/context/mcp))
+[Add to Cursor](https://cursor.com/en/install-mcp?name=keyline&config=eyJjb21tYW5kIjoia2V5bGluZS1tY3AifQ%3D%3D), or add to `~/.cursor/mcp.json` (every project) or `.cursor/mcp.json` (one project). ([guide](https://cursor.com/docs/context/mcp))
 
 ```json
 { "mcpServers": { "keyline": { "command": "keyline-mcp" } } }
@@ -179,9 +179,9 @@ Or add to `.vscode/mcp.json`, or your profile's (*MCP: Open User Configuration*)
 </details>
 
 <details>
-<summary><b>Windsurf</b></summary>
+<summary><b>Devin Desktop</b> (formerly Windsurf)</summary>
 
-Add to `~/.codeium/windsurf/mcp_config.json`. ([guide](https://docs.windsurf.com/windsurf/cascade/mcp))
+Add to `~/.config/devin/mcp_config.json` (Windows: `%APPDATA%\devin\mcp_config.json`); versions still named Windsurf read `~/.codeium/windsurf/mcp_config.json`. ([guide](https://docs.devin.ai/desktop/cascade/mcp))
 
 ```json
 { "mcpServers": { "keyline": { "command": "keyline-mcp" } } }
@@ -226,6 +226,83 @@ Or add to `~/.gemini/settings.json`, then check with `/mcp` in Gemini CLI: ([gui
 
 ```json
 { "mcpServers": { "keyline": { "command": "keyline-mcp" } } }
+```
+</details>
+
+<details>
+<summary><b>Antigravity</b> (Google)</summary>
+
+Add to `~/.gemini/config/mcp_config.json` (every workspace) or `.agents/mcp_config.json` (one workspace). ([guide](https://antigravity.google/docs/mcp))
+
+```json
+{ "mcpServers": { "keyline": { "command": "keyline-mcp" } } }
+```
+</details>
+
+<details>
+<summary><b>GitHub Copilot CLI</b></summary>
+
+Run `/mcp add` in Copilot CLI, or add to `~/.copilot/mcp-config.json`: ([guide](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/use-copilot-cli))
+
+```json
+{ "mcpServers": { "keyline": { "type": "local", "command": "keyline-mcp", "args": [], "tools": ["*"] } } }
+```
+</details>
+
+<details>
+<summary><b>Grok Build</b> (xAI)</summary>
+
+```sh
+grok mcp add keyline -- keyline-mcp
+```
+
+Or add to `~/.grok/config.toml`, then check with `grok mcp doctor keyline`: ([guide](https://docs.x.ai/build/features/mcp-servers))
+
+```toml
+[mcp_servers.keyline]
+command = "keyline-mcp"
+```
+
+grok.com and the xAI API connect only to remote MCP servers, so they can't start keyline; use Grok Build.
+</details>
+
+<details>
+<summary><b>Kiro</b></summary>
+
+Add to `~/.kiro/settings/mcp.json` (every workspace) or `.kiro/settings/mcp.json` (one workspace). ([guide](https://kiro.dev/docs/mcp/configuration/))
+
+```json
+{ "mcpServers": { "keyline": { "command": "keyline-mcp" } } }
+```
+</details>
+
+<details>
+<summary><b>opencode</b></summary>
+
+Add to `~/.config/opencode/opencode.json`, or `opencode.json` in a project. The command is a list. ([guide](https://opencode.ai/docs/mcp-servers/))
+
+```json
+{ "$schema": "https://opencode.ai/config.json", "mcp": { "keyline": { "type": "local", "command": ["keyline-mcp"] } } }
+```
+</details>
+
+<details>
+<summary><b>JetBrains</b> (AI Assistant and Junie)</summary>
+
+AI Assistant: Settings → Tools → AI Assistant → Model Context Protocol (MCP) → Add, and paste the JSON below. ([guide](https://www.jetbrains.com/help/ai-assistant/configure-an-mcp-server.html)) Junie: run `/mcp`, or add the same JSON to `~/.junie/mcp/mcp.json`. ([guide](https://junie.jetbrains.com/docs/junie-cli-mcp-configuration.html))
+
+```json
+{ "mcpServers": { "keyline": { "command": "keyline-mcp", "args": [] } } }
+```
+</details>
+
+<details>
+<summary><b>Warp</b></summary>
+
+Settings → Agents → MCP servers → Add, and paste: ([guide](https://docs.warp.dev/knowledge-and-collaboration/mcp))
+
+```json
+{ "keyline": { "command": "keyline-mcp", "args": [] } }
 ```
 </details>
 
