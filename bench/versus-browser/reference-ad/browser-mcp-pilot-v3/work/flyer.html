@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #fff; }
+  body {
+    width: var(--W);
+    height: var(--H);
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #flyer {
+    width: var(--W);
+    height: var(--H);
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+  #flyer > * { flex: 0 0 auto; }
+
+  /* ---- scaled unit: everything expressed in calc(N * var(--s)) ---- */
+
+  .headline {
+    color: #1B2A5C;
+    font-weight: 800;
+    font-size: calc(72px * var(--s));
+    line-height: 1.08;
+    letter-spacing: calc(-1.5px * var(--s));
+    padding: calc(56px * var(--s)) calc(56px * var(--s)) calc(36px * var(--s));
+    text-wrap: balance;
+  }
+  .headline em { color: #D0202E; font-style: normal; }
+
+  .photoband {
+    width: 100%;
+    flex: 0 0 auto;
+    height: calc(var(--band) * var(--s));
+    overflow: hidden;
+  }
+  .photoband img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 55%;
+    display: block;
+  }
+
+  .cands {
+    display: flex;
+    width: 100%;
+    padding: calc(40px * var(--s)) calc(40px * var(--s)) calc(40px * var(--s));
+    gap: calc(16px * var(--s));
+  }
+  .cand {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: center;
+  }
+  .cand .nm {
+    color: #1B2A5C;
+    font-weight: 700;
+    font-size: calc(34px * var(--s));
+    line-height: 1.15;
+    letter-spacing: calc(-0.5px * var(--s));
+  }
+  .cand .rl {
+    margin-top: calc(8px * var(--s));
+    color: #D0202E;
+    font-weight: 600;
+    font-size: calc(24px * var(--s));
+    letter-spacing: calc(1.2px * var(--s));
+    text-transform: uppercase;
+  }
+  .cand .rule {
+    width: calc(56px * var(--s));
+    height: calc(4px * var(--s));
+    background: #1B2A5C;
+    margin: calc(14px * var(--s)) auto 0;
+    border-radius: 999px;
+  }
+
+  .cta {
+    width: 100%;
+    background: #D0202E;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(24px * var(--s));
+    padding: calc(28px * var(--s)) calc(24px * var(--s));
+  }
+  .cta img {
+    width: calc(56px * var(--s));
+    height: calc(44px * var(--s));
+    display: block;
+    flex: 0 0 auto;
+  }
+  .cta span {
+    color: #fff;
+    font-weight: 800;
+    font-size: calc(52px * var(--s));
+    letter-spacing: calc(2px * var(--s));
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .steps {
+    padding: calc(40px * var(--s)) calc(56px * var(--s));
+    display: flex;
+    flex-direction: column;
+    gap: calc(24px * var(--s));
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: calc(20px * var(--s));
+  }
+  .step img {
+    width: calc(40px * var(--s));
+    height: calc(40px * var(--s));
+    flex: 0 0 auto;
+    display: block;
+  }
+  .step span {
+    color: #1B2A5C;
+    font-weight: 600;
+    font-size: calc(30px * var(--s));
+    line-height: 1.25;
+  }
+
+  /* wide variant: steps laid out as three columns to use the extra width */
+  body.row .steps {
+    flex-direction: row;
+    gap: calc(28px * var(--s));
+    padding: calc(40px * var(--s)) calc(48px * var(--s));
+  }
+  body.row .step {
+    flex: 1 1 0;
+    min-width: 0;
+    align-items: flex-start;
+  }
+  body.row .step img { margin-top: calc(3px * var(--s)); }
+
+  .footer {
+    width: 100%;
+    padding: calc(24px * var(--s)) calc(32px * var(--s)) calc(28px * var(--s));
+    text-align: center;
+    color: #1B2A5C;
+    font-weight: 500;
+    font-size: calc(22px * var(--s));
+    line-height: 1.3;
+    border-top: calc(2px * var(--s)) solid #E2E5EE;
+  }
+</style>
+</head>
+<body>
+<div id="flyer">
+  <div class="headline">Proven <em>RESULTS</em> for <em>WILLOWMERE</em> Families</div>
+
+  <div class="photoband"><img src="photo.jpg" alt=""></div>
+
+  <div class="cands">
+    <div class="cand"><div class="nm">Dana Levi</div><div class="rl">Mayor</div><div class="rule"></div></div>
+    <div class="cand"><div class="nm">Omar Haddad</div><div class="rl">Council</div><div class="rule"></div></div>
+    <div class="cand"><div class="nm">Ruth Cohen</div><div class="rl">Council</div><div class="rule"></div></div>
+  </div>
+
+  <div class="cta">
+    <img src="mail.svg" alt="">
+    <span>VOTE BY MAIL</span>
+  </div>
+
+  <div class="steps">
+    <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October&nbsp;20</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Mail it back by November&nbsp;3</span></div>
+  </div>
+
+  <div class="footer">Paid for by Willowmere Forward&nbsp;· willowmereforward.org</div>
+</div>
+<script>
+  const p = new URLSearchParams(location.search);
+  const W = +(p.get('w') || 1080), H = +(p.get('h') || 1350), S = +(p.get('s') || 1);
+  const BAND = +(p.get('band') || 420);
+  const r = document.documentElement.style;
+  r.setProperty('--W', W + 'px');
+  r.setProperty('--H', H + 'px');
+  r.setProperty('--s', S);
+  r.setProperty('--band', BAND + 'px');
+  if (p.get('steps') === 'row') document.body.classList.add('row');
+
+  // report fit for verification
+  window.fitReport = () => {
+    const f = document.getElementById('flyer');
+    const kids = [...f.children];
+    const natural = kids.reduce((a, el) => a + el.getBoundingClientRect().height, 0);
+    return {
+      canvas: [W, H],
+      naturalContent: Math.round(natural),
+      slack: Math.round(H - natural),
+      sections: kids.map(el => el.className + ':' + Math.round(el.getBoundingClientRect().height)),
+      overflowX: f.scrollWidth - W,
+      clipped: kids.some(el => {
+        const b = el.getBoundingClientRect();
+        return b.bottom > H + 0.6 || b.top < -0.6;
+      })
+    };
+  };
+</script>
+</body>
+</html>

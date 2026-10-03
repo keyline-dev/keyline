@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flyer</title>
+<style>
+  @font-face{
+    font-family:"Inter";
+    src:url("Inter.ttf") format("truetype");
+    font-weight:100 900;
+    font-style:normal;
+    font-display:block;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:#f2f3f7;}
+  body{display:flex;align-items:flex-start;justify-content:flex-start;}
+
+  .flyer{
+    --s:1;
+    --navy:#1B2A5C;
+    --red:#D0202E;
+    --pad:calc(var(--s) * 52px);
+    width:var(--fw);
+    height:var(--fh);
+    background:#fff;
+    overflow:hidden;
+    font-family:"Inter",sans-serif;
+    color:var(--navy);
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    position:relative;
+  }
+
+  /* ---------- 1. headline ---------- */
+  .head{
+    padding:calc(var(--s) * 46px) var(--pad) calc(var(--s) * 34px);
+    flex:0 0 auto;
+  }
+  .kicker{
+    font-weight:700;
+    font-size:calc(var(--s) * 22px);
+    letter-spacing:calc(var(--s) * 3.2px);
+    text-transform:uppercase;
+    color:var(--red);
+    margin-bottom:calc(var(--s) * 14px);
+    white-space:nowrap;
+  }
+  h1{
+    font-weight:800;
+    font-size:calc(var(--s) * 74px);
+    line-height:1.04;
+    letter-spacing:calc(var(--s) * -1.2px);
+    text-wrap:balance;
+  }
+  h1 .hl{color:var(--red);}
+
+  /* ---------- 2. photo band ---------- */
+  .photoband{
+    flex:1 1 auto;
+    width:100%;
+    height:calc(var(--s) * 380px);
+    min-height:calc(var(--s) * 190px);
+    max-height:46%;
+    overflow:hidden;
+    position:relative;
+    background:var(--navy);
+  }
+  .photoband img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:28% 58%;
+    display:block;
+  }
+
+  /* ---------- 3. candidates ---------- */
+  .cands{
+    flex:0 0 auto;
+    display:flex;
+    padding:calc(var(--s) * 34px) var(--pad);
+    gap:calc(var(--s) * 20px);
+  }
+  .cand{
+    flex:1 1 0;
+    min-width:0;
+    text-align:center;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .cand .rule{
+    width:calc(var(--s) * 48px);
+    height:calc(var(--s) * 5px);
+    background:var(--red);
+    border-radius:999px;
+    margin-bottom:calc(var(--s) * 14px);
+  }
+  .cand .nm{
+    font-weight:800;
+    font-size:calc(var(--s) * 34px);
+    line-height:1.1;
+    letter-spacing:calc(var(--s) * -0.4px);
+    white-space:nowrap;
+  }
+  .cand .rl{
+    margin-top:calc(var(--s) * 8px);
+    font-weight:600;
+    font-size:calc(var(--s) * 20px);
+    letter-spacing:calc(var(--s) * 2px);
+    text-transform:uppercase;
+    color:#64708f;
+    white-space:nowrap;
+  }
+
+  /* ---------- 4. CTA bar ---------- */
+  .cta{
+    flex:0 0 auto;
+    width:100%;
+    background:var(--red);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:calc(var(--s) * 24px);
+    padding:calc(var(--s) * 26px) var(--pad);
+  }
+  .cta img{
+    width:calc(var(--s) * 56px);
+    height:calc(var(--s) * 44px);
+    display:block;
+    flex:0 0 auto;
+  }
+  .cta span{
+    color:#fff;
+    font-weight:800;
+    font-size:calc(var(--s) * 50px);
+    letter-spacing:calc(var(--s) * 3px);
+    line-height:1;
+    white-space:nowrap;
+  }
+
+  /* ---------- 5. steps ---------- */
+  .steps{
+    flex:0 0 auto;
+    padding:calc(var(--s) * 34px) var(--pad) calc(var(--s) * 30px);
+    display:flex;
+    flex-direction:column;
+    gap:calc(var(--s) * 20px);
+  }
+  .step{
+    display:flex;
+    align-items:center;
+    gap:calc(var(--s) * 18px);
+  }
+  .step img{
+    width:calc(var(--s) * 40px);
+    height:calc(var(--s) * 40px);
+    flex:0 0 auto;
+    display:block;
+  }
+  .step span{
+    font-weight:600;
+    font-size:calc(var(--s) * 28px);
+    line-height:1.2;
+    min-width:0;
+  }
+
+  /* ---------- 6. footer ---------- */
+  footer{
+    flex:0 0 auto;
+    border-top:calc(var(--s) * 2px) solid #dfe3ee;
+    padding:calc(var(--s) * 22px) var(--pad) calc(var(--s) * 24px);
+    font-weight:500;
+    font-size:calc(var(--s) * 19px);
+    color:#6a7490;
+    letter-spacing:calc(var(--s) * .2px);
+    text-align:center;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:clip;
+  }
+
+  /* wide variant: steps side-by-side to use horizontal room */
+  .flyer.wide .steps{
+    flex-direction:row;
+    gap:calc(var(--s) * 28px);
+  }
+  .flyer.wide .step{flex:1 1 0;align-items:flex-start;}
+  .flyer.wide .step span{font-size:calc(var(--s) * 25px);}
+  .flyer.wide .head{padding-bottom:calc(var(--s) * 26px);}
+  .flyer.wide h1{max-width:calc(var(--s) * 1180px);}
+</style>
+</head>
+<body>
+<div class="flyer" id="flyer">
+  <div class="head">
+    <div class="kicker">Willowmere · November 3</div>
+    <h1>Proven <span class="hl">RESULTS</span> for <span class="hl">WILLOWMERE</span> Families</h1>
+  </div>
+
+  <div class="photoband"><img src="photo.jpg" alt="Farmhouse in a field at sunrise"></div>
+
+  <div class="cands">
+    <div class="cand"><div class="rule"></div><div class="nm">Dana Levi</div><div class="rl">Mayor</div></div>
+    <div class="cand"><div class="rule"></div><div class="nm">Omar Haddad</div><div class="rl">Council</div></div>
+    <div class="cand"><div class="rule"></div><div class="nm">Ruth Cohen</div><div class="rl">Council</div></div>
+  </div>
+
+  <div class="cta">
+    <img src="mail.svg" alt="">
+    <span>VOTE BY MAIL</span>
+  </div>
+
+  <div class="steps">
+    <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October&nbsp;20</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Mail it back by November&nbsp;3</span></div>
+  </div>
+
+  <footer>Paid for by Willowmere Forward · willowmereforward.org</footer>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const w = +(q.get('w') || 1080), h = +(q.get('h') || 1350), s = +(q.get('s') || 1);
+  const f = document.getElementById('flyer');
+  f.style.setProperty('--fw', w + 'px');
+  f.style.setProperty('--fh', h + 'px');
+  f.style.setProperty('--s', s);
+  if (q.get('v')) f.classList.add(q.get('v'));
+  document.documentElement.style.setProperty('width', w + 'px');
+</script>
+</body>
+</html>

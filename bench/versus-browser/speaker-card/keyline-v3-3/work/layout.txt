@@ -1,0 +1,78 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  glow1 frame 626,-260 760×760
+  glow2 frame -300,778 620×620
+  pad frame 0,0 1080×1080
+   header frame 84,84 912×48
+    logoImg image 84,84 160×48 contain
+    divider frame 268,91 2×34
+    eventName text 294,94 343×29 24px
+   sp1 spacer 84,188 912×12
+   content frame 84,256 912×673
+    leftCol frame 84,256 912×220
+     portraitImg image 84,256 220×220 cover shows 800×800 from 0,0 of 800×800
+     nameBlock frame 338,320 575×92
+      speakerName text 338,320 575×51 46px
+      speakerRole text 338,381 575×31 24px
+    rightCol frame 84,532 912×397
+     talkTitle text 84,532 912×204 60px 3L
+     metaRow frame 84,780 912×31
+      accentDot frame 84,790 10×10
+      meta text 114,780 464×31 24px
+     cta frame 84,855 226×74
+      ctaText text 130,877 134×30 25px
+   sp2 spacer 84,985 912×12
+ empty y 901–1080 (17%)
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  glow1 frame 1267,-300 760×760
+  glow2 frame -300,778 620×620
+  pad frame 0,0 1920×1080
+   header frame 96,96 1728×48
+    logoImg image 96,96 160×48 contain
+    divider frame 280,103 2×34
+    eventName text 306,106 343×29 24px
+   sp1 spacer 96,208 1728×77
+   content frame 96,349 1728×494
+    leftCol frame 96,349 460×494
+     portraitImg image 96,349 300×300 cover shows 800×800 from 0,0 of 800×800
+     nameBlock frame 96,685 460×158
+      speakerName text 96,685 460×114 52px 2L
+      speakerRole text 96,809 460×34 26px
+    rightCol frame 644,389 1180×414
+     talkTitle text 644,389 1180×213 62px 3L
+     metaRow frame 644,650 1180×31
+      accentDot frame 644,661 10×10
+      meta text 674,650 464×31 24px
+     cta frame 644,729 226×74
+      ctaText text 690,751 134×30 25px
+   sp2 spacer 96,907 1728×77
+ empty y 842–1080 (22%)
+story 1080×1920
+ root frame 0,0 1080×1920
+  glow1 frame 432,-300 760×760
+  glow2 frame -300,1382 620×620
+  pad frame 0,0 1080×1920
+   header frame 96,96 888×56
+    logoImg image 96,96 186×56 contain
+    divider frame 306,107 2×34
+    eventName text 332,108 379×33 27px
+   sp1 spacer 96,242 888×258
+   content frame 96,590 888×886
+    leftCol frame 96,590 888×260
+     portraitImg image 96,590 260×260 cover shows 800×800 from 0,0 of 800×800
+     nameBlock frame 396,641 560×159
+      speakerName text 396,641 560×114 52px 2L
+      speakerRole text 396,765 560×35 27px
+    rightCol frame 96,930 888×546
+     talkTitle text 96,930 888×312 68px 4L
+     metaRow frame 96,1298 888×36
+      accentDot frame 96,1311 10×10
+      meta text 126,1298 541×36 28px
+     cta frame 96,1390 258×86
+      ctaText text 150,1416 150×34 28px
+   sp2 spacer 96,1566 888×258
+ empty y 1443–1920 (25%)

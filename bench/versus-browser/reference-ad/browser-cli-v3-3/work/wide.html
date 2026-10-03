@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:'Inter';src:url('Inter.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:block;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;}
+body{
+  --s:0.85;
+  font-family:'Inter',sans-serif;
+  background:#fff;color:#1B2A5C;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:geometricPrecision;
+}
+.page{
+  width:100%;height:100%;
+  display:flex;flex-direction:column;
+  padding-top:calc(var(--s)*52px);
+  padding-bottom:calc(var(--s)*46px);
+}
+.pad{padding-left:calc(var(--s)*56px);padding-right:calc(var(--s)*56px);}
+.g{flex:1 1 auto;min-height:0;}
+.g1{flex-grow:1;flex-basis:calc(var(--s)*34px);}
+.g2{flex-grow:1;flex-basis:calc(var(--s)*34px);}
+.g3{flex-grow:1;flex-basis:calc(var(--s)*34px);}
+.g4{flex-grow:1;flex-basis:calc(var(--s)*32px);}
+.g5{flex-grow:1;flex-basis:calc(var(--s)*30px);}
+
+/* 1. headline */
+h1{
+  flex:0 0 auto;
+  font-size:calc(var(--s)*66px);
+  line-height:1.08;
+  font-weight:800;
+  letter-spacing:calc(var(--s)*-1.2px);
+  text-align:center;
+  color:#1B2A5C;
+  text-wrap:balance;
+}
+h1 .r{color:#D0202E;}
+
+/* 2. photo band */
+.photo{
+  flex:6 1 calc(var(--s)*392px);
+  min-height:calc(var(--s)*150px);
+  width:100%;
+  overflow:hidden;
+}
+.photo img{width:100%;height:100%;object-fit:cover;object-position:32% 58%;display:block;}
+
+/* 3. candidates */
+.cands{
+  flex:0 0 auto;
+  display:flex;
+  width:100%;
+  gap:calc(var(--s)*22px);
+}
+.cand{
+  flex:1 1 0;min-width:0;
+  text-align:center;
+  border-top:calc(var(--s)*4px) solid #1B2A5C;
+  padding-top:calc(var(--s)*14px);
+}
+.cand .nm{
+  font-size:calc(var(--s)*33px);
+  line-height:1.15;
+  font-weight:700;
+  letter-spacing:calc(var(--s)*-0.4px);
+  white-space:nowrap;
+  color:#1B2A5C;
+}
+.cand .ro{
+  margin-top:calc(var(--s)*5px);
+  font-size:calc(var(--s)*20px);
+  line-height:1.2;
+  font-weight:700;
+  letter-spacing:calc(var(--s)*1.4px);
+  text-transform:uppercase;
+  white-space:nowrap;
+  color:#D0202E;
+}
+
+/* 4. CTA bar */
+.cta{
+  flex:0 0 auto;
+  width:100%;
+  background:#D0202E;
+  display:flex;align-items:center;justify-content:center;
+  gap:calc(var(--s)*22px);
+  padding:calc(var(--s)*28px) calc(var(--s)*20px);
+}
+.cta img{width:calc(var(--s)*56px);height:calc(var(--s)*44px);display:block;flex:0 0 auto;}
+.cta span{
+  font-size:calc(var(--s)*42px);
+  line-height:1;
+  font-weight:800;
+  letter-spacing:calc(var(--s)*2.4px);
+  color:#fff;
+  white-space:nowrap;
+}
+
+/* 5. steps */
+.steps{
+  flex:0 0 auto;
+  display:flex;flex-direction:column;align-items:center;
+  gap:calc(var(--s)*16px);
+  width:100%;
+}
+.stepwrap{display:inline-flex;flex-direction:column;gap:calc(var(--s)*16px);max-width:100%;}
+.step{
+  display:flex;align-items:center;
+  gap:calc(var(--s)*16px);
+}
+.step img{width:calc(var(--s)*40px);height:calc(var(--s)*40px);display:block;flex:0 0 auto;}
+.step span{
+  font-size:calc(var(--s)*27px);
+  line-height:1.25;
+  font-weight:600;
+  letter-spacing:calc(var(--s)*-0.2px);
+  color:#1B2A5C;
+  white-space:nowrap;
+}
+
+/* 6. footer */
+.foot{
+  flex:0 0 auto;
+  text-align:center;
+  font-size:calc(var(--s)*20px);
+  line-height:1.3;
+  font-weight:500;
+  letter-spacing:calc(var(--s)*0.2px);
+  color:#6B7391;
+  white-space:nowrap;
+}
+</style></head>
+<body>
+<div class="page">
+  <h1 class="pad">Proven <span class="r">RESULTS</span> for <span class="r">WILLOWMERE</span> Families</h1>
+  <div class="g g1"></div>
+  <div class="photo"><img src="photo.jpg" alt=""></div>
+  <div class="g g2"></div>
+  <div class="cands pad">
+    <div class="cand"><div class="nm">Dana Levi</div><div class="ro">Mayor</div></div>
+    <div class="cand"><div class="nm">Omar Haddad</div><div class="ro">Council</div></div>
+    <div class="cand"><div class="nm">Ruth Cohen</div><div class="ro">Council</div></div>
+  </div>
+  <div class="g g3"></div>
+  <div class="cta"><img src="mail.svg" alt=""><span>VOTE BY MAIL</span></div>
+  <div class="g g4"></div>
+  <div class="steps pad">
+    <div class="stepwrap">
+      <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October 20</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Mail it back by November 3</span></div>
+    </div>
+  </div>
+  <div class="g g5"></div>
+  <div class="foot pad">Paid for by Willowmere Forward &middot; willowmereforward.org</div>
+</div>
+</body></html>

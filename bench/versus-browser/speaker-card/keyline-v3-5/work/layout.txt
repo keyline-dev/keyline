@@ -1,0 +1,54 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  header frame 80,80 920×48
+   logomark image 80,80 160×48 contain
+   eventname text 262,91 331×27 22px
+  body frame 80,168 920×723
+   speaker frame 80,168 920×184
+    portraitpic image 80,168 184×184 cover shows 800×800 from 0,0 of 800×800
+    idblock frame 292,218 708×85
+     speakername text 292,218 708×48 42px
+     speakerrole text 292,276 708×27 22px
+   talk frame 80,392 920×499
+    title text 80,514 920×192 58px 3L
+    datevenue text 80,740 920×29 24px
+  cta frame 80,931 214×69
+   ctatext text 124,951 126×29 24px
+ empty y 767–956 (17%)
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  header frame 96,78 1728×48
+   logomark image 96,78 160×48 contain
+   eventname text 278,89 331×27 22px
+  body frame 96,166 1728×727
+   speaker frame 96,315 540×430
+    portraitpic image 96,315 320×320 cover shows 800×800 from 0,0 of 800×800
+    idblock frame 96,665 540×80
+     speakername text 96,665 540×43 38px
+     speakerrole text 96,718 540×27 22px
+   talk frame 716,387 1108×286
+    title text 716,387 1108×219 66px 3L
+    datevenue text 716,644 1108×29 24px
+  cta frame 96,933 214×69
+   ctatext text 140,953 126×29 24px
+ empty y 743–958 (20%)
+story 1080×1920
+ root frame 0,0 1080×1920
+  header frame 86,110 908×52
+   logomark image 86,110 173×52 contain
+   eventname text 281,122 355×29 24px
+  body frame 86,222 908×1442
+   speaker frame 86,222 908×539
+    portraitpic image 86,222 400×400 cover shows 800×800 from 0,0 of 800×800
+    idblock frame 86,656 908×105
+     speakername text 86,656 908×64 56px
+     speakerrole text 86,730 908×31 26px
+   talk frame 86,1079 908×585
+    title text 86,1079 908×505 92px 5L
+    datevenue text 86,1630 908×34 28px
+  cta frame 86,1724 255×86
+   ctatext text 140,1750 147×34 28px
+ empty y 761–1089 (17%)

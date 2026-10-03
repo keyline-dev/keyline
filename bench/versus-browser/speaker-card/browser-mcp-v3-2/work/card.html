@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker Card</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: #06070f;
+  }
+
+  :root {
+    --bg: #0F1226;
+    --accent: #7C5CFF;
+    --ink: #FFFFFF;
+    --muted: rgba(255,255,255,0.62);
+  }
+
+  #card {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-feature-settings: "kern" 1, "liga" 1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- decorative background ---------- */
+  /* kept in its own clipped layer so decorations never affect card scroll size */
+  .bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .glow {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .glow-a {
+    background: radial-gradient(circle, rgba(124,92,255,0.40) 0%, rgba(124,92,255,0.10) 45%, rgba(124,92,255,0) 70%);
+  }
+  .glow-b {
+    background: radial-gradient(circle, rgba(124,92,255,0.22) 0%, rgba(124,92,255,0) 68%);
+  }
+  .hairline {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(124,92,255,0) 0%, rgba(124,92,255,0.55) 35%, rgba(255,255,255,0.18) 100%);
+    pointer-events: none;
+  }
+
+  /* ---------- content shell ---------- */
+  .inner {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  /* ---------- header ---------- */
+  .brand {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .brand img { display: block; }
+  .brand .rule {
+    width: 1px;
+    background: rgba(255,255,255,0.22);
+    flex-shrink: 0;
+  }
+  .event {
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    white-space: nowrap;
+    color: #FFFFFF;
+  }
+
+  /* ---------- speaker ---------- */
+  .speaker {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  .avatar {
+    position: relative;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: linear-gradient(145deg, var(--accent), #B9A6FF);
+    display: block;
+  }
+  .avatar-clip { width: 100%; height: 100%; }
+  .avatar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.18) inset;
+  }
+  .avatar-clip {
+    border-radius: 50%;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    background: #0F1226;
+  }
+  .avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    aspect-ratio: 1 / 1;
+    /* zoom toward the face so the circular crop isn't mostly backdrop */
+    transform: scale(1.22);
+    transform-origin: 50% 40%;
+  }
+  .who { min-width: 0; }
+  .name {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    color: #fff;
+  }
+  .role {
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--muted);
+  }
+
+  /* ---------- title ---------- */
+  .title-wrap { min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--accent);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .eyebrow::before {
+    content: "";
+    display: block;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .title {
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    color: #fff;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+  .title .hl { color: var(--accent); }
+
+  /* ---------- footer ---------- */
+  .footer {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 24px;
+  }
+  .meta {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .meta .dot {
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .when {
+    font-weight: 600;
+    line-height: 1.25;
+    color: rgba(255,255,255,0.86);
+    letter-spacing: -0.005em;
+  }
+  .btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #FFFFFF;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    white-space: nowrap;
+    border-radius: 999px;
+    box-shadow: 0 10px 40px rgba(124,92,255,0.45);
+  }
+
+  /* =========================================================
+     SQUARE 1080 x 1080
+     ========================================================= */
+  body.square #card {
+    width: 1080px; height: 1080px;
+    padding: 76px 80px 78px;
+  }
+  body.square .glow-a { width: 900px; height: 900px; top: -340px; right: -300px; }
+  body.square .glow-b { width: 760px; height: 760px; bottom: -380px; left: -280px; }
+  body.square .inner { flex-direction: column; }
+
+  body.square .brand { gap: 26px; }
+  body.square .brand img { width: 150px; height: 45px; }
+  body.square .brand .rule { height: 38px; }
+  body.square .event { font-size: 25px; }
+
+  body.square .title-wrap { margin-top: 56px; flex: 1 1 auto; justify-content: center; }
+  body.square .eyebrow { font-size: 17px; margin-bottom: 26px; }
+  body.square .eyebrow::before { width: 44px; }
+  body.square .title { font-size: 66px; }
+
+  body.square .speaker { gap: 30px; margin-top: 56px; }
+  body.square .avatar { width: 152px; height: 152px; padding: 4px; }
+  body.square .name { font-size: 38px; }
+  body.square .role { font-size: 23px; margin-top: 9px; }
+
+  body.square .footer { margin-top: 48px; padding-top: 46px; justify-content: space-between;
+                        border-top: 1px solid rgba(255,255,255,0.14); }
+  body.square .meta { gap: 16px; }
+  body.square .meta .dot { width: 10px; height: 10px; }
+  body.square .when { font-size: 25px; }
+  body.square .btn { font-size: 25px; padding: 0 44px; height: 72px; }
+
+  /* =========================================================
+     LANDSCAPE 1920 x 1080
+     ========================================================= */
+  body.landscape #card {
+    width: 1920px; height: 1080px;
+    padding: 84px 96px 86px;
+  }
+  body.landscape .glow-a { width: 1100px; height: 1100px; top: -420px; right: -340px; }
+  body.landscape .glow-b { width: 820px; height: 820px; bottom: -460px; left: -300px; }
+
+  body.landscape .inner { flex-direction: row; gap: 96px; align-items: stretch; }
+  body.landscape .col-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  body.landscape .col-side {
+    flex: 0 0 580px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border-left: 1px solid rgba(255,255,255,0.12);
+    padding-left: 72px;
+  }
+
+  body.landscape .brand { gap: 28px; }
+  body.landscape .brand img { width: 160px; height: 48px; }
+  body.landscape .brand .rule { height: 40px; }
+  body.landscape .event { font-size: 27px; }
+
+  body.landscape .title-wrap { margin-top: 68px; flex: 1 1 auto; justify-content: center; }
+  body.landscape .eyebrow { font-size: 18px; margin-bottom: 30px; }
+  body.landscape .eyebrow::before { width: 48px; }
+  body.landscape .title { font-size: 74px; }
+
+  body.landscape .footer { margin-top: 56px; padding-top: 50px; gap: 48px;
+                           border-top: 1px solid rgba(255,255,255,0.14); }
+  body.landscape .meta { gap: 18px; }
+  body.landscape .meta .dot { width: 11px; height: 11px; }
+  body.landscape .when { font-size: 28px; }
+  body.landscape .btn { font-size: 26px; padding: 0 48px; height: 76px; }
+
+  body.landscape .avatar { width: 360px; height: 360px; padding: 6px; }
+  body.landscape .who { margin-top: 44px; }
+  body.landscape .name { font-size: 42px; white-space: nowrap; }
+  body.landscape .role { font-size: 25px; margin-top: 14px; white-space: nowrap; }
+
+  /* =========================================================
+     STORY 1080 x 1920
+     ========================================================= */
+  body.story #card {
+    width: 1080px; height: 1920px;
+    padding: 110px 86px 116px;
+  }
+  body.story .glow-a { width: 980px; height: 980px; top: -400px; right: -340px; }
+  body.story .glow-b { width: 900px; height: 900px; bottom: -420px; left: -320px; }
+  body.story .inner { flex-direction: column; align-items: center; text-align: center; }
+
+  body.story .brand { gap: 26px; }
+  body.story .brand img { width: 160px; height: 48px; }
+  body.story .brand .rule { height: 40px; }
+  body.story .event { font-size: 26px; }
+
+  body.story .speaker { flex-direction: column; margin-top: 96px; }
+  body.story .avatar { width: 400px; height: 400px; padding: 7px; }
+  body.story .who { margin-top: 46px; }
+  body.story .name { font-size: 50px; }
+  body.story .role { font-size: 27px; margin-top: 14px; }
+
+  body.story .title-wrap { margin-top: 76px; align-items: center; flex: 1 1 auto; justify-content: center; }
+  body.story .eyebrow { font-size: 18px; margin-bottom: 36px; }
+  body.story .eyebrow::before { width: 46px; }
+  body.story .title { font-size: 76px; }
+
+  body.story .footer { margin-top: 76px; padding-top: 62px; flex-direction: column; gap: 46px;
+                       align-self: stretch; justify-content: center;
+                       border-top: 1px solid rgba(255,255,255,0.14); }
+  body.story .meta { gap: 16px; }
+  body.story .meta .dot { width: 11px; height: 11px; }
+  body.story .when { font-size: 28px; }
+  body.story .btn { font-size: 28px; padding: 0 56px; height: 84px; }
+</style>
+</head>
+<body>
+
+<div id="card">
+  <div class="bg">
+    <div class="glow glow-a"></div>
+    <div class="glow glow-b"></div>
+  </div>
+
+  <div class="inner" id="inner"></div>
+</div>
+
+<script>
+const BRAND = `
+  <div class="brand">
+    <img src="logo.svg" alt="Fieldnotes Conf logo">
+    <div class="rule"></div>
+    <div class="event">FIELDNOTES CONF 2026</div>
+  </div>`;
+
+const SPEAKER = `
+  <div class="speaker">
+    <div class="avatar"><div class="avatar-clip"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div></div>
+    <div class="who">
+      <div class="name">Maya Okonkwo-Lindqvist</div>
+      <div class="role">Principal Engineer, Northwind Labs</div>
+    </div>
+  </div>`;
+
+const TITLE = `
+  <div class="title-wrap">
+    <div class="eyebrow">KEYNOTE</div>
+    <h1 class="title" id="title">Shipping at the speed of trust: <span class="hl">what ten years of on-call taught us about resilient systems</span></h1>
+  </div>`;
+
+const FOOTER = `
+  <div class="footer">
+    <div class="meta">
+      <div class="dot"></div>
+      <div class="when">November 14, 2026 · Harbor Hall, Lisbon</div>
+    </div>
+    <div class="btn">Get tickets</div>
+  </div>`;
+
+const size = new URLSearchParams(location.search).get('size') || 'square';
+document.body.className = size;
+
+const inner = document.getElementById('inner');
+
+if (size === 'landscape') {
+  inner.innerHTML =
+    `<div class="col-main">${BRAND}${TITLE}${FOOTER}</div>` +
+    `<div class="col-side">
+       <div class="avatar"><div class="avatar-clip"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div></div>
+       <div class="who">
+         <div class="name">Maya Okonkwo-Lindqvist</div>
+         <div class="role">Principal Engineer, Northwind Labs</div>
+       </div>
+     </div>`;
+} else if (size === 'story') {
+  inner.innerHTML = BRAND + SPEAKER + TITLE + FOOTER;
+} else {
+  inner.innerHTML = BRAND + '<div class="hairline"></div>' + TITLE + SPEAKER + FOOTER;
+}
+
+/* ---- overflow audit: every real content element must sit inside the card's padding box ---- */
+const CONTENT = '.brand, .event, .title-wrap, .eyebrow, .title, .speaker, .avatar, .who, .name, .role, .footer, .meta, .when, .btn, .col-main, .col-side, .brand img, .avatar-clip';
+
+function padBox() {
+  const card = document.getElementById('card');
+  const b = card.getBoundingClientRect();
+  const cs = getComputedStyle(card);
+  return {
+    l: b.left + parseFloat(cs.paddingLeft),
+    t: b.top + parseFloat(cs.paddingTop),
+    r: b.right - parseFloat(cs.paddingRight),
+    b: b.bottom - parseFloat(cs.paddingBottom)
+  };
+}
+
+function overflows(tol) {
+  tol = tol || 0.6;
+  const p = padBox();
+  const bad = [];
+  document.querySelectorAll(CONTENT).forEach(el => {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return;
+    if (r.left < p.l - tol || r.right > p.r + tol || r.top < p.t - tol || r.bottom > p.b + tol) {
+      bad.push(el.className || el.tagName);
+    }
+  });
+  const inner = document.getElementById('inner');
+  if (inner.scrollHeight > inner.clientHeight + tol) bad.push('inner-scroll');
+  return bad;
+}
+
+document.fonts.ready.then(() => {
+  const title = document.getElementById('title');
+  let fs = parseFloat(getComputedStyle(title).fontSize);
+  let guard = 0;
+  // only the talk title is elastic; shrink it until the composition fits
+  while (overflows().length && fs > 26 && guard++ < 300) {
+    fs -= 1;
+    title.style.fontSize = fs + 'px';
+  }
+  document.documentElement.setAttribute('data-ready', '1');
+});
+</script>
+</body>
+</html>

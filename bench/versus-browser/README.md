@@ -58,6 +58,60 @@ Then judge the unjudged runs, rewrite `results.tsv` and print the medians:
 cargo test --release --test versus_browser judge_runs -- --ignored --nocapture
 ```
 
+## Prompt version vs3
+
+The same protocol on keyline 0.7.0 (`9e4a66c`). One change to the task, made before any counted run: the flyer's photo is a real one, `bench/photos/farmhouse.jpg` (a farmhouse in a field at sunrise), for every arm. Speaker card, judge prompt and tooling unchanged. Pilots (`*-pilot-v3`, one per arm on the flyer) ran on `80d053e` and aren't counted.
+
+30 counted runs, 5 per arm and task in five interleaved blocks, on 2026-10-03, 10:18–12:40. Two earlier attempts were stopped and none of their runs counted: the first after its first block, so the Gemini schema fix could ship as 0.7.0, and the second because the machine slept overnight and its runs couldn't reach the API (one turn, no tokens). The runner now stops at a run that uses no tokens. **Infrastructure reruns:** one, `speaker-card/browser-mcp-v3-3`, whose first attempt ended on an API connection reset (`ECONNRESET`) after 9 turns without its PNGs.
+
+### Results
+
+Medians (min–max) over all 30 runs. Ratios are browser ÷ keyline: the ratio of the medians, then the range between the extremes.
+
+#### reference-ad
+
+| Arm | Correct | Total tokens | Cost | Cold cost | Turns | Time (s) | Images seen | Fixed overhead | Peak context | Measured with JS |
+|---|---|---|---|---|---|---|---|---|---|---|
+| keyline | 5/5 | 147k (93k–163k) | $0.47 ($0.37–0.57) | $0.90 | 10 (8–11) | 120 (88–320) | 3 (2–3) | 5k | 22k | – |
+| browser-cli | 5/5 | 372k (261k–765k) | $0.91 ($0.73–1.37) | $2.16 | 23 (15–38) | 227 (195–322) | 8 (5–10) | 4k | 35k | 5/5 |
+| browser-mcp | 5/5 | 917k (361k–1,259k) | $1.08 ($0.95–1.41) | $4.86 | 37 (31–44) | 216 (180–265) | 5 (4–9) | 9k | 40k | 5/5 |
+
+| Browser ÷ keyline | Total tokens | Cost |
+|---|---|---|
+| browser-cli | 2.5× (1.6–8.2×) | 1.9× (1.3–3.7×) |
+| browser-mcp | 6.2× (2.2–13.5×) | 2.3× (1.7–3.8×) |
+
+#### speaker-card
+
+| Arm | Correct | Total tokens | Cost | Cold cost | Turns | Time (s) | Images seen | Fixed overhead | Peak context | Measured with JS |
+|---|---|---|---|---|---|---|---|---|---|---|
+| keyline | 5/5 | 144k (90k–195k) | $0.42 ($0.40–0.58) | $0.86 | 10 (7–13) | 103 (91–144) | 4 (2–4) | 5k | 21k | – |
+| browser-cli | 4/5 | 505k (387k–1,054k) | $1.14 ($0.87–1.71) | $2.87 | 30 (25–31) | 265 (191–327) | 9 (7–13) | 4k | 47k | 5/5 |
+| browser-mcp | 5/5 | 1,053k (448k–2,840k) | $1.23 ($0.65–2.68) | $5.53 | 39 (23–61) | 213 (133–447) | 7 (5–8) | 9k | 45k | 5/5 |
+
+| Browser ÷ keyline | Total tokens | Cost |
+|---|---|---|
+| browser-cli | 3.5× (2.0–11.8×) | 2.7× (1.5–4.3×) |
+| browser-mcp | 7.3× (2.3–31.7×) | 2.9× (1.1–6.8×) |
+
+Every run is in `results.tsv`, and `judge_runs` prints the medians over correct runs only (speaker-card browser-cli: 647k over its 4).
+
+### Reading it
+
+- **The stronger browser arm is browser-cli,** with the lower median total tokens on both tasks, so it's the comparison.
+- **Both tasks:** keyline used fewer tokens (2.5× and 3.5×) and was correct at least as often (5/5 and 5/5, against 5/5 and 4/5). The browser run that failed, `speaker-card/browser-cli-v3-4`, left the "Get tickets" button cut off at the square size.
+- **The ranges don't overlap:** keyline's most expensive run used fewer tokens than any browser run, on both tasks (163k against 261k, and 195k against 387k).
+- **Elsewhere:** keyline was faster on median time (120 s against 227 s, and 103 s against 265 s), took fewer turns and looked at fewer images. No keyline flyer run opened the photo or marked a subject; the default crop kept the farmhouse whole at every size.
+- **From the turns:** in `speaker-card/keyline-v3-4` the model twice wrote a `layer_add` that wasn't valid JSON, which Claude Code refused before keyline saw it; in `speaker-card/keyline-v3-1` keyline refused gradient stops written as `[color, offset]`.
+
+### What the rules allow
+
+keyline won on both tasks with correctness at least as high, so a general claim is allowed, from the smaller of the two ratios, rounded down to one significant figure:
+
+> keyline used 2× fewer tokens than a headless-browser agent (median of 5 runs on each of two tasks, Claude Opus 5, October 2026).
+
+And per task: 2× on the flyer, 3× on the speaker card.
+
 ## Prompt version vs2
 
 The same protocol (prompts, tasks, judge, tooling unchanged; only the version label) rerun on keyline `43d4acd`. The `commit` column says `f386138`, the commit that bumped the label; its `src/` is identical to `43d4acd`.

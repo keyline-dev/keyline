@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>flyer</title>
+<style>
+@font-face{
+  font-family:"Inter";
+  src:url("Inter.ttf") format("truetype");
+  font-weight:100 900;
+  font-style:normal;
+  font-display:block;
+}
+:root{ --s:1; --navy:#1B2A5C; --red:#D0202E; }
+html{ font-size: calc(100px * var(--s)); }
+*{ margin:0; padding:0; box-sizing:border-box; }
+body{ background:#888; }
+
+.flyer{
+  position:relative;
+  overflow:hidden;
+  background:#fff;
+  font-family:"Inter",sans-serif;
+  color:var(--navy);
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+}
+
+/* 1. headline */
+.head{
+  padding: 0.50rem 0.48rem 0.40rem;
+  font-weight:800;
+  font-size:0.60rem;
+  line-height:1.06;
+  letter-spacing:-0.015em;
+  text-wrap:balance;
+}
+.head em{ font-style:normal; color:var(--red); }
+
+/* 2. photo band */
+.photo{
+  flex:3 1 3.30rem;
+  min-height:1.10rem;
+  width:100%;
+  display:block;
+  object-fit:cover;
+  object-position:50% 55%;
+}
+
+/* 3. candidates */
+.cands{
+  display:flex;
+  padding:0.40rem 0.40rem 0.34rem;
+  flex:0 0 auto;
+}
+.cand{
+  position:relative;
+  flex:1 1 0;
+  min-width:0;
+  text-align:center;
+  padding:0 0.07rem;
+}
+.cand + .cand::before{
+  content:"";
+  position:absolute;
+  left:0; top:0.02rem; bottom:0.02rem;
+  width:max(1px,0.012rem);
+  background:#d8dce8;
+}
+.cand .nm{
+  font-weight:800;
+  font-size:0.285rem;
+  line-height:1.15;
+  letter-spacing:-0.01em;
+  white-space:nowrap;
+}
+.cand .rl{
+  margin-top:0.075rem;
+  font-weight:700;
+  font-size:0.175rem;
+  line-height:1.2;
+  letter-spacing:0.10em;
+  text-transform:uppercase;
+  color:var(--red);
+  white-space:nowrap;
+}
+
+/* 4. CTA bar */
+.cta{
+  flex:0 0 auto;
+  background:var(--red);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0.22rem;
+  padding:0.24rem 0.3rem;
+}
+.cta img{ width:0.52rem; height:0.409rem; display:block; flex:0 0 auto; }
+.cta span{
+  color:#fff;
+  font-weight:800;
+  font-size:0.40rem;
+  line-height:1.15;
+  letter-spacing:0.05em;
+  white-space:nowrap;
+}
+
+/* 5. steps */
+.steps{
+  flex:0 0 auto;
+  padding:0.36rem 0.48rem 0.30rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.19rem;
+}
+.step{ display:flex; align-items:center; gap:0.17rem; }
+.step img{ width:0.30rem; height:0.30rem; display:block; flex:0 0 auto; }
+.step span{
+  font-size:0.225rem;
+  line-height:1.25;
+  font-weight:600;
+  letter-spacing:-0.002em;
+}
+
+/* 6. footer */
+.foot{
+  flex:0 0 auto;
+  border-top:max(1px,0.012rem) solid #d8dce8;
+  margin:0 0.48rem;
+  padding:0.22rem 0 0.30rem;
+  text-align:center;
+  font-size:0.175rem;
+  line-height:1.3;
+  font-weight:500;
+  color:#5b6484;
+  letter-spacing:0.004em;
+}
+.sp1{ flex:0.4 0 0; }
+.sp2{ flex:0.6 0 0; }
+</style>
+</head>
+<body>
+<div class="flyer" id="flyer">
+  <h1 class="head">Proven <em>RESULTS</em> for <em>WILLOWMERE</em> Families</h1>
+  <div class="sp1"></div>
+  <img class="photo" src="photo.jpg" alt="">
+  <div class="cands">
+    <div class="cand"><div class="nm">Dana Levi</div><div class="rl">Mayor</div></div>
+    <div class="cand"><div class="nm">Omar Haddad</div><div class="rl">Council</div></div>
+    <div class="cand"><div class="nm">Ruth Cohen</div><div class="rl">Council</div></div>
+  </div>
+  <div class="cta">
+    <img src="mail.svg" alt=""><span>VOTE BY MAIL</span>
+  </div>
+  <div class="steps">
+    <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October&nbsp;20</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+    <div class="step"><img src="check.svg" alt=""><span>Mail it back by November&nbsp;3</span></div>
+  </div>
+  <div class="sp2"></div>
+  <div class="foot">Paid for by Willowmere Forward&nbsp;· willowmereforward.org</div>
+</div>
+<script>
+const q = new URLSearchParams(location.search);
+const w = +(q.get('w') || 1080), h = +(q.get('h') || 1350), s = +(q.get('s') || 1);
+document.documentElement.style.setProperty('--s', s);
+const f = document.getElementById('flyer');
+f.style.width = w + 'px';
+f.style.height = h + 'px';
+document.body.style.margin = '0';
+</script>
+</body>
+</html>

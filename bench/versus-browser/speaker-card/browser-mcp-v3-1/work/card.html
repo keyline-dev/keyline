@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker card</title>
+<style>
+@font-face {
+  font-family: "Inter";
+  src: url("Inter.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+:root{
+  --bg:#0F1226;
+  --accent:#7C5CFF;
+  --white:#ffffff;
+  --muted:rgba(255,255,255,.66);
+  --muted2:rgba(255,255,255,.78);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:#000;}
+body{
+  font-family:"Inter",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
+.card{
+  position:relative;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--white);
+  display:flex;
+  isolation:isolate;
+}
+
+/* decorative glow */
+.card::before,.card::after{
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  z-index:0;
+  pointer-events:none;
+}
+.card::before{
+  width:70%;aspect-ratio:1;
+  right:-22%;top:-26%;
+  background:radial-gradient(circle, rgba(124,92,255,.38) 0%, rgba(124,92,255,0) 68%);
+}
+.card::after{
+  width:60%;aspect-ratio:1;
+  left:-26%;bottom:-30%;
+  background:radial-gradient(circle, rgba(124,92,255,.22) 0%, rgba(124,92,255,0) 70%);
+}
+
+.inner{position:relative;z-index:1;display:flex;width:100%;height:100%;}
+
+/* ---------- shared pieces ---------- */
+.brand{display:flex;align-items:center;gap:var(--brand-gap);}
+.brand img{display:block;height:var(--logo-h);width:auto;}
+.brand .rule{width:1px;height:calc(var(--logo-h) * .72);background:rgba(255,255,255,.26);}
+.brand .ename{
+  font-size:var(--ename-size);
+  font-weight:700;
+  letter-spacing:.17em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  line-height:1;
+}
+
+.title{
+  font-size:var(--title-size);
+  line-height:1.1;
+  font-weight:800;
+  letter-spacing:-.02em;
+  text-wrap:balance;
+  overflow-wrap:break-word;
+}
+.title .hl{color:var(--accent);}
+
+.speaker{display:flex;align-items:center;gap:var(--sp-gap);}
+.avatar{
+  width:var(--avatar);
+  height:var(--avatar);
+  flex:0 0 var(--avatar);
+  border-radius:50%;
+  overflow:hidden;
+  background:#1a1f3d;
+  box-shadow:0 0 0 var(--ring-w) var(--accent), 0 0 0 calc(var(--ring-w) + var(--gap-w)) rgba(255,255,255,.14);
+}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+.sname{font-size:var(--name-size);font-weight:700;line-height:1.15;letter-spacing:-.01em;}
+.srole{font-size:var(--role-size);font-weight:500;color:var(--muted2);line-height:1.3;margin-top:var(--role-gap);}
+
+.meta{
+  display:flex;align-items:center;gap:var(--meta-gap);
+  font-size:var(--meta-size);font-weight:500;color:var(--muted);
+  line-height:1.3;
+}
+.meta .dot{width:var(--dotsz);height:var(--dotsz);border-radius:50%;background:var(--accent);flex:0 0 auto;}
+
+.cta{
+  display:inline-flex;align-items:center;justify-content:center;
+  align-self:flex-start;
+  background:var(--accent);
+  color:#fff;
+  font-size:var(--cta-size);
+  font-weight:700;
+  letter-spacing:.01em;
+  padding:var(--cta-py) var(--cta-px);
+  border-radius:999px;
+  line-height:1;
+  white-space:nowrap;
+  box-shadow:0 10px 30px rgba(124,92,255,.32);
+}
+
+.accentbar{
+  width:var(--bar-w);height:var(--bar-h);border-radius:999px;background:var(--accent);
+}
+
+/* ================= SQUARE 1080x1080 ================= */
+body.square .card{
+  width:1080px;height:1080px;
+  --logo-h:46px; --brand-gap:22px; --ename-size:21px;
+  --title-size:70px;
+  --avatar:168px; --ring-w:4px; --gap-w:3px; --sp-gap:30px;
+  --name-size:40px; --role-size:23px; --role-gap:7px;
+  --meta-size:23px; --meta-gap:14px; --dotsz:8px;
+  --cta-size:24px; --cta-py:23px; --cta-px:46px;
+  --bar-w:76px; --bar-h:7px;
+}
+body.square .inner{flex-direction:column;padding:76px 78px 72px;}
+body.square .spacer{flex:1 1 auto;min-height:40px;}
+body.square .title{margin-top:44px;}
+body.square .accentbar{margin-top:52px;}
+body.square .speaker{margin-top:44px;}
+body.square .meta{margin-top:42px;}
+body.square .cta{margin-top:40px;}
+
+/* ================= LANDSCAPE 1920x1080 ================= */
+body.landscape .card{
+  width:1920px;height:1080px;
+  --logo-h:48px; --brand-gap:24px; --ename-size:22px;
+  --title-size:68px;
+  --avatar:420px; --ring-w:6px; --gap-w:4px; --sp-gap:0px;
+  --name-size:42px; --role-size:25px; --role-gap:9px;
+  --meta-size:25px; --meta-gap:15px; --dotsz:9px;
+  --cta-size:25px; --cta-py:25px; --cta-px:50px;
+  --bar-w:84px; --bar-h:7px;
+}
+body.landscape .inner{flex-direction:row;align-items:stretch;padding:84px 96px;gap:84px;}
+body.landscape .col-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;}
+body.landscape .col-side{
+  flex:0 0 520px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;
+}
+body.landscape .spacer{flex:1 1 0;min-height:30px;}
+body.landscape .title{margin-top:40px;}
+body.landscape .accentbar{margin-top:46px;}
+body.landscape .meta{margin-top:0;}
+body.landscape .cta{margin-top:40px;}
+body.landscape .col-side .sname{margin-top:42px;white-space:nowrap;}
+body.landscape .col-side .srole{max-width:520px;}
+
+/* ================= STORY 1080x1920 ================= */
+body.story .card{
+  width:1080px;height:1920px;
+  --logo-h:50px; --brand-gap:24px; --ename-size:22px;
+  --title-size:80px;
+  --avatar:380px; --ring-w:6px; --gap-w:4px; --sp-gap:0px;
+  --name-size:52px; --role-size:28px; --role-gap:10px;
+  --meta-size:28px; --meta-gap:16px; --dotsz:10px;
+  --cta-size:28px; --cta-py:28px; --cta-px:58px;
+  --bar-w:92px; --bar-h:8px;
+}
+body.story .inner{flex-direction:column;align-items:center;text-align:center;padding:110px 82px 120px;}
+body.story .brand{justify-content:center;}
+body.story .spacer{flex:1 1 0;min-height:24px;}
+body.story .avatar{margin-top:0;}
+body.story .sname{margin-top:44px;}
+body.story .srole{margin-top:12px;}
+body.story .accentbar{margin-top:56px;}
+body.story .title{margin-top:56px;}
+body.story .meta{margin-top:56px;justify-content:center;}
+body.story .cta{align-self:center;margin-top:60px;}
+</style>
+</head>
+<body>
+<div class="card"><div class="inner" id="root"></div></div>
+
+<script>
+const NAME  = "Maya Okonkwo-Lindqvist";
+const ROLE  = "Principal Engineer, Northwind Labs";
+const TITLE = 'Shipping at the speed of trust: <span class="hl">what ten years of on-call taught us</span> about resilient systems';
+const META  = "November 14, 2026 &nbsp;·&nbsp; Harbor Hall, Lisbon";
+
+const brand = `
+  <div class="brand">
+    <img src="logo.svg" alt="">
+    <span class="rule"></span>
+    <span class="ename">Fieldnotes Conf 2026</span>
+  </div>`;
+
+const meta = `<div class="meta"><span class="dot"></span><span>November 14, 2026 &nbsp;·&nbsp; Harbor Hall, Lisbon</span></div>`;
+const cta  = `<div class="cta">Get tickets</div>`;
+const bar  = `<div class="accentbar"></div>`;
+const avatar = `<div class="avatar"><img src="portrait.png" alt=""></div>`;
+
+const v = new URLSearchParams(location.search).get("v") || "square";
+document.body.className = v;
+const root = document.getElementById("root");
+
+if (v === "square") {
+  root.innerHTML = `
+    ${brand}
+    ${bar}
+    <h1 class="title">${TITLE}</h1>
+    <div class="spacer"></div>
+    <div class="speaker">
+      ${avatar}
+      <div class="sinfo">
+        <div class="sname">${NAME}</div>
+        <div class="srole">${ROLE}</div>
+      </div>
+    </div>
+    ${meta}
+    ${cta}`;
+} else if (v === "landscape") {
+  root.innerHTML = `
+    <div class="col-main">
+      ${brand}
+      <div class="spacer"></div>
+      ${bar}
+      <h1 class="title">${TITLE}</h1>
+      <div class="spacer"></div>
+      ${meta}
+      ${cta}
+    </div>
+    <div class="col-side">
+      ${avatar}
+      <div class="sname">${NAME}</div>
+      <div class="srole">${ROLE}</div>
+    </div>`;
+} else {
+  root.innerHTML = `
+    ${brand}
+    <div class="spacer"></div>
+    ${avatar}
+    <div class="sname">${NAME}</div>
+    <div class="srole">${ROLE}</div>
+    ${bar}
+    <h1 class="title">${TITLE}</h1>
+    <div class="spacer"></div>
+    ${meta}
+    ${cta}`;
+}
+
+document.fonts.ready.then(() => { document.documentElement.dataset.ready = "1"; });
+</script>
+</body>
+</html>

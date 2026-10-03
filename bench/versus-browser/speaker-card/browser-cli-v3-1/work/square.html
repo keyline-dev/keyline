@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>square</title>
+<style>
+@font-face{font-family:'Inter';src:url('Inter.ttf') format('truetype');font-weight:100 900;font-style:normal;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:1080px;height:1080px;}
+body{font-family:'Inter',sans-serif;background:#0F1226;color:#fff;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+.card{position:relative;width:1080px;height:1080px;padding:76px;
+  display:flex;flex-direction:column;overflow:hidden;}
+.card::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(860px 720px at 12% 2%,rgba(124,92,255,.32),transparent 62%),
+    radial-gradient(820px 700px at 104% 100%,rgba(124,92,255,.16),transparent 60%);}
+.card::after{content:'';position:absolute;left:0;right:0;top:0;height:6px;
+  background:linear-gradient(90deg,#7C5CFF 0%,#7C5CFF 40%,rgba(124,92,255,0) 100%);}
+.head,.main{position:relative;z-index:1;}
+
+/* header */
+.head{display:flex;align-items:center;gap:22px;flex:0 0 auto;}
+.logo{display:block;line-height:0;}
+.logo svg{display:block;width:168px;height:auto;}
+.bar{width:2px;height:40px;background:rgba(255,255,255,.26);border-radius:2px;flex:0 0 auto;}
+.event{font-size:21px;font-weight:700;letter-spacing:0.20em;
+  color:rgba(255,255,255,.94);white-space:nowrap;line-height:1;padding-left:2px;}
+
+/* main */
+.main{flex:1 1 auto;display:flex;min-height:0;min-width:0;}
+.stackmain{flex-direction:column;justify-content:space-between;
+  padding-top:38px;padding-bottom:8px;}
+.split{flex-direction:row;align-items:center;gap:72px;}
+.col-l{flex:0 0 232px;display:flex;}
+.col-r{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;
+  gap:34px;}
+
+/* portrait */
+.ring{flex:0 0 auto;width:232px;height:232px;border-radius:50%;
+  padding:6px;
+  background:linear-gradient(145deg,#7C5CFF,rgba(124,92,255,.16));
+  box-shadow:0 13px 37px rgba(6,8,24,.55);}
+.photo{width:100%;height:100%;border-radius:50%;
+  background:url('portrait.png') center/cover no-repeat,#1b1f3a;}
+
+/* speaker */
+.speaker{display:flex;align-items:center;gap:37px;flex:0 0 auto;min-width:0;}
+.speaker.col{flex-direction:column;align-items:flex-start;gap:26px;}
+.who{min-width:0;}
+.name{font-size:42px;font-weight:700;letter-spacing:-0.022em;line-height:1.1;
+  overflow-wrap:break-word;}
+.role{margin-top:11px;font-size:23px;font-weight:500;
+  line-height:1.35;color:#B9A7FF;overflow-wrap:break-word;}
+
+/* title + footer group */
+.group{display:flex;flex-direction:column;gap:42px;flex:0 0 auto;min-width:0;}
+.hr{height:2px;width:100%;flex:0 0 auto;border-radius:2px;
+  background:linear-gradient(90deg,rgba(124,92,255,.85) 0%,rgba(124,92,255,.35) 32%,rgba(255,255,255,.07) 100%);}
+.title{font-size:68px;font-weight:700;line-height:1.13;letter-spacing:-0.026em;
+  overflow-wrap:break-word;text-wrap:pretty;}
+.foot{display:flex;flex-direction:column;align-items:flex-start;gap:34px;flex:0 0 auto;}
+.meta{display:flex;align-items:center;font-size:24px;font-weight:500;line-height:1.4;
+  color:rgba(255,255,255,.82);overflow-wrap:break-word;}
+.dot{width:10px;height:10px;border-radius:50%;
+  background:#7C5CFF;margin-right:13px;flex:0 0 auto;}
+.sep{color:#7C5CFF;padding:0 8px;font-weight:700;}
+.btn{display:inline-flex;align-items:center;justify-content:center;
+  padding:20px 42px;border-radius:999px;background:#7C5CFF;color:#fff;
+  font-size:23px;font-weight:700;letter-spacing:-0.004em;line-height:1;white-space:nowrap;
+  box-shadow:0 12px 30px rgba(124,92,255,.36);}
+</style>
+</head>
+<body><div class="card">
+    <header class="head">
+      <span class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 48" width="160" height="48">
+<rect x="0" y="28" width="12" height="20" rx="3" fill="#7C5CFF"/>
+<rect x="18" y="16" width="12" height="32" rx="3" fill="#7C5CFF"/>
+<rect x="36" y="4" width="12" height="44" rx="3" fill="#FFFFFF"/>
+<circle cx="84" cy="24" r="18" fill="none" stroke="#FFFFFF" stroke-width="8"/>
+<circle cx="84" cy="24" r="6" fill="#7C5CFF"/>
+<path d="M114 40 L130 8 L146 40 Z" fill="#7C5CFF"/>
+<rect x="150" y="8" width="10" height="32" rx="3" fill="#FFFFFF"/></svg></span>
+      <span class="bar"></span>
+      <span class="event">FIELDNOTES CONF 2026</span>
+    </header>
+    <main class="main stackmain">
+      <div class="speaker"><div class="ring"><div class="photo"></div></div><div class="who">
+          <h2 class="name">Maya Okonkwo-Lindqvist</h2>
+          <p class="role">Principal Engineer, Northwind Labs</p>
+        </div></div>
+      <div class="group">
+        <div class="hr"></div>
+        <h1 class="title">Shipping at the speed of trust: what ten years of on‑call taught us about resilient systems</h1>
+        <div class="foot"><p class="meta"><span class="dot"></span>November 14, 2026 <span class="sep">·</span> Harbor Hall, Lisbon</p><a class="btn">Get tickets</a></div>
+      </div>
+    </main>
+  </div></body></html>

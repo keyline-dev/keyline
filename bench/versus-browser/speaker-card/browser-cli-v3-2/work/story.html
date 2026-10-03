@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Story</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  .card { padding: 110px 70px 120px; justify-content: space-between; align-items: center; text-align: center; }
+
+  .glow.a { width: 1000px; height: 1000px; top: -420px; right: -300px;
+            background: radial-gradient(circle, rgba(124,92,255,.40) 0%, rgba(124,92,255,0) 68%); }
+  .glow.b { width: 900px; height: 900px; bottom: -420px; left: -340px;
+            background: radial-gradient(circle, rgba(124,92,255,.24) 0%, rgba(124,92,255,0) 70%); }
+  .grid-lines { background-size: 80px 80px;
+    mask-image: radial-gradient(110% 80% at 50% 0%, #000 0%, transparent 72%);
+    -webkit-mask-image: radial-gradient(110% 80% at 50% 0%, #000 0%, transparent 72%); }
+
+  .header { gap: 22px; justify-content: center; }
+  .header img { width: 180px; height: 54px; }
+  .rule { width: 1px; height: 32px; }
+  .event-name { font-size: 20px; letter-spacing: 0.17em; }
+
+  .speaker { display: flex; flex-direction: column; align-items: center; }
+  .portrait { width: 420px; --ring: 9px; }
+  .speaker-name { font-size: 44px; margin-top: 44px; }
+  .speaker-role { font-size: 24px; margin-top: 13px; }
+
+  .talk { width: 100%; }
+  .kicker { font-size: 16px; margin-bottom: 28px; justify-content: center; }
+  .title { font-size: 64px; }
+
+  .footer { display: flex; flex-direction: column; align-items: center; gap: 40px; }
+  .meta { font-size: 24px; }
+  .btn { font-size: 23px; padding: 26px 56px; align-self: center; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="glow a"></div>
+  <div class="glow b"></div>
+  <div class="grid-lines"></div>
+
+  <header class="header">
+    <img src="logo.svg" alt="">
+    <div class="rule"></div>
+    <div class="event-name">Fieldnotes Conf 2026</div>
+  </header>
+
+  <div class="speaker">
+    <div class="portrait"></div>
+    <div class="speaker-name">Maya Okonkwo-Lindqvist</div>
+    <div class="speaker-role">Principal Engineer, Northwind Labs</div>
+  </div>
+
+  <div class="talk">
+    <div class="kicker">Keynote</div>
+    <h1 class="title">Shipping at the speed of trust: what ten years of on-call taught us about resilient systems</h1>
+  </div>
+
+  <footer class="footer">
+    <div class="meta"><b>November 14, 2026</b> &middot; Harbor Hall, Lisbon</div>
+    <a class="btn">Get tickets
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Landscape</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  .card { padding: 72px 96px; justify-content: space-between; }
+
+  .glow.a { width: 900px; height: 900px; top: -400px; right: 120px;
+            background: radial-gradient(circle, rgba(124,92,255,.38) 0%, rgba(124,92,255,0) 68%); }
+  .glow.b { width: 760px; height: 760px; bottom: -400px; left: -220px;
+            background: radial-gradient(circle, rgba(124,92,255,.20) 0%, rgba(124,92,255,0) 70%); }
+
+  .header { gap: 22px; }
+  .header img { width: 160px; height: 48px; }
+  .rule { width: 1px; height: 30px; }
+  .event-name { font-size: 19px; letter-spacing: 0.17em; }
+
+  .main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 96px;
+    min-height: 0;
+    padding: 28px 0;
+  }
+
+  .left { flex: 1 1 auto; min-width: 0; }
+  .kicker { font-size: 16px; margin-bottom: 24px; }
+  .title { font-size: 70px; }
+
+  .right {
+    flex: 0 0 auto;
+    width: 424px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .portrait { width: 352px; --ring: 8px; }
+  .speaker-name { font-size: 34px; margin-top: 34px; }
+  .speaker-role { font-size: 20px; margin-top: 10px; }
+
+  .footer { display: flex; align-items: center; justify-content: space-between; gap: 40px; }
+  .meta { font-size: 22px; }
+  .btn { font-size: 20px; padding: 22px 42px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="glow a"></div>
+  <div class="glow b"></div>
+  <div class="grid-lines"></div>
+
+  <header class="header">
+    <img src="logo.svg" alt="">
+    <div class="rule"></div>
+    <div class="event-name">Fieldnotes Conf 2026</div>
+  </header>
+
+  <div class="main">
+    <div class="left">
+      <div class="kicker">Keynote</div>
+      <h1 class="title">Shipping at the speed of trust: what ten years of on-call taught us about resilient systems</h1>
+    </div>
+    <div class="right">
+      <div class="portrait"></div>
+      <div class="speaker-name">Maya Okonkwo-Lindqvist</div>
+      <div class="speaker-role">Principal Engineer, Northwind Labs</div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="meta"><b>November 14, 2026</b> &middot; Harbor Hall, Lisbon</div>
+    <a class="btn">Get tickets
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </footer>
+</div>
+</body>
+</html>

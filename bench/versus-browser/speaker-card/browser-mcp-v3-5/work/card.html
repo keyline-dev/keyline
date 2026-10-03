@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face{
+  font-family:'Inter';
+  src:url('Inter.ttf') format('truetype');
+  font-weight:100 900;
+  font-style:normal;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#06070f}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+:root{
+  --bg:#0F1226;
+  --accent:#7C5CFF;
+}
+.card{
+  position:relative;
+  overflow:hidden;
+  background:var(--bg);
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+}
+/* decorative glow */
+.card::before{
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(124,92,255,.38) 0%, rgba(124,92,255,0) 68%);
+  pointer-events:none;
+}
+.card::after{
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(124,92,255,.18) 0%, rgba(124,92,255,0) 70%);
+  pointer-events:none;
+}
+.inner{position:relative;z-index:2;display:flex;flex-direction:column;height:100%;width:100%}
+
+/* ---------- header ---------- */
+.header{display:flex;align-items:center;flex:0 0 auto}
+.header img{display:block;flex:0 0 auto}
+.rule{width:1px;background:rgba(255,255,255,.22);flex:0 0 auto}
+.event{
+  font-weight:700;
+  letter-spacing:.14em;
+  white-space:nowrap;
+  color:#fff;
+}
+
+/* ---------- speaker ---------- */
+.speaker{display:flex;align-items:center;flex:0 0 auto}
+.avatar{
+  flex:0 0 auto;
+  border-radius:50%;
+  overflow:hidden;
+  position:relative;
+  background:#1a1f3d;
+  box-shadow:0 0 0 var(--ring,4px) rgba(124,92,255,.95), 0 0 0 calc(var(--ring,4px) + 6px) rgba(124,92,255,.18);
+}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+.who{min-width:0}
+.name{font-weight:700;letter-spacing:-.015em;line-height:1.1}
+.role{font-weight:500;color:rgba(255,255,255,.66);line-height:1.3}
+
+/* ---------- title ---------- */
+.title{
+  font-weight:700;
+  letter-spacing:-.025em;
+  line-height:1.1;
+  flex:0 0 auto;
+  overflow-wrap:break-word;
+}
+.title em{font-style:normal;color:var(--accent)}
+
+/* ---------- meta ---------- */
+.meta{
+  display:flex;align-items:center;
+  font-weight:500;
+  color:rgba(255,255,255,.80);
+  flex:0 0 auto;
+  white-space:nowrap;
+}
+.meta .dot{flex:0 0 auto;border-radius:50%;background:var(--accent)}
+
+/* ---------- button ---------- */
+.cta{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--accent);
+  color:#fff;
+  font-weight:700;
+  border-radius:999px;
+  white-space:nowrap;
+  align-self:flex-start;
+  flex:0 0 auto;
+  box-shadow:0 10px 30px rgba(124,92,255,.35);
+}
+
+/* =========================================================
+   SQUARE 1080 x 1080
+   ========================================================= */
+.sq{width:1080px;height:1080px}
+.sq::before{width:760px;height:760px;right:-240px;top:-280px}
+.sq::after{width:620px;height:620px;left:-260px;bottom:-300px}
+.sq .inner{padding:76px}
+.sq .header{gap:26px}
+.sq .rule{height:38px}
+.sq .event{font-size:23px}
+.sq .speaker{gap:36px;margin-top:72px}
+.sq .avatar{width:200px;height:200px;--ring:4px}
+.sq .name{font-size:44px}
+.sq .role{font-size:24px;margin-top:8px}
+.sq .title{font-size:66px;margin-top:76px}
+.sq .meta{gap:14px;font-size:24px;margin-top:auto;padding-top:48px}
+.sq .meta .dot{width:7px;height:7px}
+.sq .cta{font-size:23px;padding:0 44px;height:66px;margin-top:38px}
+
+/* =========================================================
+   LANDSCAPE 1920 x 1080
+   ========================================================= */
+.ls{width:1920px;height:1080px}
+.ls::before{width:900px;height:900px;right:-230px;top:-330px}
+.ls::after{width:700px;height:700px;left:-300px;bottom:-330px}
+.ls .inner{padding:84px 96px}
+.ls .header{gap:28px}
+.ls .rule{height:40px}
+.ls .event{font-size:25px}
+.ls .body{display:flex;gap:110px;align-items:center;flex:1 1 auto;min-height:0;padding:40px 0 0}
+.ls .col{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.ls .side{flex:0 0 auto;width:540px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.ls .avatar{width:420px;height:420px;--ring:5px}
+.ls .name{font-size:42px;margin-top:46px;white-space:nowrap}
+.ls .role{font-size:24px;margin-top:10px;white-space:nowrap}
+.ls .title{font-size:74px}
+.ls .meta{gap:16px;font-size:26px;margin-top:48px}
+.ls .meta .dot{width:8px;height:8px}
+.ls .cta{font-size:25px;padding:0 50px;height:72px;margin-top:48px}
+
+/* =========================================================
+   STORY 1080 x 1920
+   ========================================================= */
+.st{width:1080px;height:1920px}
+.st::before{width:860px;height:860px;right:-280px;top:-300px}
+.st::after{width:760px;height:760px;left:-300px;bottom:-280px}
+.st .inner{padding:96px 80px 104px}
+.st .header{gap:26px;justify-content:center}
+.st .rule{height:40px}
+.st .event{font-size:25px}
+.st .speaker{flex-direction:column;align-items:center;text-align:center;gap:46px;margin-top:auto}
+.st .avatar{width:480px;height:480px;--ring:6px}
+.st .name{font-size:56px}
+.st .role{font-size:28px;margin-top:14px}
+.st .title{font-size:72px;margin-top:96px;text-align:center}
+.st .meta{gap:16px;font-size:28px;margin-top:auto;padding-top:72px;justify-content:center;align-self:center}
+.st .meta .dot{width:8px;height:8px}
+.st .cta{font-size:27px;padding:0 56px;height:80px;margin-top:56px;align-self:center}
+</style>
+</head>
+<body>
+<div class="card sq" id="card">
+  <div class="inner">
+    <div class="header">
+      <img src="logo.svg" width="160" height="48" alt="">
+      <div class="rule"></div>
+      <div class="event">FIELDNOTES CONF 2026</div>
+    </div>
+
+    <div class="speaker">
+      <div class="avatar"><img src="portrait.png" alt=""></div>
+      <div class="who">
+        <div class="name">Maya Okonkwo&#8209;Lindqvist</div>
+        <div class="role">Principal Engineer, Northwind Labs</div>
+      </div>
+    </div>
+
+    <h1 class="title">Shipping at the <em>speed of trust</em>: what ten years of on&#8209;call taught us about resilient systems</h1>
+
+    <div class="meta">
+      <span>November 14, 2026</span>
+      <span class="dot"></span>
+      <span>Harbor Hall, Lisbon</span>
+    </div>
+
+    <div class="cta">Get tickets</div>
+  </div>
+</div>
+<script>
+const v = new URLSearchParams(location.search).get('v') || 'sq';
+const card = document.getElementById('card');
+card.className = 'card ' + v;
+
+if (v === 'ls') {
+  // restructure into two columns: text left, portrait right
+  const inner = card.querySelector('.inner');
+  const header = inner.querySelector('.header');
+  const speaker = inner.querySelector('.speaker');
+  const avatar = speaker.querySelector('.avatar');
+  const who = speaker.querySelector('.who');
+  const title = inner.querySelector('.title');
+  const meta = inner.querySelector('.meta');
+  const cta = inner.querySelector('.cta');
+
+  const body = document.createElement('div'); body.className = 'body';
+  const col = document.createElement('div'); col.className = 'col';
+  const side = document.createElement('div'); side.className = 'side';
+
+  col.append(title, meta, cta);
+  side.append(avatar, who);
+  body.append(col, side);
+  speaker.remove();
+  inner.append(body);
+}
+document.fonts.ready.then(() => { document.documentElement.dataset.ready = '1'; });
+</script>
+</body>
+</html>

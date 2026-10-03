@@ -1,0 +1,104 @@
+{
+  "correct": true,
+  "costUsd": 0.107515,
+  "defects": 0,
+  "model": "claude-opus-5",
+  "sizes": {
+    "landscape": {
+      "cutOrOverflowing": [],
+      "items": {
+        "1": {
+          "present": true,
+          "readable": true
+        },
+        "2": {
+          "present": true,
+          "readable": true
+        },
+        "3": {
+          "present": true,
+          "readable": true
+        },
+        "4": {
+          "present": true,
+          "readable": true
+        },
+        "5": {
+          "present": true,
+          "readable": true
+        },
+        "6": {
+          "present": true,
+          "readable": true
+        }
+      },
+      "overlapping": [],
+      "portraitCircle": true,
+      "smallestTextLegible": true
+    },
+    "square": {
+      "cutOrOverflowing": [],
+      "items": {
+        "1": {
+          "present": true,
+          "readable": true
+        },
+        "2": {
+          "present": true,
+          "readable": true
+        },
+        "3": {
+          "present": true,
+          "readable": true
+        },
+        "4": {
+          "present": true,
+          "readable": true
+        },
+        "5": {
+          "present": true,
+          "readable": true
+        },
+        "6": {
+          "present": true,
+          "readable": true
+        }
+      },
+      "overlapping": [],
+      "portraitCircle": true,
+      "smallestTextLegible": true
+    },
+    "story": {
+      "cutOrOverflowing": [],
+      "items": {
+        "1": {
+          "present": true,
+          "readable": true
+        },
+        "2": {
+          "present": true,
+          "readable": true
+        },
+        "3": {
+          "present": true,
+          "readable": true
+        },
+        "4": {
+          "present": true,
+          "readable": true
+        },
+        "5": {
+          "present": true,
+          "readable": true
+        },
+        "6": {
+          "present": true,
+          "readable": true
+        }
+      },
+      "overlapping": [],
+      "portraitCircle": true,
+      "smallestTextLegible": true
+    }
+  }
+}

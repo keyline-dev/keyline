@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face{
+  font-family:'Inter';
+  src:url('Inter.ttf') format('truetype');
+  font-weight:100 900;
+  font-display:block;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{background:#fff;}
+body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+
+#page{position:relative;overflow:hidden;background:#fff;}
+#inner{position:absolute;top:0;left:0;transform-origin:top left;
+       display:flex;flex-direction:column;background:#fff;}
+
+.sp{flex:1 1 0;min-height:14px;}
+.sp.s2{flex:1 1 0;}
+
+/* ---------- headline ---------- */
+.head{padding:0 96px;}
+.head h1{
+  font-size:70px;line-height:1.08;font-weight:800;color:#1B2A5C;
+  letter-spacing:-.015em;text-wrap:balance;
+}
+.head h1 .r{color:#D0202E;}
+.rule{margin:28px 96px 0;height:8px;width:150px;background:#D0202E;border-radius:4px;}
+
+/* ---------- photo band ---------- */
+.photo{
+  flex:1.5 1 22%;width:100%;
+  overflow:hidden;background:#1B2A5C;
+}
+.photo img{width:100%;height:100%;object-fit:cover;object-position:center 42%;display:block;}
+
+/* ---------- candidates ---------- */
+.cands{padding:0 72px;display:grid;grid-template-columns:repeat(3,1fr);gap:40px;}
+.cand{text-align:center;padding-top:18px;border-top:5px solid #1B2A5C;}
+.cand .nm{font-size:36px;line-height:1.14;font-weight:800;color:#1B2A5C;letter-spacing:-.01em;}
+.cand .ro{margin-top:8px;font-size:24px;line-height:1.2;font-weight:600;color:#D0202E;
+          text-transform:uppercase;letter-spacing:.1em;}
+
+/* ---------- CTA ---------- */
+.cta{width:100%;background:#D0202E;display:flex;align-items:center;justify-content:center;
+     gap:32px;padding:30px 48px;}
+.cta img{width:72px;height:57px;display:block;flex:none;}
+.cta span{font-size:58px;line-height:1;font-weight:900;color:#fff;letter-spacing:.04em;
+          white-space:nowrap;}
+
+/* ---------- steps ---------- */
+.steps{padding:0 96px;display:flex;flex-direction:column;gap:20px;}
+.step{display:flex;align-items:center;gap:24px;}
+.step img{width:44px;height:44px;display:block;flex:none;}
+.step span{font-size:31px;line-height:1.25;font-weight:600;color:#1B2A5C;}
+
+/* ---------- footer ---------- */
+.foot{padding:24px 96px 32px;}
+.foot .line{height:3px;background:#D4D8E4;margin-bottom:20px;}
+.foot p{font-size:22px;line-height:1.3;font-weight:500;color:#5A6484;}
+</style>
+</head>
+<body>
+<div id="page">
+  <div id="inner">
+    <div class="sp" style="flex:none;height:40px"></div>
+    <div class="head">
+      <h1>Proven <span class="r">RESULTS</span> for <span class="r">WILLOWMERE</span> Families</h1>
+    </div>
+    <div class="rule"></div>
+    <div class="sp s2"></div>
+    <div class="photo"><img src="photo.jpg" alt=""></div>
+    <div class="sp s2"></div>
+    <div class="cands">
+      <div class="cand"><div class="nm">Dana&nbsp;Levi</div><div class="ro">Mayor</div></div>
+      <div class="cand"><div class="nm">Omar&nbsp;Haddad</div><div class="ro">Council</div></div>
+      <div class="cand"><div class="nm">Ruth&nbsp;Cohen</div><div class="ro">Council</div></div>
+    </div>
+    <div class="sp s2"></div>
+    <div class="cta">
+      <img src="mail.svg" alt=""><span>VOTE BY MAIL</span>
+    </div>
+    <div class="sp s2"></div>
+    <div class="steps">
+      <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October&nbsp;20</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+      <div class="step"><img src="check.svg" alt=""><span>Mail it back by November&nbsp;3</span></div>
+    </div>
+    <div class="sp s2"></div>
+    <div class="foot">
+      <div class="line"></div>
+      <p>Paid for by Willowmere Forward&nbsp;· willowmereforward.org</p>
+    </div>
+  </div>
+</div>
+<script>
+const P = new URLSearchParams(location.search);
+const W = +(P.get('w')||1080), H = +(P.get('h')||1350), S = +(P.get('s')||1);
+const page = document.getElementById('page'), inner = document.getElementById('inner');
+page.style.width = W+'px'; page.style.height = H+'px';
+inner.style.width  = (W/S)+'px';
+inner.style.height = (H/S)+'px';
+inner.style.transform = 'scale('+S+')';
+document.body.style.width = W+'px'; document.body.style.height = H+'px';
+window.ready = document.fonts.ready.then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+</script>
+</body>
+</html>

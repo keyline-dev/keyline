@@ -1,0 +1,96 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×1000
+portrait 1080×1350
+ root frame 0,0 1080×1350
+  headline text 0,0 1080×238 76px 2L
+  band-photo image 0,238 1080×500 cover shows 1600×741 from 0,205 of 1600×1000 (subject 87%)
+  candidates frame 0,738 1080×142
+   c1 frame 36,772 321×76
+    text1 text 36,772 321×41 34px
+    text2 text 36,820 321×28 23px
+   c2 frame 379,772 321×76
+    text3 text 379,772 321×41 34px
+    text4 text 379,820 321×28 23px
+   c3 frame 723,772 321×76
+    text5 text 723,772 321×41 34px
+    text6 text 723,820 321×28 23px
+  cta frame 0,880 1080×94
+   cta-mail image 325,905 56×44 contain
+   cta-text text 401,899 354×56 46px
+  steps frame 0,974 1080×216
+   frame1 frame 56,1008 968×40
+    image1 image 56,1008 40×40 contain
+    text7 text 114,1010 910×36 30px
+   frame2 frame 56,1066 968×40
+    image2 image 56,1066 40×40 contain
+    text8 text 114,1068 910×36 30px
+   frame3 frame 56,1124 968×40
+    image3 image 56,1124 40×40 contain
+    text9 text 114,1126 910×36 30px
+  spacer1 spacer 0,1190 1080×89
+  footer-wrap frame 0,1279 1080×71
+   footer text 40,1301 1000×27 22px
+ empty y 1164–1305 (10%)
+wide 1200×1000
+ root frame 0,0 1200×1000
+  headline text 0,0 1200×201 65px 2L
+  band-photo image 0,201 1200×323 cover shows 1600×431 from 0,360 of 1600×1000 (subject 51%)
+  candidates frame 0,524 1200×121
+   c1 frame 31,553 367×65
+    text1 text 31,553 367×35 29px
+    text2 text 31,593 367×24 20px
+   c2 frame 416,553 367×65
+    text3 text 416,553 367×35 29px
+    text4 text 416,593 367×24 20px
+   c3 frame 802,553 367×65
+    text5 text 802,553 367×35 29px
+    text6 text 802,593 367×24 20px
+  cta frame 0,645 1200×80
+   cta-mail image 417,666 48×37 contain
+   cta-text text 482,661 301×47 39px
+  steps frame 0,725 1200×184
+   frame1 frame 48,753 1105×34
+    image1 image 48,753 34×34 contain
+    text7 text 97,755 1056×31 26px
+   frame2 frame 48,803 1105×34
+    image2 image 48,803 34×34 contain
+    text8 text 97,804 1056×31 26px
+   frame3 frame 48,852 1105×34
+    image3 image 48,852 34×34 contain
+    text9 text 97,854 1056×31 26px
+  spacer1 spacer 0,908 1200×31
+  footer-wrap frame 0,940 1200×60
+   footer text 34,958 1132×23 19px
+ empty y 886–962 (8%)
+sky 300×600
+ root frame 0,0 300×600
+  headline text 0,0 300×118 26px 3L
+  band-photo image 0,118 300×221 cover shows 1356×1000 from 122,0 of 1600×1000 (subject 85%)
+  candidates frame 0,339 300×58
+   c1 frame 9,355 89×28
+    text1 text 9,355 89×16 13px
+    text2 text 9,373 89×10 8px
+   c2 frame 106,355 89×28
+    text3 text 106,355 89×16 13px
+    text4 text 106,373 89×10 8px
+   c3 frame 202,355 89×28
+    text5 text 202,355 89×16 13px
+    text6 text 202,373 89×10 8px
+  cta frame 0,397 300×44
+   cta-mail image 57,409 26×20 contain
+   cta-text text 93,407 150×24 20px
+  steps frame 0,441 300×113
+   frame1 frame 13,461 274×13
+    image1 image 13,462 11×11 contain
+    text7 text 29,461 258×13 11px
+   frame2 frame 13,492 274×13
+    image2 image 13,493 11×11 contain
+    text8 text 29,492 258×13 11px
+   frame3 frame 13,523 274×13
+    image3 image 13,524 11×11 contain
+    text9 text 29,523 258×13 11px
+  spacer1 spacer 0,554 300×15
+  footer-wrap frame 0,569 300×31
+   footer text 7,579 287×11 9px
+ empty y 536–581 (8%)

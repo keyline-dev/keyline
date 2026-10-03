@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vote By Mail — Willowmere Forward</title>
+<style>
+  @font-face{
+    font-family:"Inter";
+    src:url("Inter.ttf") format("truetype-variations");
+    font-weight:100 900;
+    font-style:normal;
+  }
+
+  :root{
+    --s:0.28;                     /* content scale, overridden per size */
+    --gmax:3.6;                /* how far a gap may stretch past its master size */
+    --navy:#1B2A5C;
+    --red:#D0202E;
+    --ink:#2B3457;
+    --pad:calc(54px * var(--s));
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  html,body{width:100%;height:100%;}
+
+  body{
+    font-family:"Inter",sans-serif;
+    font-variation-settings:"opsz" 28;
+    background:#fff;
+    color:var(--navy);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:geometricPrecision;
+    overflow:hidden;
+  }
+
+  .flyer{
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    background:#fff;
+    overflow:hidden;
+  }
+
+  /* ---------- flexible vertical rhythm ---------- */
+  /* Spacers grow in proportion to their master values, so the master's
+     vertical rhythm is preserved on every canvas. They stop at --gmax x
+     their base size; any surplus beyond that is taken by the photo band
+     (which simply crops taller) instead of pulling the sections apart. */
+  .gap{
+    flex:1 1 auto;
+    flex-grow:var(--g);
+    min-height:calc(var(--g) * 1px * var(--s));
+    max-height:calc(var(--g) * var(--gmax) * 1px * var(--s));
+  }
+  .gap-top{--g:40;}
+  .gap-hero{--g:30;}
+  .gap-cands{--g:32;}
+  .gap-cta{--g:30;}
+  .gap-steps{--g:28;}
+  .gap-foot{--g:26;}
+  .gap-bottom{--g:34;}
+
+  /* ---------- 1. headline ---------- */
+  .headline{
+    flex:0 0 auto;
+    padding:0 var(--pad);
+    text-align:center;
+    font-weight:800;
+    font-size:calc(66px * var(--s));
+    line-height:1.1;
+    letter-spacing:calc(-0.022em);
+    text-wrap:balance;
+  }
+  .headline em{color:var(--red);font-style:normal;}
+
+  .kicker{
+    flex:0 0 auto;
+    padding:0 var(--pad);
+    text-align:center;
+    font-weight:700;
+    font-size:calc(19px * var(--s));
+    letter-spacing:calc(0.2em);
+    text-transform:uppercase;
+    color:var(--red);
+    margin-bottom:calc(16px * var(--s));
+  }
+
+  /* ---------- 2. photo band (full width, crops) ---------- */
+  .photoband{
+    /* grows last: only takes space the gaps are not allowed to absorb */
+    flex:1 1 auto;
+    width:100%;
+    height:calc(296px * var(--s));
+    min-height:calc(104px * var(--s));
+    position:relative;
+    overflow:hidden;
+    background:#1B2A5C;
+  }
+  .photoband img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;       /* crop, never distort */
+    object-position:50% 54%;
+    display:block;
+  }
+
+  /* ---------- 3. candidate columns ---------- */
+  .cands{
+    flex:0 0 auto;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:0 var(--pad);
+    gap:calc(26px * var(--s));
+  }
+  .cand{
+    flex:1 1 0;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+  }
+  .avatar{
+    width:calc(84px * var(--s));
+    height:calc(84px * var(--s));
+    border-radius:50%;
+    background:var(--navy);
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    font-size:calc(31px * var(--s));
+    letter-spacing:calc(0.01em);
+    margin-bottom:calc(14px * var(--s));
+    flex:0 0 auto;
+  }
+  .cand .nm{
+    font-weight:700;
+    font-size:calc(27px * var(--s));
+    line-height:1.12;
+    letter-spacing:calc(-0.015em);
+    white-space:nowrap;
+  }
+  .cand .rl{
+    margin-top:calc(7px * var(--s));
+    font-weight:700;
+    font-size:calc(15px * var(--s));
+    line-height:1.1;
+    letter-spacing:calc(0.13em);
+    text-transform:uppercase;
+    color:var(--red);
+    white-space:nowrap;
+  }
+
+  /* ---------- 4. red CTA bar (full width) ---------- */
+  .ctabar{
+    flex:0 0 auto;
+    width:100%;
+    background:var(--red);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:calc(22px * var(--s));
+    padding:calc(22px * var(--s)) calc(16px * var(--s));
+  }
+  .ctabar img{
+    width:calc(56px * var(--s));
+    height:calc(44px * var(--s));
+    display:block;
+    flex:0 0 auto;
+  }
+  .ctabar span{
+    color:#fff;
+    font-weight:800;
+    font-size:calc(44px * var(--s));
+    line-height:1.16;
+    letter-spacing:calc(0.045em);
+    white-space:nowrap;
+  }
+
+  /* ---------- 5. steps ---------- */
+  .steps{
+    flex:0 0 auto;
+    padding:0 var(--pad);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:calc(20px * var(--s));
+  }
+  .steplist{
+    display:flex;
+    flex-direction:column;
+    gap:calc(20px * var(--s));
+    max-width:100%;
+  }
+  .step{
+    display:flex;
+    align-items:center;
+    gap:calc(16px * var(--s));
+  }
+  .step img{
+    width:calc(40px * var(--s));
+    height:calc(40px * var(--s));
+    display:block;
+    flex:0 0 auto;
+  }
+  .step span{
+    font-weight:600;
+    font-size:calc(25px * var(--s));
+    line-height:1.2;
+    letter-spacing:calc(-0.01em);
+    color:var(--ink);
+    white-space:nowrap;
+  }
+
+  /* ---------- 6. footer ---------- */
+  .footer{
+    flex:0 0 auto;
+    padding:0 calc(20px * var(--s));
+    text-align:center;
+    font-weight:500;
+    font-size:calc(17px * var(--s));
+    line-height:1.3;
+    letter-spacing:calc(0.005em);
+    color:#5A6484;
+    white-space:nowrap;
+  }
+</style>
+</head>
+<body>
+  <div class="flyer">
+    <div class="gap gap-top"></div>
+
+    <div class="kicker">November 3 General Election</div>
+    <h1 class="headline">Proven <em>RESULTS</em> for <em>WILLOWMERE</em> Families</h1>
+
+    <div class="gap gap-hero"></div>
+
+    <div class="photoband">
+      <img src="photo.jpg" alt="A farmhouse in a field at sunrise">
+    </div>
+
+    <div class="gap gap-cands"></div>
+
+    <div class="cands">
+      <div class="cand">
+        <div class="avatar">DL</div>
+        <div class="nm">Dana Levi</div>
+        <div class="rl">Mayor</div>
+      </div>
+      <div class="cand">
+        <div class="avatar">OH</div>
+        <div class="nm">Omar Haddad</div>
+        <div class="rl">Council</div>
+      </div>
+      <div class="cand">
+        <div class="avatar">RC</div>
+        <div class="nm">Ruth Cohen</div>
+        <div class="rl">Council</div>
+      </div>
+    </div>
+
+    <div class="gap gap-cta"></div>
+
+    <div class="ctabar">
+      <img src="mail.svg" alt="">
+      <span>VOTE BY MAIL</span>
+    </div>
+
+    <div class="gap gap-steps"></div>
+
+    <div class="steps">
+      <div class="steplist">
+        <div class="step"><img src="check.svg" alt=""><span>Request your ballot by October 20</span></div>
+        <div class="step"><img src="check.svg" alt=""><span>Fill it out at home</span></div>
+        <div class="step"><img src="check.svg" alt=""><span>Mail it back by November 3</span></div>
+      </div>
+    </div>
+
+    <div class="gap gap-foot"></div>
+
+    <div class="footer">Paid for by Willowmere Forward · willowmereforward.org</div>
+
+    <div class="gap gap-bottom"></div>
+  </div>
+
+  <script>
+    // scale is supplied via ?s=  so one document serves all three sizes
+    const s = new URLSearchParams(location.search).get('s');
+    if (s) document.documentElement.style.setProperty('--s', s);
+  </script>
+</body>
+</html>

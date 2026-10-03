@@ -1,0 +1,144 @@
+const fs = require('fs');
+const path = require('path');
+const DIR = __dirname;
+
+const sizes = [
+  { name: 'portrait', W: 1080, H: 1350, s: 1 },
+  { name: 'wide', W: 1200, H: 1000, s: 0.85 },
+  { name: 'sky', W: 300, H: 600, s: 0.28 },
+];
+
+const mail = fs.readFileSync(path.join(DIR, 'mail.svg'), 'utf8').trim();
+const check = fs.readFileSync(path.join(DIR, 'check.svg'), 'utf8').trim();
+
+const cands = [
+  { initials: 'DL', name: 'Dana Levi', role: 'Mayor' },
+  { initials: 'OH', name: 'Omar Haddad', role: 'Council' },
+  { initials: 'RC', name: 'Ruth Cohen', role: 'Council' },
+];
+
+const steps = [
+  'Request your ballot by October 20',
+  'Fill it out at home',
+  'Mail it back by November 3',
+];
+
+function html({ W, H, s }) {
+  const cw = W / s; // content width in master units
+  const ch = H / s;
+  return `<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: 'Inter'; src: url('Inter.ttf') format('truetype');
+  font-weight: 100 900; font-style: normal; font-display: block; }
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:${W}px; height:${H}px; overflow:hidden; background:#fff; }
+.stage {
+  width:${cw}px; height:${ch}px; transform: scale(${s}); transform-origin: top left;
+  container-type: size; container-name: stage;
+}
+/* vertical spacing unit: 10px on the master canvas, compressed on short canvases */
+.flyer { --u: min(10px, 0.7407cqh); }
+.flyer {
+  width:100%; height:100%; background:#fff;
+  font-family:'Inter', sans-serif; color:#1B2A5C;
+  display:flex; flex-direction:column; justify-content:space-between;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* 1. headline */
+.headline { padding: calc(var(--u)*6) 60px calc(var(--u)*3.8); }
+.headline h1 {
+  font-size:74px; line-height:1.14; font-weight:800; letter-spacing:-1.5px;
+  color:#1B2A5C; text-wrap:balance;
+}
+.headline h1 em { color:#D0202E; font-style:normal; }
+.rule { margin-top:calc(var(--u)*2.6); width:170px; height:9px; background:#D0202E; border-radius:5px; }
+
+/* 2. photo band */
+.photo { position:relative; width:100%; flex:1 1 auto; min-height:calc(var(--u)*23); max-height:44%; overflow:hidden; background:#1B2A5C; }
+.photo img { width:100%; height:100%; object-fit:cover; object-position:50% 58%; display:block; }
+
+/* 3. candidates */
+.cands { display:flex; align-items:flex-start; padding:calc(var(--u)*4.4) 48px calc(var(--u)*4); gap:28px; }
+.cand { flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; text-align:center; }
+.badge {
+  width:104px; height:104px; border-radius:50%; background:#1B2A5C; color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:40px; font-weight:700; letter-spacing:1px; flex:0 0 auto;
+}
+.cand .nm { margin-top:calc(var(--u)*2); font-size:34px; font-weight:700; line-height:1.15; color:#1B2A5C; }
+.cand .rl {
+  margin-top:10px; font-size:24px; font-weight:700; letter-spacing:2.5px;
+  text-transform:uppercase; color:#D0202E;
+}
+
+/* 4. CTA bar */
+.cta {
+  width:100%; background:#D0202E; color:#fff;
+  display:flex; align-items:center; justify-content:center; gap:30px;
+  padding:calc(var(--u)*3.4) 40px; flex:0 0 auto;
+}
+.cta svg { width:72px; height:57px; display:block; flex:0 0 auto; }
+.cta span { font-size:58px; font-weight:800; letter-spacing:3px; line-height:1.16; white-space:nowrap; }
+
+/* 5. steps */
+.steps {
+  padding:calc(var(--u)*4.4) 60px calc(var(--u)*1);
+  display:flex; flex-direction:column; gap:calc(var(--u)*2.6);
+}
+.step { display:flex; align-items:center; gap:24px; min-width:0; }
+.step svg { width:46px; height:46px; flex:0 0 auto; }
+.step p { font-size:32px; font-weight:600; line-height:1.25; color:#1B2A5C; }
+
+/* landscape canvases: run the steps across the width instead of down */
+@container stage (min-aspect-ratio: 1/1) {
+  .steps { flex-direction:row; align-items:flex-start; gap:30px; padding-left:50px; padding-right:50px; }
+  .step { flex:1 1 0; gap:18px; align-items:flex-start; }
+  /* uniform two-line text block keeps all three icons on one baseline */
+  .step p { font-size:29px; text-wrap:balance; min-height:2.5em; }
+}
+
+/* 6. footer */
+.footer {
+  padding:calc(var(--u)*3) 50px calc(var(--u)*4.2); text-align:center;
+  font-size:24px; font-weight:500; color:#6E768C; letter-spacing:0.3px;
+}
+</style></head>
+<body>
+<div class="stage"><div class="flyer">
+
+  <header class="headline">
+    <h1>Proven <em>RESULTS</em> for <em>WILLOWMERE</em> Families</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="photo"><img src="photo.jpg" alt=""></div>
+
+  <section class="cands">
+    ${cands.map(c => `<div class="cand">
+      <div class="badge">${c.initials}</div>
+      <div class="nm">${c.name}</div>
+      <div class="rl">${c.role}</div>
+    </div>`).join('\n    ')}
+  </section>
+
+  <section class="cta">
+    ${mail}
+    <span>VOTE BY MAIL</span>
+  </section>
+
+  <section class="steps">
+    ${steps.map(t => `<div class="step">${check}<p>${t}</p></div>`).join('\n    ')}
+  </section>
+
+  <footer class="footer">Paid for by Willowmere Forward &middot; willowmereforward.org</footer>
+
+</div></div>
+</body></html>`;
+}
+
+for (const sz of sizes) {
+  fs.writeFileSync(path.join(DIR, `${sz.name}.html`), html(sz));
+  console.log('wrote', sz.name + '.html', `content ${Math.round(sz.W/sz.s)}x${Math.round(sz.H/sz.s)}`);
+}

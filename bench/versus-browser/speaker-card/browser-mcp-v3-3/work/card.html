@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker card</title>
+<style>
+@font-face {
+  font-family: 'Inter';
+  src: url('Inter.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  background:#07080f;
+  font-family:'Inter', sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+:root {
+  --bg:#0F1226;
+  --accent:#7C5CFF;
+}
+
+.card {
+  position:relative;
+  overflow:hidden;
+  background:var(--bg);
+  color:#fff;
+  display:flex;
+  isolation:isolate;
+}
+
+/* decorative glow */
+.card::before {
+  content:"";
+  position:absolute;
+  width:120%;
+  height:120%;
+  left:-40%;
+  top:-55%;
+  background:radial-gradient(closest-side, rgba(124,92,255,.38), rgba(124,92,255,0) 70%);
+  z-index:0;
+  pointer-events:none;
+}
+.card::after {
+  content:"";
+  position:absolute;
+  width:90%;
+  height:90%;
+  right:-35%;
+  bottom:-45%;
+  background:radial-gradient(closest-side, rgba(124,92,255,.22), rgba(124,92,255,0) 70%);
+  z-index:0;
+  pointer-events:none;
+}
+
+.inner {
+  position:relative;
+  z-index:1;
+  width:100%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ---------- header ---------- */
+.header { display:flex; align-items:center; gap:var(--hgap); flex:0 0 auto; }
+.header img { display:block; width:var(--logow); height:auto; }
+.rule { width:2px; height:var(--ruleh); background:rgba(255,255,255,.22); border-radius:2px; }
+.event {
+  font-weight:700;
+  letter-spacing:.14em;
+  font-size:var(--eventfs);
+  line-height:1;
+  white-space:nowrap;
+  color:#fff;
+}
+
+/* ---------- portrait ---------- */
+.portrait {
+  width:var(--pw);
+  height:var(--pw);
+  border-radius:50%;
+  overflow:hidden;
+  flex:0 0 auto;
+  background:#1a1e3a;
+  box-shadow:0 0 0 var(--ring) rgba(124,92,255,.95), 0 0 0 calc(var(--ring) + 4px) rgba(255,255,255,.10);
+}
+.portrait img {
+  width:100%; height:100%;
+  object-fit:cover;
+  display:block;
+  border-radius:50%;
+}
+
+/* ---------- text ---------- */
+.name {
+  font-weight:800;
+  font-size:var(--namefs);
+  line-height:1.08;
+  letter-spacing:-.015em;
+}
+.role {
+  font-weight:500;
+  font-size:var(--rolefs);
+  line-height:1.3;
+  color:rgba(255,255,255,.68);
+  margin-top:var(--rolemt);
+}
+.kicker {
+  display:inline-block;
+  font-weight:700;
+  font-size:var(--kickfs);
+  letter-spacing:.18em;
+  color:var(--accent);
+  text-transform:uppercase;
+}
+.title {
+  font-weight:800;
+  font-size:var(--titlefs);
+  line-height:1.1;
+  letter-spacing:-.022em;
+  text-wrap:balance;
+  overflow-wrap:break-word;
+}
+.title .hl { color:var(--accent); }
+
+.meta {
+  display:flex;
+  align-items:center;
+  gap:var(--metagap);
+  font-weight:600;
+  font-size:var(--metafs);
+  line-height:1.25;
+  color:rgba(255,255,255,.82);
+}
+.meta .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); flex:0 0 auto; }
+
+.btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--accent);
+  color:#fff;
+  font-weight:700;
+  font-size:var(--btnfs);
+  line-height:1;
+  padding:var(--btnpy) var(--btnpx);
+  border-radius:999px;
+  white-space:nowrap;
+  letter-spacing:.005em;
+  flex:0 0 auto;
+  box-shadow:0 10px 30px rgba(124,92,255,.35);
+}
+
+.footer {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:40px;
+  flex:0 0 auto;
+}
+
+/* =======================================================
+   SQUARE 1080 x 1080
+   ======================================================= */
+.card.square {
+  width:1080px; height:1080px;
+  padding:72px;
+  --hgap:28px; --logow:168px; --ruleh:40px; --eventfs:23px;
+  --pw:200px; --ring:5px;
+  --namefs:50px; --rolefs:25px; --rolemt:10px;
+  --kickfs:17px; --titlefs:57px;
+  --metafs:25px; --metagap:16px;
+  --btnfs:25px; --btnpy:26px; --btnpx:46px;
+}
+.square .speaker { display:flex; align-items:center; gap:34px; }
+.square .block-title { margin-top:auto; margin-bottom:auto; }
+.square .header { margin-bottom:56px; }
+.square .kicker { margin-bottom:22px; }
+.square .speaker { margin-bottom:54px; }
+.square .footer { margin-top:auto; }
+
+/* =======================================================
+   LANDSCAPE 1920 x 1080
+   ======================================================= */
+.card.landscape {
+  width:1920px; height:1080px;
+  padding:76px 88px;
+  --hgap:28px; --logow:178px; --ruleh:42px; --eventfs:24px;
+  --pw:400px; --ring:6px;
+  --namefs:50px; --rolefs:25px; --rolemt:10px;
+  --kickfs:17px; --titlefs:64px;
+  --metafs:25px; --metagap:16px;
+  --btnfs:25px; --btnpy:26px; --btnpx:48px;
+}
+.landscape .body {
+  flex:1 1 auto;
+  display:flex;
+  align-items:center;
+  gap:96px;
+  min-height:0;
+  padding:30px 0;
+}
+.landscape .col-left { flex:1 1 auto; min-width:0; }
+.landscape .col-right {
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  width:560px;
+}
+.landscape .col-right .name { margin-top:40px; font-size:41px; white-space:nowrap; }
+.landscape .col-right .role { font-size:23px; }
+.landscape .kicker { margin-bottom:22px; }
+.landscape .header { margin-bottom:0; }
+.landscape .footer { margin-top:0; }
+
+/* =======================================================
+   STORY 1080 x 1920
+   ======================================================= */
+.card.story {
+  width:1080px; height:1920px;
+  padding:110px 84px 104px;
+  --hgap:26px; --logow:176px; --ruleh:42px; --eventfs:24px;
+  --pw:330px; --ring:6px;
+  --namefs:58px; --rolefs:28px; --rolemt:14px;
+  --kickfs:19px; --titlefs:68px;
+  --metafs:28px; --metagap:18px;
+  --btnfs:30px; --btnpy:32px; --btnpx:62px;
+}
+.story .inner { align-items:center; text-align:center; }
+.story .header { justify-content:center; }
+.story .speaker { display:flex; flex-direction:column; align-items:center; }
+.story .name { margin-top:36px; }
+.story .meta { justify-content:center; }
+.story .btn { width:100%; }
+.story .spacer { flex:1 1 auto; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="inner" id="inner"></div>
+</div>
+
+<script>
+const LOGO = `<div class="header">
+      <img src="logo.svg" alt="Fieldnotes Conf logo">
+      <div class="rule"></div>
+      <div class="event">FIELDNOTES CONF 2026</div>
+    </div>`;
+
+const PORTRAIT = `<div class="portrait"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>`;
+const NAME = `<div class="name">Maya Okonkwo&#8209;Lindqvist</div>`;
+const ROLE = `<div class="role">Principal Engineer, Northwind Labs</div>`;
+const KICKER = `<div class="kicker">Keynote</div>`;
+const TITLE = `<div class="title">Shipping at the <span class="hl">speed of trust</span>: what ten years of on&#8209;call taught us about resilient systems</div>`;
+const META = `<div class="meta"><span class="dot"></span><span>November 14, 2026 &middot; Harbor Hall, Lisbon</span></div>`;
+const BTN = `<div class="btn">Get tickets</div>`;
+
+const layouts = {
+  square: `
+    ${LOGO}
+    <div class="block-title">
+      ${KICKER}
+      ${TITLE}
+    </div>
+    <div class="speaker">
+      ${PORTRAIT}
+      <div>${NAME}${ROLE}</div>
+    </div>
+    <div class="footer">${META}${BTN}</div>
+  `,
+  landscape: `
+    ${LOGO}
+    <div class="body">
+      <div class="col-left">
+        ${KICKER}
+        ${TITLE}
+      </div>
+      <div class="col-right">
+        ${PORTRAIT}
+        ${NAME}
+        ${ROLE}
+      </div>
+    </div>
+    <div class="footer">${META}${BTN}</div>
+  `,
+  story: `
+    ${LOGO}
+    <div class="spacer"></div>
+    <div class="speaker">
+      ${PORTRAIT}
+      ${NAME}
+      ${ROLE}
+    </div>
+    <div class="spacer"></div>
+    <div>
+      ${KICKER}
+      ${TITLE}
+    </div>
+    <div class="spacer"></div>
+    ${META}
+    <div style="height:48px"></div>
+    ${BTN}
+  `
+};
+
+const size = new URLSearchParams(location.search).get('size') || 'square';
+document.getElementById('card').classList.add(size);
+document.getElementById('inner').innerHTML = layouts[size];
+</script>
+</body>
+</html>

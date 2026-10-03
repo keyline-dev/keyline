@@ -1,0 +1,76 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  glow frame 626,-194 760×760
+  shell frame 0,0 1080×1080
+   header frame 72,72 936×48
+    logoMark image 72,72 160×48 contain
+    rule frame 252,81 1×30
+    eventName text 273,84 303×25 21px
+   topSpace spacer 72,160 936×232
+   main frame 72,432 936×576
+    person frame 72,432 936×180
+     portraitImg image 72,432 180×180 cover shows 800×800 from 0,0 of 800×800
+     nameBlock frame 280,480 462×85
+      speakerName text 280,480 462×44 38px
+      speakerRole text 280,532 462×33 23px
+    textBlock frame 72,648 936×360
+     talkTitle text 72,648 936×198 58px 3L
+     footer frame 72,878 936×130
+      dateRow frame 72,878 488×35
+       dot frame 72,891 10×10
+       dateVenue text 96,878 464×35 24px
+      cta frame 72,941 209×67
+       ctaLabel text 112,960 129×29 24px
+ empty y 120–432 (29%)
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  glow frame 1229,-281 900×900
+  shell frame 0,0 1920×1080
+   header frame 80,80 1760×54
+    logoMark image 80,80 180×54 contain
+    rule frame 280,92 1×30
+    eventName text 301,93 327×28 23px
+   topSpace spacer 80,178 1760×0
+   main frame 80,222 1760×778
+    person frame 80,370 540×483
+     portraitImg image 80,370 360×360 cover shows 800×800 from 0,0 of 800×800
+     nameBlock frame 80,764 487×89
+      speakerName text 80,764 487×46 40px
+      speakerRole text 80,818 487×35 24px
+    textBlock frame 692,426 1148×371
+     talkTitle text 692,426 1148×204 60px 3L
+     footer frame 692,666 1148×131
+      dateRow frame 692,666 507×36
+       dot frame 692,679 10×10
+       dateVenue text 716,666 483×36 25px
+      cta frame 692,730 209×67
+       ctaLabel text 732,749 129×29 24px
+ empty y 134–370 (22%)
+story 1080×1920
+ root frame 0,0 1080×1920
+  glow frame 410,-154 760×760
+  shell frame 0,0 1080×1920
+   header frame 88,88 904×60
+    logoMark image 88,88 200×60 contain
+    rule frame 308,103 1×30
+    eventName text 329,103 351×30 25px
+   topSpace spacer 88,200 904×323
+   main frame 88,575 904×1005
+    person frame 88,575 904×450
+     portraitImg image 88,575 320×320 cover shows 800×800 from 0,0 of 800×800
+     nameBlock frame 88,925 561×100
+      speakerName text 88,925 561×53 46px
+      speakerRole text 88,986 561×39 27px
+    textBlock frame 88,1073 904×507
+     talkTitle text 88,1073 904×320 70px 4L
+     footer frame 88,1433 904×147
+      dateRow frame 88,1433 565×41
+       dot frame 88,1448 10×10
+       dateVenue text 112,1433 541×41 28px
+      cta frame 88,1502 242×78
+       ctaLabel text 134,1524 150×34 28px
+   bottomSpace spacer 88,1632 904×200
+ empty y 148–575 (22%)

@@ -1,0 +1,93 @@
+ok
+
+assets check 40×40, mail 56×44, photo 1600×1000
+portrait 1080×1350
+ root frame 0,0 1080×1350
+  headline text 0,0 1080×236 76px 2L
+  photoband image 0,236 1080×489 cover shows 1600×724 from 0,152 of 1600×1000
+  candidates frame 0,725 1080×131
+   cand1 frame 36,755 323×71
+    text1 text 36,755 323×39 34px
+    text2 text 36,800 323×26 22px
+   cand2 frame 379,755 323×71
+    text3 text 379,755 323×39 34px
+    text4 text 379,800 323×26 22px
+   cand3 frame 721,755 323×71
+    text5 text 721,755 323×39 34px
+    text6 text 721,800 323×26 22px
+  ctabar frame 0,856 1080×103
+   mailicon image 324,886 56×44 contain
+   ctatext text 402,882 354×51 46px
+  steps frame 0,959 1080×213
+   frame1 frame 48,995 984×35
+    image1 image 48,997 32×32 contain
+    text7 text 96,995 936×35 28px
+   frame2 frame 48,1052 984×35
+    image2 image 48,1054 32×32 contain
+    text8 text 96,1052 936×35 28px
+   frame3 frame 48,1109 984×35
+    image3 image 48,1111 32×32 contain
+    text9 text 96,1109 936×35 28px
+  tail spacer 0,1172 1080×120
+  footer text 0,1292 1080×58 20px
+ empty y 1143–1298 (11%)
+wide 1200×1000
+ root frame 0,0 1200×1000
+  headline text 0,0 1200×201 65px 2L
+  photoband image 0,201 1200×277 cover shows 1600×370 from 0,347 of 1600×1000
+  candidates frame 0,478 1200×111
+   cand1 frame 31,504 368×60
+    text1 text 31,504 368×33 29px
+    text2 text 31,542 368×22 19px
+   cand2 frame 416,504 368×60
+    text3 text 416,504 368×33 29px
+    text4 text 416,542 368×22 19px
+   cand3 frame 801,504 368×60
+    text5 text 801,504 368×33 29px
+    text6 text 801,542 368×22 19px
+  ctabar frame 0,589 1200×87
+   mailicon image 416,614 48×37 contain
+   ctatext text 483,612 301×43 39px
+  steps frame 0,677 1200×182
+   frame1 frame 41,707 1118×30
+    image1 image 41,709 27×27 contain
+    text7 text 82,707 1078×30 24px
+   frame2 frame 41,756 1118×30
+    image2 image 41,757 27×27 contain
+    text8 text 82,756 1078×30 24px
+   frame3 frame 41,805 1118×30
+    image3 image 41,806 27×27 contain
+    text9 text 82,805 1078×30 24px
+  tail spacer 0,858 1200×92
+  footer text 0,951 1200×49 17px
+ empty y 834–956 (12%)
+sky 300×600
+ root frame 0,0 300×600
+  headline text 0,0 300×57 20px 2L
+  photoband image 0,57 300×274 cover shows 1093×1000 from 111,0 of 1600×1000
+  candidates frame 0,332 300×61
+   cand1 frame 8,349 91×28
+    text1 text 8,349 91×15 13px
+    text2 text 8,365 91×11 9px
+   cand2 frame 104,349 91×28
+    text3 text 104,349 91×15 13px
+    text4 text 104,365 91×11 9px
+   cand3 frame 201,349 91×28
+    text5 text 201,349 91×15 13px
+    text6 text 201,365 91×11 9px
+  ctabar frame 0,393 300×32
+   mailicon image 81,401 20×16 contain
+   ctatext text 108,400 111×17 15px
+  steps frame 0,425 300×123
+   frame1 frame 12,444 275×14
+    image1 image 12,445 12×12 contain
+    text7 text 29,444 259×14 11px
+   frame2 frame 12,481 275×14
+    image2 image 12,482 12×12 contain
+    text8 text 29,481 259×14 11px
+   frame3 frame 12,517 275×14
+    image3 image 12,518 12×12 contain
+    text9 text 29,517 259×14 11px
+  tail spacer 0,548 300×34
+  footer text 0,581 300×18 9px
+ empty y 530–584 (9%)

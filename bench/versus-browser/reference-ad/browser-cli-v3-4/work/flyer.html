@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vote By Mail Flyer</title>
+<style>
+  @font-face{
+    font-family:'Inter';
+    src:url('Inter.ttf') format('truetype');
+    font-weight:100 900;
+    font-style:normal;
+    font-display:block;
+  }
+
+  :root{
+    --s:1;                      /* content scale, set from ?s= */
+    --navy:#1B2A5C;
+    --red:#D0202E;
+    --ink:#101935;
+    --pad:calc(52px * var(--s));
+    --gap:calc(30px * var(--s));
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+
+  html,body{height:100%;}
+
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#fff;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:geometricPrecision;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+
+  /* flexible vertical spacers – absorb leftover height evenly */
+  .sp{flex:1 1 auto;min-height:var(--gap);}
+  .sp.half{flex:0.7 1 auto;min-height:calc(34px * var(--s));}
+
+  .edge{padding-left:var(--pad);padding-right:var(--pad);}
+
+  /* ---------- 1. headline ---------- */
+  .headline{
+    font-size:calc(62px * var(--s));
+    line-height:1.08;
+    font-weight:800;
+    letter-spacing:calc(-0.022em);
+    color:var(--navy);
+    text-wrap:balance;
+  }
+  .headline .hl{color:var(--red);}
+
+  .rule{
+    height:calc(6px * var(--s));
+    width:calc(150px * var(--s));
+    background:var(--red);
+    border-radius:999px;
+    margin-top:calc(20px * var(--s));
+  }
+
+  /* ---------- 2. photo band ---------- */
+  .photo{
+    flex:2.2 1 auto;
+    min-height:calc(170px * var(--s));
+    max-height:min(calc(560px * var(--s)), 40vh);
+    width:100%;
+    overflow:hidden;
+    position:relative;
+    background:#d9c38a;
+  }
+  .photo img{
+    width:100%;height:100%;
+    object-fit:cover;
+    object-position:50% 58%;
+    display:block;
+  }
+
+  /* ---------- 3. candidates ---------- */
+  .cands{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    align-items:start;
+  }
+  .cand{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    padding:0 calc(6px * var(--s));
+  }
+  .badge{
+    width:calc(74px * var(--s));
+    height:calc(74px * var(--s));
+    border-radius:50%;
+    background:var(--navy);
+    color:#fff;
+    font-size:calc(28px * var(--s));
+    font-weight:700;
+    letter-spacing:calc(0.02em);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:calc(14px * var(--s));
+  }
+  .cand .name{
+    font-size:calc(31px * var(--s));
+    font-weight:700;
+    color:var(--navy);
+    line-height:1.12;
+    white-space:nowrap;
+  }
+  .cand .role{
+    margin-top:calc(6px * var(--s));
+    font-size:calc(19px * var(--s));
+    font-weight:600;
+    letter-spacing:calc(0.11em);
+    text-transform:uppercase;
+    color:var(--red);
+    white-space:nowrap;
+  }
+
+  /* ---------- 4. CTA bar ---------- */
+  .cta{
+    width:100%;
+    background:var(--red);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:calc(22px * var(--s));
+    padding:calc(21px * var(--s)) var(--pad);
+  }
+  .cta img{
+    width:calc(56px * var(--s));
+    height:calc(44px * var(--s));
+    flex:none;
+    display:block;
+  }
+  .cta span{
+    color:#fff;
+    font-size:calc(44px * var(--s));
+    font-weight:800;
+    letter-spacing:calc(0.07em);
+    line-height:1;
+    white-space:nowrap;
+  }
+
+  /* ---------- 5. steps ---------- */
+  .steps{
+    display:flex;
+    flex-direction:column;
+    gap:calc(20px * var(--s));
+  }
+  .step{
+    display:flex;
+    align-items:center;
+    gap:calc(16px * var(--s));
+    flex:1 1 0;
+    min-width:0;
+  }
+  .step img{
+    width:calc(40px * var(--s));
+    height:calc(40px * var(--s));
+    flex:none;
+    display:block;
+  }
+  .step p{
+    font-size:calc(26px * var(--s));
+    font-weight:600;
+    line-height:1.26;
+    color:var(--navy);
+    min-width:0;
+  }
+
+  /* wide formats: steps sit side by side to keep the layout balanced */
+  @media (min-aspect-ratio:1/1){
+    .steps{flex-direction:row;gap:calc(34px * var(--s));justify-content:space-between;}
+    .step{flex:0 1 auto;align-items:center;}
+  }
+
+  /* ---------- 6. footer ---------- */
+  .footer{
+    font-size:calc(20px * var(--s));
+    font-weight:500;
+    color:#6B7280;
+    letter-spacing:calc(0.01em);
+    text-align:center;
+    line-height:1.3;
+  }
+</style>
+</head>
+<body>
+
+  <div class="sp half"></div>
+
+  <header class="edge">
+    <h1 class="headline">Proven <span class="hl">RESULTS</span> for <span class="hl">WILLOWMERE</span> Families</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="sp"></div>
+
+  <div class="photo">
+    <img src="photo.jpg" alt="A farmhouse in a field at sunrise">
+  </div>
+
+  <div class="sp"></div>
+
+  <section class="cands edge">
+    <div class="cand">
+      <div class="badge">DL</div>
+      <div class="name">Dana Levi</div>
+      <div class="role">Mayor</div>
+    </div>
+    <div class="cand">
+      <div class="badge">OH</div>
+      <div class="name">Omar Haddad</div>
+      <div class="role">Council</div>
+    </div>
+    <div class="cand">
+      <div class="badge">RC</div>
+      <div class="name">Ruth Cohen</div>
+      <div class="role">Council</div>
+    </div>
+  </section>
+
+  <div class="sp"></div>
+
+  <div class="cta">
+    <img src="mail.svg" alt="">
+    <span>VOTE BY MAIL</span>
+  </div>
+
+  <div class="sp"></div>
+
+  <section class="steps edge">
+    <div class="step"><img src="check.svg" alt=""><p>Request your ballot by October&nbsp;20</p></div>
+    <div class="step"><img src="check.svg" alt=""><p>Fill it out at home</p></div>
+    <div class="step"><img src="check.svg" alt=""><p>Mail it back by November&nbsp;3</p></div>
+  </section>
+
+  <div class="sp"></div>
+
+  <footer class="footer edge">Paid for by Willowmere Forward · willowmereforward.org</footer>
+
+  <div class="sp half"></div>
+
+<script>
+  var s = new URLSearchParams(location.search).get('s');
+  if (s) document.documentElement.style.setProperty('--s', s);
+</script>
+</body>
+</html>

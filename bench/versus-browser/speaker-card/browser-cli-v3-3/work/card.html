@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker Card</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('./Inter.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  :root {
+    --bg: #0F1226;
+    --accent: #7C5CFF;
+    --text: #FFFFFF;
+    --muted: rgba(255,255,255,0.68);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .card {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background: var(--bg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Decorative background glow */
+  .glow {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(124,92,255,0.30) 0%, rgba(124,92,255,0.10) 42%, rgba(124,92,255,0) 70%);
+  }
+  .glow-a { width: 120vmin; height: 120vmin; top: -55vmin; right: -40vmin; }
+  .glow-b { width: 90vmin; height: 90vmin; bottom: -45vmin; left: -35vmin;
+            background: radial-gradient(circle, rgba(124,92,255,0.18) 0%, rgba(124,92,255,0) 70%); }
+
+  .inner {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: var(--pad);
+  }
+
+  /* ---------- Header ---------- */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: var(--logo-gap);
+    flex: none;
+  }
+  .header img {
+    width: var(--logo-w);
+    height: auto;
+    display: block;
+    flex: none;
+  }
+  .event-name {
+    font-size: var(--event-fs);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--text);
+  }
+  .rule {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(124,92,255,0.65), rgba(124,92,255,0));
+    min-width: 0;
+  }
+
+  /* ---------- Speaker block ---------- */
+  .speaker {
+    display: flex;
+    align-items: center;
+    gap: var(--speaker-gap);
+    flex: none;
+  }
+  .avatar {
+    width: var(--avatar);
+    height: var(--avatar);
+    flex: none;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #1a1f3d;
+    box-shadow: 0 0 0 calc(var(--avatar) * 0.018) var(--accent),
+                0 0 0 calc(var(--avatar) * 0.048) rgba(124,92,255,0.22);
+  }
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 42%;
+    display: block;
+    border-radius: 50%;
+  }
+  .who { min-width: 0; }
+  .name {
+    font-size: var(--name-fs);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+  }
+  .role {
+    margin-top: var(--role-gap);
+    font-size: var(--role-fs);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--accent);
+  }
+
+  /* ---------- Title ---------- */
+  .title {
+    font-size: var(--title-fs);
+    font-weight: 700;
+    line-height: 1.14;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    flex: none;
+  }
+
+  /* ---------- Footer ---------- */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--pad);
+    flex: none;
+  }
+  .meta {
+    font-size: var(--meta-fs);
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+  .btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #FFFFFF;
+    font-size: var(--btn-fs);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    padding: var(--btn-py) var(--btn-px);
+    border-radius: 999px;
+    white-space: nowrap;
+    box-shadow: 0 calc(var(--btn-fs) * 0.35) calc(var(--btn-fs) * 1.2) rgba(124,92,255,0.35);
+  }
+
+  /* ================= SQUARE 1080 x 1080 ================= */
+  .card {
+    --pad: 76px;
+    --logo-w: 150px;
+    --logo-gap: 22px;
+    --event-fs: 22px;
+    --avatar: 196px;
+    --speaker-gap: 36px;
+    --name-fs: 43px;
+    --role-fs: 23px;
+    --role-gap: 10px;
+    --title-fs: 58px;
+    --meta-fs: 23px;
+    --btn-fs: 23px;
+    --btn-px: 40px;
+    --btn-py: 23px;
+  }
+  .inner { justify-content: space-between; }
+  .body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 54px;
+    flex: 1;
+    min-height: 0;
+    padding: 40px 0;
+  }
+  .title { padding-right: 2px; }
+
+  /* ================= LANDSCAPE 1920 x 1080 ================= */
+  @media (min-aspect-ratio: 13/10) {
+    .card {
+      --pad: 84px;
+      --logo-w: 168px;
+      --logo-gap: 24px;
+      --event-fs: 24px;
+      --avatar: 380px;
+      --speaker-gap: 30px;
+      --name-fs: 40px;
+      --role-fs: 23px;
+      --role-gap: 10px;
+      --title-fs: 60px;
+      --meta-fs: 24px;
+      --btn-fs: 24px;
+      --btn-px: 44px;
+      --btn-py: 25px;
+    }
+    .inner { display: grid; grid-template-rows: auto 1fr auto; row-gap: 48px; }
+    .body {
+      display: grid;
+      grid-template-columns: 1fr 570px;
+      column-gap: 80px;
+      align-items: center;
+      min-height: 0;
+      flex: none;
+      padding: 0;
+    }
+    .speaker {
+      grid-column: 2;
+      grid-row: 1;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 30px;
+      width: 100%;
+    }
+    .who { width: 100%; }
+    .name { white-space: nowrap; }
+    .title { grid-column: 1; grid-row: 1; max-width: 100%; }
+    .footer { align-items: center; }
+  }
+
+  /* ================= STORY 1080 x 1920 ================= */
+  @media (max-aspect-ratio: 4/5) {
+    .card {
+      --pad: 84px;
+      --logo-w: 160px;
+      --logo-gap: 22px;
+      --event-fs: 23px;
+      --avatar: 368px;
+      --speaker-gap: 36px;
+      --name-fs: 58px;
+      --role-fs: 30px;
+      --role-gap: 14px;
+      --title-fs: 76px;
+      --meta-fs: 30px;
+      --btn-fs: 30px;
+      --btn-px: 56px;
+      --btn-py: 31px;
+    }
+    .inner { justify-content: space-between; }
+    .body { display: flex; flex-direction: column; gap: 70px; }
+    .speaker {
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+      gap: 40px;
+    }
+    .footer {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 44px;
+    }
+    .meta { font-size: var(--meta-fs); }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="glow glow-a"></div>
+    <div class="glow glow-b"></div>
+
+    <div class="inner">
+
+      <header class="header">
+        <img src="./logo.svg" alt="Fieldnotes Conf logo">
+        <div class="event-name">FIELDNOTES CONF 2026</div>
+        <div class="rule"></div>
+      </header>
+
+      <div class="body">
+        <div class="speaker">
+          <div class="avatar"><img src="./portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+          <div class="who">
+            <div class="name">Maya&nbsp;Okonkwo-Lindqvist</div>
+            <div class="role">Principal Engineer, Northwind Labs</div>
+          </div>
+        </div>
+
+        <h1 class="title">Shipping at the speed of trust: what ten years of on-call taught us about resilient systems</h1>
+      </div>
+
+      <footer class="footer">
+        <div class="meta">November 14, 2026 · Harbor Hall, Lisbon</div>
+        <div class="btn">Get tickets</div>
+      </footer>
+
+    </div>
+  </div>
+</body>
+</html>

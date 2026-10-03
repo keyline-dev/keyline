@@ -1,0 +1,63 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  glow ellipse 594,-302 900×900
+  page frame 0,0 1080×1080
+   header frame 72,72 936×48
+    logoImg image 72,72 160×48 contain
+    divider rect 252,79 2×34
+    eventName text 274,82 351×29 24px
+   body frame 72,164 936×844
+    portraitImg image 72,164 284×284 cover shows 800×800 from 0,0 of 800×800
+    textcol frame 72,488 936×487
+     whoBlock frame 72,488 936×95
+      speakerName text 72,488 936×53 48px
+      speakerRole text 72,549 936×34 26px
+     rule rect 72,605 84×4
+     talkTitle text 72,631 936×198 58px 3L
+     meta text 72,851 936×31 24px
+     cta frame 72,904 217×71
+      ctaText text 112,924 137×31 26px
+ empty y 949–1080 (12%)
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  glow ellipse 1190,-367 900×900
+  page frame 0,0 1920×1080
+   header frame 80,80 1760×48
+    logoImg image 80,80 160×48 contain
+    divider rect 260,87 2×34
+    eventName text 282,89 375×31 26px
+   body frame 80,176 1760×824
+    portraitImg image 1320,328 520×520 cover shows 800×800 from 0,0 of 800×800
+    textcol frame 80,318 1160×541
+     whoBlock frame 80,318 1160×106
+      speakerName text 80,318 1160×62 56px
+      speakerRole text 80,388 1160×36 28px
+     rule rect 80,450 84×4
+     talkTitle text 80,480 1160×219 64px 3L
+     meta text 80,725 1160×34 26px
+     cta frame 80,785 227×74
+      ctaText text 120,805 147×34 28px
+ empty y 848–1080 (21%)
+story 1080×1920
+ root frame 0,0 1080×1920
+  glow ellipse 432,-230 900×900
+  page frame 0,0 1080×1920
+   header frame 88,88 904×57
+    logoImg image 88,88 190×57 contain
+    divider rect 298,100 2×34
+    eventName text 320,99 424×36 30px
+   body frame 88,209 904×1623
+    portraitImg image 88,406 440×440 cover shows 800×800 from 0,0 of 800×800
+    textcol frame 88,918 904×718
+     whoBlock frame 88,918 904×120
+      speakerName text 88,918 904×70 64px
+      speakerRole text 88,996 904×42 32px
+     rule rect 88,1068 84×4
+     talkTitle text 88,1102 904×348 76px 4L
+     meta text 88,1480 904×39 30px
+     cta frame 88,1549 264×87
+      ctaText text 136,1573 168×39 32px
+ empty y 1604–1920 (16%)

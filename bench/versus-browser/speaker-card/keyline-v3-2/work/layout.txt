@@ -1,0 +1,63 @@
+ok
+
+assets logo 160×48, portrait 800×800
+square 1080×1080
+ root frame 0,0 1080×1080
+  header frame 80,80 920×48
+   logoImg image 80,80 160×48 contain
+   divider frame 262,90 1×28
+   eventName text 285,91 327×27 22px
+  body frame 80,184 920×816
+   speakerBlock frame 80,184 920×200
+    avatar frame 80,184 200×200
+     portraitImg image 80,184 200×200 cover shows 800×800 from 0,0 of 800×800
+    idBlock frame 310,241 690×87
+     speakerName text 310,241 690×48 40px
+     speakerRole text 310,299 690×29 24px
+   titleBlock frame 80,432 920×568
+    talkTitle text 80,432 920×288 64px 4L
+    spacer1 spacer 80,756 920×70
+    dateVenue text 80,862 920×31 26px
+    cta frame 80,929 225×71
+     ctaText text 124,949 137×31 26px
+ empty y 718–867 (14%)
+landscape 1920×1080
+ root frame 0,0 1920×1080
+  header frame 88,72 1744×48
+   logoImg image 88,72 160×48 contain
+   divider frame 270,82 1×28
+   eventName text 293,83 327×27 22px
+  body frame 88,168 1744×840
+   speakerBlock frame 88,351 470×475
+    avatar frame 88,351 300×300
+     portraitImg image 88,351 300×300 cover shows 800×800 from 0,0 of 800×800
+    idBlock frame 88,681 470×145
+     speakerName text 88,681 470×106 44px 2L
+     speakerRole text 88,797 470×29 24px
+   titleBlock frame 646,347 1186×483
+    talkTitle text 646,347 1186×261 78px 3L
+    spacer1 spacer 646,648 1186×0
+    dateVenue text 646,688 1186×31 26px
+    cta frame 646,759 225×71
+     ctaText text 690,779 137×31 26px
+ empty y 825–1080 (24%)
+story 1080×1920
+ root frame 0,0 1080×1920
+  header frame 88,120 904×48
+   logoImg image 88,120 160×48 contain
+   divider frame 270,130 1×28
+   eventName text 293,131 327×27 22px
+  body frame 88,248 904×1552
+   speakerBlock frame 88,248 904×503
+    avatar frame 88,248 360×360
+     portraitImg image 88,248 360×360 cover shows 800×800 from 0,0 of 800×800
+    idBlock frame 88,644 904×107
+     speakerName text 88,644 904×63 52px
+     speakerRole text 88,717 904×34 28px
+   titleBlock frame 88,823 904×977
+    talkTitle text 88,823 904×495 88px 5L
+    spacer1 spacer 88,1354 904×267
+    dateVenue text 88,1657 904×36 30px
+    cta frame 88,1729 225×71
+     ctaText text 132,1749 137×31 26px
+ empty y 1316–1663 (18%)

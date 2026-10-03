@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speaker card</title>
+<script>
+  // Pick the layout variant from the viewport before first paint.
+  (function () {
+    var w = window.innerWidth, h = window.innerHeight;
+    var v = w === h ? 'square' : (w > h ? 'landscape' : 'story');
+    document.documentElement.className = v;
+  })();
+</script>
+<style>
+@font-face {
+  font-family: 'Inter';
+  src: url('Inter.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+:root {
+  --bg: #0F1226;
+  --ink: #FFFFFF;
+  --accent: #7C5CFF;
+  --muted: rgba(255,255,255,0.68);
+  --hair: rgba(255,255,255,0.14);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+body {
+  color: var(--ink);
+  font-family: 'Inter', sans-serif;
+  font-feature-settings: 'ss01' 1, 'cv05' 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.card {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  padding: var(--pad);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* ---------- ambient background ---------- */
+.glow {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(60% 55% at 88% 6%,  rgba(124,92,255,0.34) 0%, rgba(124,92,255,0) 62%),
+    radial-gradient(55% 50% at 4% 96%,  rgba(124,92,255,0.20) 0%, rgba(124,92,255,0) 60%),
+    linear-gradient(160deg, #141838 0%, #0F1226 45%, #0B0E1E 100%);
+}
+.grid-lines {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 60px 60px;
+  -webkit-mask-image: radial-gradient(80% 80% at 50% 40%, #000 0%, transparent 85%);
+          mask-image: radial-gradient(80% 80% at 50% 40%, #000 0%, transparent 85%);
+}
+
+/* ---------- brand ---------- */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--brand-gap);
+}
+.brand img {
+  width: var(--logo);
+  height: auto;
+  display: block;
+}
+.brand .rule {
+  width: 1px;
+  height: calc(var(--logo) * 0.26);
+  background: var(--hair);
+  flex: none;
+}
+.event {
+  font-size: var(--evt);
+  font-weight: 700;
+  letter-spacing: 0.17em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ---------- title ---------- */
+.title {
+  margin: 0;
+  font-size: var(--title);
+  font-weight: 700;
+  line-height: 1.07;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+}
+.title .hl { color: var(--accent); }
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  font-size: var(--eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  line-height: 1;
+}
+.eyebrow::before {
+  content: "";
+  width: 2.2em;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* ---------- speaker ---------- */
+.avatar {
+  position: relative;
+  width: var(--avatar);
+  height: var(--avatar);
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #1b1f3d;
+  box-shadow:
+    0 0 0 calc(var(--avatar) * 0.018) var(--accent),
+    0 calc(var(--avatar) * 0.06) calc(var(--avatar) * 0.16) rgba(0,0,0,0.45);
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 42%;
+  display: block;
+  border-radius: 50%;
+}
+
+.speaker {
+  display: flex;
+  align-items: center;
+  gap: var(--speaker-gap);
+  min-width: 0;
+}
+.name {
+  font-size: var(--name);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+.role {
+  margin-top: 0.34em;
+  font-size: var(--role);
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.25;
+}
+
+/* ---------- meta + button ---------- */
+.meta {
+  font-size: var(--meta);
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.3;
+  letter-spacing: 0.005em;
+}
+.meta b { color: var(--ink); font-weight: 600; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55em;
+  flex: none;
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--btn);
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  box-shadow: 0 12px 34px rgba(124,92,255,0.38);
+}
+.btn::after {
+  content: "→";
+  font-weight: 600;
+  transform: translateY(-0.03em);
+}
+
+.hairline { height: 1px; background: var(--hair); border: 0; margin: 0; }
+
+/* shared pieces */
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.meta-row .dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--accent); flex: none;
+}
+.speaker-block { display: flex; flex-direction: column; }
+
+/* =======================================================
+   SQUARE 1080 × 1080
+   ======================================================= */
+html.square {
+  --pad: 76px;
+  --logo: 152px;
+  --brand-gap: 22px;
+  --evt: 23px;
+  --eyebrow: 19px;
+  --title: 60px;
+  --avatar: 132px;
+  --speaker-gap: 26px;
+  --name: 33px;
+  --role: 21px;
+  --meta: 21px;
+  --btn: 21px;
+  --btn-pad-y: 23px;
+  --btn-pad-x: 38px;
+}
+html.square .card {
+  display: flex;
+  flex-direction: column;
+}
+html.square .speaker-wrap { display: none; }
+html.square .avatar-hero { display: none; }
+html.square .headline {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 28px;
+  padding: 44px 0 38px;
+}
+html.square .foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+}
+html.square .meta-row { padding-bottom: 30px; }
+html.square .hairline { margin-bottom: 34px; }
+
+/* =======================================================
+   LANDSCAPE 1920 × 1080
+   ======================================================= */
+html.landscape {
+  --pad: 92px;
+  --logo: 160px;
+  --brand-gap: 24px;
+  --evt: 24px;
+  --eyebrow: 20px;
+  --title: 72px;
+  --avatar: 460px;
+  --speaker-gap: 24px;
+  --name: 36px;
+  --role: 23px;
+  --meta: 22px;
+  --btn: 22px;
+  --btn-pad-y: 25px;
+  --btn-pad-x: 42px;
+}
+html.landscape .card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--avatar);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  column-gap: 96px;
+}
+html.landscape .speaker-wrap { display: none; }
+html.landscape .brand { grid-column: 1; grid-row: 1; }
+html.landscape .headline {
+  grid-column: 1; grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 30px;
+  padding: 44px 0 38px;
+  min-width: 0;
+}
+/* footer spans the full width so the CTA sits on the right edge */
+html.landscape .foot-wrap { grid-column: 1 / -1; grid-row: 3; min-width: 0; }
+html.landscape .foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 48px;
+}
+html.landscape .avatar-hero {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  align-self: center;
+  justify-self: end;
+  display: block;
+}
+html.landscape .foot .avatar { display: none; }
+html.landscape .meta-row { padding-bottom: 28px; }
+html.landscape .hairline { margin-bottom: 32px; }
+
+/* =======================================================
+   STORY 1080 × 1920
+   ======================================================= */
+html.story {
+  --pad: 84px;
+  --logo: 168px;
+  --brand-gap: 24px;
+  --evt: 25px;
+  --eyebrow: 21px;
+  --title: 74px;
+  --avatar: 384px;
+  --speaker-gap: 0px;
+  --name: 44px;
+  --role: 25px;
+  --meta: 24px;
+  --btn: 25px;
+  --btn-pad-y: 29px;
+  --btn-pad-x: 54px;
+}
+html.story .card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 96px;
+  padding-bottom: 96px;
+}
+html.story .brand { justify-content: center; }
+html.story .avatar-hero { display: none; }
+html.story .foot .speaker { display: none; }
+/* two auto margins centre the speaker+title group in the leftover space */
+html.story .speaker-wrap { margin-top: auto; padding-top: 40px; }
+html.story .speaker {
+  flex-direction: column;
+  align-items: center;
+  gap: 34px;
+}
+html.story .speaker-block { align-items: center; }
+html.story .headline {
+  margin-top: 74px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 34px;
+}
+html.story .foot-wrap {
+  margin-top: auto;
+  padding-top: 74px;
+  width: 100%;
+}
+html.story .meta-row { justify-content: center; }
+html.story .hairline { width: 100%; margin: 42px 0; }
+html.story .foot { display: flex; justify-content: center; }
+html.story .btn { width: 100%; max-width: 580px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="glow"></div>
+  <div class="grid-lines"></div>
+
+  <header class="brand">
+    <img src="logo.svg" alt="Fieldnotes Conf logo">
+    <span class="rule"></span>
+    <span class="event">FIELDNOTES CONF 2026</span>
+  </header>
+
+  <div class="speaker-wrap">
+    <div class="speaker">
+      <div class="avatar"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+      <div class="speaker-block">
+        <div class="name">Maya Okonkwo-Lindqvist</div>
+        <div class="role">Principal Engineer, Northwind Labs</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="headline">
+    <span class="eyebrow">KEYNOTE</span>
+    <h1 class="title">Shipping at the speed of trust: what ten years of on-call taught us about resilient systems</h1>
+  </div>
+
+  <div class="avatar avatar-hero"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+
+  <div class="foot-wrap">
+    <div class="meta-row">
+      <span class="dot"></span>
+      <div class="meta"><b>November 14, 2026</b> · Harbor Hall, Lisbon</div>
+    </div>
+    <hr class="hairline">
+    <div class="foot">
+      <div class="speaker">
+        <div class="avatar"><img src="portrait.png" alt="Maya Okonkwo-Lindqvist"></div>
+        <div class="speaker-block">
+          <div class="name">Maya Okonkwo-Lindqvist</div>
+          <div class="role">Principal Engineer, Northwind Labs</div>
+        </div>
+      </div>
+      <a class="btn" href="#">Get tickets</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>
