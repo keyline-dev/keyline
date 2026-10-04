@@ -11,11 +11,11 @@
 
 **No browser, and fewer tokens.** No headless Chrome, Puppeteer or Playwright: one native Rust binary on [Skia](https://skia.org). Every edit replies with what's wrong at each size, so the agent fixes the design from measurements instead of screenshots: 2× fewer tokens than an agent driving headless Chrome, and 6× fewer than Playwright MCP ([benchmark](https://keyline.dev/benchmark/)).
 
-<p align="center">One prompt, five sizes: the layout adapts from a 4:5 post to a 728×90 leaderboard, and keyline's checks catch what doesn't fit before anything renders.</p>
-
 <p align="center">
   <img src="https://keyline.dev/assets/readme/readme-v0.png" width="820" alt="One prompt for a Loam Cargo e-bike launch becomes five ads: an Instagram post, a Facebook feed ad, and 300×600, 300×250 and 728×90 display ads, with keyline's check line: leaderboard content !overflow needs 572×116, fixed, ok at every size">
 </p>
+
+<p align="center">One prompt, five sizes: the layout adapts from a 4:5 post to a 728×90 leaderboard, and keyline's checks catch what doesn't fit before anything renders.</p>
 
 <p align="center">
   <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/adoption/instagram-square-v0.r1.webp" height="170" alt="An adoption post for Biscuit, a pug, from a template with one row per dog"></a>
