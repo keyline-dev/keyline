@@ -1,5 +1,12 @@
 # keyline-mcp
 
+[![Release](https://img.shields.io/github/v/release/keyline-dev/keyline)](https://github.com/keyline-dev/keyline/releases/latest)
+[![CI](https://github.com/keyline-dev/keyline/actions/workflows/ci.yml/badge.svg)](https://github.com/keyline-dev/keyline/actions/workflows/ci.yml)
+[![License: FSL-1.1-ALv2](https://img.shields.io/badge/license-FSL--1.1--ALv2-blue)](LICENSE)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.keyline--dev%2Fkeyline-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.keyline-dev/keyline)
+
+**[keyline.dev](https://keyline.dev)**: examples, the benchmark, and setup for every client.
+
 **An AI-native design engine: agents design, keyline renders. No Chrome, no browser.** An AI agent (Claude Code, Codex, Gemini CLI, Cursor, Cline or any [MCP](https://modelcontextprotocol.io) client) describes a design once as a small JSON scene. A Rust renderer built on [Skia](https://skia.org) turns it into PNG, JPEG, WebP, vector PDF, animated PNG, GIF, MP4 or WebM at every size you need: portrait post, landscape banner and skyscraper ad from one master layout. Output is deterministic: no model generates pixels, so the same scene always renders the same design. There's no browser anywhere in the pipeline: no headless Chrome, Puppeteer or Playwright to install, run or keep patched on the server, just one native binary.
 
 Think of it as Figma or Canva for AI agents: a design tool whose only user is a language model, for social posts, display ads, flyers, banners and other marketing images.
