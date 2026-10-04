@@ -11,8 +11,6 @@
 
 **No browser, and fewer tokens.** No headless Chrome, Puppeteer or Playwright: one native Rust binary on [Skia](https://skia.org). Every edit replies with what's wrong at each size, so the agent fixes the design from measurements instead of screenshots: 2× fewer tokens than an agent driving headless Chrome, and 6× fewer than Playwright MCP ([benchmark](https://keyline.dev/benchmark/)).
 
-> Status: early development. The scene format and the tools still change.
-
 <p align="center">
   <img src="https://keyline.dev/assets/readme/readme-v0.png" width="820" alt="One prompt for a Loam Cargo e-bike launch becomes five ads: an Instagram post, a Facebook feed ad, and 300×600, 300×250 and 728×90 display ads, with keyline's check line: leaderboard content !overflow needs 572×116, fixed, ok at every size">
 </p>
