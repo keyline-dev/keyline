@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/keyline-dev/keyline)](https://github.com/keyline-dev/keyline/releases/latest)
 [![CI](https://github.com/keyline-dev/keyline/actions/workflows/ci.yml/badge.svg)](https://github.com/keyline-dev/keyline/actions/workflows/ci.yml)
-[![License: FSL-1.1-ALv2](https://img.shields.io/badge/license-FSL--1.1--ALv2-blue)](LICENSE)
+[![License: FSL-1.1-ALv2](https://img.shields.io/badge/license-FSL--1.1--ALv2-blue)](LICENSE.md)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.keyline--dev%2Fkeyline-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.keyline-dev/keyline)
 
 **[keyline.dev](https://keyline.dev)**: examples, the benchmark, and setup for every client.
@@ -440,7 +440,7 @@ Contributions follow [CLAUDE.md](CLAUDE.md): Rust only, `cargo fmt` and `clippy 
 
 ## License
 
-[Functional Source License 1.1, Apache 2.0 future license](LICENSE) (FSL-1.1-ALv2): free to use, modify and redistribute, commercially too, for any purpose **except a competing use: making keyline available to others in a commercial product or service that substitutes for it or offers substantially the same functionality**, which includes offering it as a hosted service. Your own internal use, research, education and work for clients are all allowed. **Two years after each release, that release is also available under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).** For a license to compete, contact the author.
+[Functional Source License 1.1, Apache 2.0 future license](LICENSE.md) (FSL-1.1-ALv2): free to use, modify and redistribute, commercially too, for any purpose **except a competing use: making keyline available to others in a commercial product or service that substitutes for it or offers substantially the same functionality**, which includes offering it as a hosted service. Your own internal use, research, education and work for clients are all allowed. **Two years after each release, that release is also available under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).** For a license to compete, contact the author.
 
 Contributions are welcome under the [contributor agreement](CONTRIBUTING.md#contributor-agreement): contributors assign the copyright in their changes to the author.
 

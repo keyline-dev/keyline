@@ -75,10 +75,10 @@ jobs:
           name=keyline-mcp-${GITHUB_REF_NAME}-${{ matrix.os }}-${{ matrix.arch }}
           mkdir "$name"
           if [ "${{ matrix.os }}" = windows ]; then
-            cp target/release/keyline-mcp.exe LICENSE README.md "$name"/
+            cp target/release/keyline-mcp.exe LICENSE.md README.md "$name"/
             7z a -tzip "$name.zip" "$name" > /dev/null
           else
-            cp target/release/keyline-mcp LICENSE README.md "$name"/
+            cp target/release/keyline-mcp LICENSE.md README.md "$name"/
             tar czf "$name.tar.gz" "$name"
           fi
       - uses: actions/upload-artifact@v4
@@ -117,7 +117,7 @@ jobs:
           tar xzf "dist/$mac.tar.gz" -C "$RUNNER_TEMP"
           unzip -q "dist/$win.zip" -d "$RUNNER_TEMP"
           mv "$RUNNER_TEMP/$mac/keyline-mcp" "$RUNNER_TEMP/$win/keyline-mcp.exe" bundle/server/
-          cp mcpb/manifest.json LICENSE bundle/
+          cp mcpb/manifest.json LICENSE.md bundle/
           npx -y @anthropic-ai/mcpb validate bundle/manifest.json
           npx -y @anthropic-ai/mcpb pack bundle "dist/keyline-mcp-${GITHUB_REF_NAME#v}.mcpb"
       - name: Checksums

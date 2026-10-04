@@ -15,7 +15,7 @@ depends = "$auto"
 recommends = "libvulkan1"
 assets = [
     ["target/release/keyline-mcp", "usr/bin/", "755"],
-    ["LICENSE", "usr/share/doc/keyline-mcp/", "644"],
+    ["LICENSE.md", "usr/share/doc/keyline-mcp/", "644"],
     ["README.md", "usr/share/doc/keyline-mcp/", "644"],
     ["fonts/OFL.txt", "usr/share/doc/keyline-mcp/LICENSE-inter.txt", "644"],
     ["icons/LICENSE-lucide.txt", "usr/share/doc/keyline-mcp/", "644"],

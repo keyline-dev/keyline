@@ -40,11 +40,11 @@ jobs:
       - name: Windows .zip and Claude Desktop .mcpb
         run: |
           mkdir -p out keyline-mcp-windows-amd64 bundle/server
-          cp bins/bin-windows/keyline-mcp.exe LICENSE README.md keyline-mcp-windows-amd64/
+          cp bins/bin-windows/keyline-mcp.exe LICENSE.md README.md keyline-mcp-windows-amd64/
           zip -qr out/keyline-mcp-windows-amd64.zip keyline-mcp-windows-amd64
           cp bins/bin-windows/keyline-mcp.exe bins/bin-macos/keyline-mcp bundle/server/
           chmod +x bundle/server/keyline-mcp
-          cp mcpb/manifest.json LICENSE bundle/
+          cp mcpb/manifest.json LICENSE.md bundle/
           npx -y @anthropic-ai/mcpb validate bundle/manifest.json
           npx -y @anthropic-ai/mcpb pack bundle out/keyline-mcp-preview.mcpb
           (cd out && sha256sum * > SHA256SUMS && cat SHA256SUMS)
