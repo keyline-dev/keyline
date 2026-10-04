@@ -857,6 +857,38 @@ async fn edits_say_what_the_checks_see_in_masks_tags_leaders_and_shadows() {
     mcp.stop().await;
 }
 
+#[tokio::test]
+async fn a_shape_that_paints_nothing_is_flagged() {
+    let mcp = Mcp::start("invisible").await;
+    let id = mcp
+        .ok("scene_create", json!({"sizes": ["400x300"]}))
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    // A divider as an agent sent it: hairlines at alpha 0 around a diamond.
+    let reply = mcp
+        .ok("layer_add", json!({"sceneId": id, "layers": [
+            {"id": "divider", "type": "frame", "width": 300, "height": 6, "flexDirection": "row",
+             "alignItems": "center", "gap": 14, "children": [
+                {"id": "left", "type": "rect", "height": 2, "flexGrow": 1, "fill": "rgba(216,161,91,0)"},
+                {"id": "dot", "type": "rect", "width": 6, "height": 6, "rotate": 45, "fill": "#D8A15B"},
+                {"id": "right", "type": "rect", "height": 2, "flexGrow": 1, "fill": "rgba(216,161,91,0)"}]}]}))
+        .await;
+    for side in ["left", "right"] {
+        assert!(
+            reply
+                .lines()
+                .any(|l| l.starts_with(&format!("400x300 {side} rect"))
+                    && l.ends_with(" warn invisible (no visible fill or stroke)")),
+            "{reply}"
+        );
+    }
+    assert!(!reply.contains("dot warn"), "{reply}");
+    mcp.stop().await;
+}
+
 #[test]
 fn without_data_the_home_folder_holds_it_on_every_os() {
     // Windows has no HOME; its home folder is USERPROFILE.

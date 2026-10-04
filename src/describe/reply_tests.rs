@@ -175,7 +175,7 @@ fn text_under_a_later_layer_or_highlight_is_covered() {
     assert_eq!(
         one(
             json!([pct.clone(), {"id": "m", "type": "rect", "width": 200, "height": 80},
-            {"id": "masked", "type": "rect", "x": 300, "width": 10, "height": 10, "mask": {"layer": "m"}}])
+            {"id": "masked", "type": "rect", "x": 300, "width": 10, "height": 10, "fill": "#000000", "mask": {"layer": "m"}}])
         ),
         "ok"
     );

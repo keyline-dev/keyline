@@ -75,6 +75,7 @@ A **layer line** is `id type x,y w×h`, in px at that size, then:
 | `!unsafe <side> <px>` | defect | Text's letters, as drawn (a rotation included), reach under the size's `safeArea`: how far past each edge they go, so one move fixes it (`!unsafe bottom 32px`) |
 | `warn contrast R:1 (WCAG N)` | advisory | Text contrast against what's behind it is below the WCAG level for its size. Knockout text is judged by what shows through its letters against the frame around them |
 | `warn shadow clipped by <frame>` | advisory | A frame that clips its content (`clipsContent`, on by default) cuts the layer's drop shadow; give it room (padding) or set `clipsContent: false` |
+| `warn invisible (no visible fill or stroke)` | advisory | A shape, line or icon draws nothing: every fill and stroke is fully transparent (`rgba(…, 0)`, often meant as a fade) or missing (`fill: []` and no stroke). Frames and spacers aren't checked, and neither is a layer used as a mask, one with a `backdropBlur`, or one whose `color` animates |
 
 Defects need fixing; advisories need judgment ([concepts](concepts.md#checks-defects-advisories-facts)). In a scene of [shots](scene.md#shots-and-transitions), every shot is checked, each with the layers around it.
 

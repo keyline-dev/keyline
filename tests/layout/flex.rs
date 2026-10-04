@@ -20,7 +20,8 @@ fn row(stack: Value, children: Value) -> keyline_mcp::scene::Scene {
 }
 
 fn rect(id: &str, w: Value, h: Value) -> Value {
-    let mut r = json!({"id": id, "type": "rect"});
+    // Filled, as a real one is: a rect that paints nothing is a warning.
+    let mut r = json!({"id": id, "type": "rect", "fill": "#000000"});
     r["width"] = w;
     r["height"] = h;
     r

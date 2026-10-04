@@ -20,6 +20,7 @@
 mod contrast;
 mod facts;
 mod group;
+mod invisible;
 mod overlap;
 mod parts;
 #[cfg(test)]
@@ -28,7 +29,7 @@ mod reply_tests;
 mod tests;
 mod views;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::path::Path;
 
@@ -149,6 +150,7 @@ fn check(
                 }),
                 overlaps: overlaps(&placed),
                 covers: covers(scene, &placed),
+                masks: invisible::masks(scene),
                 backdrop: backdrop.as_ref().and_then(skia_safe::Image::peek_pixels),
                 through: through.as_ref().and_then(skia_safe::Image::peek_pixels),
             };
@@ -229,6 +231,8 @@ struct Checks<'s, 'i> {
     overlaps: HashMap<&'s str, Vec<&'s str>>,
     /// Text ids whose ink a later layer or highlight covers, and how much.
     covers: HashMap<&'s str, Vec<(String, f32)>>,
+    /// Layers another layer uses as its mask: not drawn on their own.
+    masks: HashSet<String>,
     /// The size rendered without text: what each text is read against.
     backdrop: Option<Pixmap<'i>>,
     /// The size without text or the frames knockout text cuts through:
@@ -541,6 +545,9 @@ fn line(
         && shadow_cut(p, visible)
     {
         let _ = write!(out, " warn shadow clipped by {by}");
+    }
+    if !out.contains(" !hidden") && !checks.masks.contains(&l.id) && invisible::paints_nothing(l) {
+        out.push_str(" warn invisible (no visible fill or stroke)");
     }
     // An unnamed text's words, when there's something to fix or judge.
     if (out.contains(" !") || out.contains(" warn "))

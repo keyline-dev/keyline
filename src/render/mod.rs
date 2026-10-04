@@ -474,7 +474,7 @@ impl Ctx<'_> {
 }
 
 /// A shape's fills: `fills`, else its short-form `color`/`gradient` (the gradient wins).
-fn fills_of(l: &Layer) -> Vec<crate::scene::Paint> {
+pub(crate) fn fills_of(l: &Layer) -> Vec<crate::scene::Paint> {
     if let Some(fs) = &l.look.fills {
         return fs.as_slice().to_vec();
     }
@@ -508,7 +508,7 @@ fn fills_of(l: &Layer) -> Vec<crate::scene::Paint> {
 }
 
 /// A shape's strokes: `strokes`, else its short-form `stroke` (a line's color and width).
-fn strokes_of(l: &Layer) -> Vec<Cow<'_, Stroke>> {
+pub(crate) fn strokes_of(l: &Layer) -> Vec<Cow<'_, Stroke>> {
     if let Some(ss) = &l.look.strokes {
         return ss.as_slice().iter().map(Cow::Borrowed).collect();
     }
