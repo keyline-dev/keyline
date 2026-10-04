@@ -3,7 +3,7 @@ name = "keyline-mcp"
 version = "0.7.1"
 edition = "2024"
 license = "FSL-1.1-ALv2"
-description = "Design engine for AI agents: images and video at every size, no Chrome needed"
+description = "Design engine for AI agents: images at every size, no Chrome, 2× fewer tokens"
 
 # `cargo deb` (a build tool, run in the release workflow) packages the binary.
 [package.metadata.deb]

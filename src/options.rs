@@ -9,7 +9,7 @@ use crate::gpu::Backend;
 
 /// What `--help` prints: every flag.
 pub const HELP: &str = "keyline-mcp: a design engine for AI agents: images and video at every size,
-no Chrome needed. An MCP server over stdio.
+no Chrome, 2× fewer tokens. An MCP server over stdio.
 
 Usage: keyline-mcp [options]                  the MCP server, over stdio
        keyline-mcp render <scene.json> [options]

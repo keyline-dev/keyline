@@ -1,6 +1,6 @@
 {
   "name": "keyline",
-  "description": "Design engine for AI agents: images and video at every size, no Chrome needed",
+  "description": "Design engine for AI agents: images at every size, no Chrome, 2× fewer tokens",
   "owner": {
     "name": "keyline",
     "url": "https://keyline.dev"
@@ -9,7 +9,7 @@
     {
       "name": "keyline",
       "source": "./plugin",
-      "description": "Design engine for AI agents: images and video at every size, no Chrome needed"
+      "description": "Design engine for AI agents: images at every size, no Chrome, 2× fewer tokens"
     }
   ]
 }
