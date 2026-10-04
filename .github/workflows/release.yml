@@ -19,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: The tag matches Cargo.toml and the plugin
+      - name: The tag matches Cargo.toml, the plugin, the bundle and server.json
         run: |
           want="v$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
-          for f in plugin/.claude-plugin/plugin.json mcpb/manifest.json; do
+          for f in plugin/.claude-plugin/plugin.json mcpb/manifest.json server.json; do
             got="v$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$f" | head -n 1)"
             if [ "$got" != "$want" ]; then
               echo "::error::$f says $got, Cargo.toml $want: make them agree"
