@@ -7,25 +7,26 @@
 
 **[keyline.dev](https://keyline.dev)**: examples, the benchmark, and setup for every client.
 
-**An AI-native design engine: agents design, keyline renders. No Chrome, and 2× fewer tokens than an agent driving headless Chrome ([benchmark](https://keyline.dev/benchmark/)).** An AI agent (Claude Code, Codex, Gemini CLI, Cursor, Cline or any [MCP](https://modelcontextprotocol.io) client) describes a design once as a small JSON scene. A Rust renderer built on [Skia](https://skia.org) turns it into PNG, JPEG, WebP, vector PDF, animated PNG, GIF, MP4 or WebM at every size you need: portrait post, landscape banner and skyscraper ad from one master layout. Output is deterministic: no model generates pixels, so the same scene always renders the same design. There's no browser anywhere in the pipeline: no headless Chrome, Puppeteer or Playwright to install, run or keep patched on the server, just one native binary.
+**Design engine for AI agents: Canva for your agent.** keyline is a free MCP server for Claude Code, Claude Desktop, Cursor, Codex, Gemini CLI and any MCP client. Your agent describes a social post, ad or banner once, as a small JSON scene; keyline renders it as images and video at every size, with real text in your fonts and colors, the same every run.
 
-Think of it as Figma or Canva for AI agents: a design tool whose only user is a language model, for social posts, display ads, flyers, banners and other marketing images.
+**No browser, and fewer tokens.** No headless Chrome, Puppeteer or Playwright: one native Rust binary on [Skia](https://skia.org). Every edit replies with what's wrong at each size, so the agent fixes the design from measurements instead of screenshots: 2× fewer tokens than an agent driving headless Chrome, and 6× fewer than Playwright MCP ([benchmark](https://keyline.dev/benchmark/)).
 
 > Status: early development. The scene format and the tools still change.
 
 <p align="center">
-  <img src="tests/golden/macos/showcase-square.png" height="240" alt="A square post: Cold Brew Season, a summer promo">
-  <img src="tests/golden/macos/showcase-banner.png" height="240" alt="The same design as a wide banner, with a drink graphic beside the text">
-  <img src="tests/golden/macos/showcase-story.png" height="240" alt="The same design as a tall story, the graphic above the text">
+  <img src="https://keyline.dev/assets/readme/hero-v0.png" width="820" alt="One prompt for a Loam Cargo e-bike launch becomes five ads: an Instagram post, a Facebook feed ad, and 300×600, 300×250 and 728×90 display ads, with keyline's check line: feed sub text !truncated needs 470×96, fixed, ok at every size">
 </p>
 
-<p align="center">One scene, three sizes: a square post, a wide banner and a story, each laid out by the engine from a single design (<a href="tests/fixtures/showcase.json">the scene</a>).</p>
+<p align="center">One prompt, five sizes: the layout adapts from a 4:5 post to a 728×90 leaderboard, and keyline's checks catch what doesn't fit before anything renders.</p>
 
 <p align="center">
-  <img src="docs/media/showcase-motion.png" width="400" alt="The same design animated: the headline assembles letter by letter, the button pops in and pulses">
+  <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/adoption/instagram-square-v0.r1.webp" height="170" alt="An adoption post for Biscuit, a pug, from a template with one row per dog"></a>
+  <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/campaign/instagram-portrait-v0.r2.webp" height="170" alt="A city council campaign post in Spanish"></a>
+  <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/festival/thumb-v0.webp" height="170" alt="A festival lineup thumbnail in duotone"></a>
+  <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/menu/instagram-portrait-v0.webp" height="170" alt="A supper-club menu with dot leaders to the prices"></a>
 </p>
 
-<p align="center">The same design with motion, rendered as an animated PNG with no browser and no video tool (<a href="tests/fixtures/showcase-motion.json">the scene</a>).</p>
+<p align="center">More campaigns, with motion, on <a href="https://keyline.dev/#gallery">keyline.dev</a>. Every image there, and the one above, was made with keyline.</p>
 
 ---
 
