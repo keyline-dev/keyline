@@ -22,12 +22,8 @@
 <p align="center">
   <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/adoption/instagram-square-v0.r1.webp" height="170" alt="An adoption post for Biscuit, a pug, from a template with one row per dog"></a>
   <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/campaign/instagram-portrait-v0.r2.webp" height="170" alt="A city council campaign post in Spanish"></a>
-  <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/festival/thumb-v0.webp" height="170" alt="A festival lineup thumbnail in duotone"></a>
+  <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/readme/festival-v0.webp" height="170" alt="An animated festival teaser: magenta duotone stage shots, then the headliner's letters fly in"></a>
   <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/menu/instagram-portrait-v0.webp" height="170" alt="A supper-club menu with dot leaders to the prices"></a>
-</p>
-
-<p align="center">
-  <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/readme/festival-v0.webp" width="640" alt="An animated festival teaser: magenta duotone stage shots, then the headliner's letters fly in and the lineup appears"></a>
 </p>
 
 <p align="center">More campaigns, with motion, on <a href="https://keyline.dev/#gallery">keyline.dev</a>. Every image there, and the one above, was made with keyline.</p>
