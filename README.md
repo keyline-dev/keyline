@@ -14,7 +14,7 @@
 > Status: early development. The scene format and the tools still change.
 
 <p align="center">
-  <img src="https://keyline.dev/assets/readme/hero-v0.png" width="820" alt="One prompt for a Loam Cargo e-bike launch becomes five ads: an Instagram post, a Facebook feed ad, and 300×600, 300×250 and 728×90 display ads, with keyline's check line: feed sub text !truncated needs 470×96, fixed, ok at every size">
+  <img src="https://keyline.dev/assets/readme/readme-v0.png" width="820" alt="One prompt for a Loam Cargo e-bike launch becomes five ads: an Instagram post, a Facebook feed ad, and 300×600, 300×250 and 728×90 display ads, with keyline's check line: leaderboard content !overflow needs 572×116, fixed, ok at every size">
 </p>
 
 <p align="center">One prompt, five sizes: the layout adapts from a 4:5 post to a 728×90 leaderboard, and keyline's checks catch what doesn't fit before anything renders.</p>
@@ -24,6 +24,10 @@
   <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/campaign/instagram-portrait-v0.r2.webp" height="170" alt="A city council campaign post in Spanish"></a>
   <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/festival/thumb-v0.webp" height="170" alt="A festival lineup thumbnail in duotone"></a>
   <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/menu/instagram-portrait-v0.webp" height="170" alt="A supper-club menu with dot leaders to the prices"></a>
+</p>
+
+<p align="center">
+  <a href="https://keyline.dev/#gallery"><img src="https://keyline.dev/assets/readme/festival-v0.webp" width="640" alt="An animated festival teaser: magenta duotone stage shots, then the headliner's letters fly in and the lineup appears"></a>
 </p>
 
 <p align="center">More campaigns, with motion, on <a href="https://keyline.dev/#gallery">keyline.dev</a>. Every image there, and the one above, was made with keyline.</p>
