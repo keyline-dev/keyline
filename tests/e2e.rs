@@ -9,7 +9,7 @@
 mod common;
 
 use common::golden::{PIXEL_TOLERANCE, check_golden, golden, mismatch, png_of, rgba};
-use common::{Mcp, b64, build_reference_ad};
+use common::{Mcp, b64, build_reference_ad, photo_png};
 use serde_json::json;
 
 /// Tool definitions are sent to the model on every turn, so they have a
@@ -280,6 +280,42 @@ async fn tool_surface_stays_small() {
         traffic / 4 < 2000,
         "reference ad took ~{} tokens of tool traffic",
         traffic / 4
+    );
+    mcp.stop().await;
+}
+
+#[tokio::test]
+async fn an_asset_gone_from_the_store_is_flagged_before_rendering() {
+    let mcp = Mcp::start("asset-gone").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"sizes": [{"id": "s", "width": 400, "height": 300}]}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    mcp.ok(
+        "asset_add",
+        json!({"sceneId": id, "id": "photo", "base64": b64(&photo_png())}),
+    )
+    .await;
+    mcp.ok(
+        "layer_add",
+        json!({"sceneId": id, "layers": [{"type": "image", "id": "pic", "asset": "photo", "width": 400, "height": 300}]}),
+    )
+    .await;
+    assert_eq!(mcp.ok("scene_describe", json!({"sceneId": id})).await, "ok");
+    // The data folder cleaned under a saved scene.
+    for f in std::fs::read_dir(mcp.data.join("assets")).unwrap() {
+        std::fs::remove_file(f.unwrap().path()).unwrap();
+    }
+    let reply = mcp.ok("scene_describe", json!({"sceneId": id})).await;
+    assert!(
+        reply.starts_with("asset photo !missing from the store; add it again with asset_add"),
+        "{reply}"
     );
     mcp.stop().await;
 }

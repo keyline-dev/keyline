@@ -732,3 +732,30 @@ fn a_marked_subject_steers_the_crop_and_says_how_much_shows() {
     // No subject marked: nothing said of one.
     assert!(!band(serde_json::Value::Null, 80).contains("subject"));
 }
+
+#[test]
+fn an_asset_gone_from_the_store_is_a_defect() {
+    let dir = std::env::temp_dir().join(format!("keyline-describe-assets-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("here"), b"bytes").unwrap();
+    // Two images, drawn; the fixture's own asset, unused, isn't checked.
+    let mut s = scene(json!([
+        {"id": "a", "type": "image", "asset": "logo", "width": 10, "height": 10},
+        {"id": "b", "type": "image", "asset": "photo", "width": 10, "height": 10}
+    ]));
+    for (id, sha) in [("logo", "here"), ("photo", "gone")] {
+        s.assets.insert(
+            id.into(),
+            serde_json::from_value(json!({"sha256": sha, "width": 10, "height": 10})).unwrap(),
+        );
+    }
+    let w = warnings(&s, Some(&dir)).unwrap();
+    let lines: Vec<_> = w.lines().collect();
+    assert!(
+        lines.contains(&"asset photo !missing from the store; add it again with asset_add"),
+        "{w}"
+    );
+    assert!(!w.contains("asset logo") && !w.contains("asset img"), "{w}");
+    // Without the store to look in, nothing is said.
+    assert_eq!(warnings(&s, None), None);
+}

@@ -203,9 +203,46 @@ fn check(
             }
         }
     }
+    // Every asset's file is still in the store: a design that fits can
+    // still fail to render without one (the data folder cleaned, the scene
+    // moved to another machine). Assets were decoded when added and are
+    // stored by content hash, so being there is being ready.
+    if let Some(dir) = assets {
+        let used = used_strings(scene);
+        for (id, a) in &scene.assets {
+            if used.contains(id.as_str()) && !dir.join(&a.sha256).is_file() {
+                let _ = writeln!(
+                    out,
+                    "asset {id} !missing from the store; add it again with asset_add"
+                );
+            }
+        }
+    }
     out.push_str(&grouped(&problems, sizes.len()));
     if out.is_empty() {
         out.push_str("ok");
+    }
+    out
+}
+
+/// Every string in the scene outside its asset list: an asset whose id isn't
+/// among them isn't drawn (layers, fills, masks, the soundtrack and tokens
+/// all name assets by id), so its file can't stop a render.
+fn used_strings(scene: &Scene) -> HashSet<String> {
+    fn walk(v: &serde_json::Value, out: &mut HashSet<String>) {
+        match v {
+            serde_json::Value::String(s) => {
+                out.insert(s.clone());
+            }
+            serde_json::Value::Array(a) => a.iter().for_each(|v| walk(v, out)),
+            serde_json::Value::Object(o) => o.values().for_each(|v| walk(v, out)),
+            _ => {}
+        }
+    }
+    let mut out = HashSet::new();
+    if let Ok(serde_json::Value::Object(mut o)) = serde_json::to_value(scene) {
+        o.remove("assets");
+        o.values().for_each(|v| walk(v, &mut out));
     }
     out
 }
