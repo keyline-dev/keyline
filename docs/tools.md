@@ -402,4 +402,5 @@ layers[0]: unknown token {{blue}}; tokens: brand, headline
 row 2: no token headlin; tokens: accent, headline
 layers[0]: token {{big}} doesn't suit fontSize: invalid type: string "huge", expected f32
 give exactly one of url, path or base64
+video layer intro: its clip stopped decoding at 2.0s (File ended prematurely); re-encode or replace the clip
 ```

@@ -5,6 +5,8 @@
 //! ffmpeg, video is refused and APNG still works.
 //!
 //! A scene soundtrack (a WAV) plays under a video, cut to its length.
+//! A clip cut short fails the render with where it stopped, rather than
+//! freezing on its last good frame.
 //!
 //! The demo with livelier clips: `cargo test --test e2e_video -- --ignored`.
 
@@ -409,6 +411,69 @@ async fn local_paths_are_offered_only_with_folders_and_name_them() {
         .as_str()
         .unwrap();
     assert_eq!(path, format!("Or a local file in {}", dir.display()));
+    mcp.stop().await;
+}
+
+#[tokio::test]
+async fn a_clip_cut_short_fails_the_render_instead_of_freezing() {
+    if !have_ffmpeg() {
+        return;
+    }
+    let dir = scratch("cut");
+    let file = dir.join("cut.mkv");
+    let made = Command::new("ffmpeg")
+        .args([
+            "-v",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=size=160x120:rate=25",
+        ])
+        .args(["-t", "4", "-c:v", "ffv1", "-pix_fmt", "bgr0"])
+        .arg(&file)
+        .status()
+        .unwrap()
+        .success();
+    assert!(made, "ffmpeg made the clip");
+    let bytes = std::fs::read(&file).unwrap();
+    std::fs::write(&file, &bytes[..bytes.len() / 2]).unwrap();
+
+    let dir = std::fs::canonicalize(&dir).unwrap();
+    let file = dir.join("cut.mkv");
+    let mcp = Mcp::start_args("cut-clip", &["--allow-read", dir.to_str().unwrap()]).await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"sizes": [{"id": "s", "width": 160, "height": 120}], "duration": 4, "fps": 25}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    // ffprobe reads the header, which still says four seconds.
+    let reply = mcp
+        .ok(
+            "asset_add",
+            json!({"sceneId": id, "id": "clip", "path": file.to_str().unwrap()}),
+        )
+        .await;
+    assert!(reply.starts_with("clip 160×120 4s 25fps"), "{reply}");
+    mcp.ok(
+        "layer_add",
+        json!({"sceneId": id, "layers": [{"type": "video", "id": "intro", "asset": "clip", "width": 160, "height": 120}]}),
+    )
+    .await;
+    let e = mcp
+        .call("render", json!({"sceneId": id, "time": 3}))
+        .await
+        .unwrap_err();
+    assert!(
+        e.starts_with("video layer intro: its clip stopped decoding at 2.0s ("),
+        "{e}"
+    );
     mcp.stop().await;
 }
 
