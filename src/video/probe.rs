@@ -8,6 +8,24 @@ use serde::Deserialize;
 
 use crate::scene::Clip;
 
+/// How many frames a video file's first video stream holds, counted from
+/// its packets (fast: nothing is decoded).
+///
+/// # Errors
+/// No ffprobe, or a file it can't read.
+pub fn video_frames(file: &Path) -> Result<usize, String> {
+    let out = Command::new(super::ffprobe()?)
+        .args(["-v", "error", "-select_streams", "v:0", "-count_packets"])
+        .args(["-show_entries", "stream=nb_read_packets", "-of", "csv=p=0"])
+        .arg(file)
+        .output()
+        .map_err(|e| format!("can't run ffprobe: {e}"))?;
+    String::from_utf8_lossy(&out.stdout)
+        .trim()
+        .parse()
+        .map_err(|_| "ffprobe can't count the video's frames".to_owned())
+}
+
 /// The first video stream's `(width, height, clip)`; `(0, 0, clip)` for a
 /// sound file (MP3, M4A, WAV); `None` for anything else (an unknown file, a
 /// still image).
@@ -109,4 +127,40 @@ struct Stream {
 struct Disposition {
     #[serde(default)]
     attached_pic: u8,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frames_are_counted_from_the_file() {
+        if Command::new("ffmpeg").arg("-version").output().is_err() {
+            assert!(
+                std::env::var_os("CI").is_none(),
+                "CI needs ffmpeg installed"
+            );
+            return;
+        }
+        let file =
+            std::env::temp_dir().join(format!("keyline-probe-frames-{}.mkv", std::process::id()));
+        let made = Command::new("ffmpeg")
+            .args([
+                "-v",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc=size=64x48:rate=25",
+            ])
+            .args(["-t", "2", "-c:v", "ffv1"])
+            .arg(&file)
+            .status()
+            .unwrap()
+            .success();
+        assert!(made, "ffmpeg made the clip");
+        assert_eq!(video_frames(&file), Ok(50));
+        let _ = std::fs::remove_file(&file);
+    }
 }

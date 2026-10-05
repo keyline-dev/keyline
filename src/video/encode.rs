@@ -405,5 +405,47 @@ fn encode_once(
         return Err(anyhow!("ffmpeg failed: {}", first.unwrap_or("no message")));
     }
     fed?;
+    // The reply says how many frames the file has: count them in the file,
+    // not in what was fed, so an encoder that stops early can't pass.
+    let written = super::probe::video_frames(&out).map_err(|e| anyhow!(e))?;
+    all_frames(written, count, container)?;
     Ok(std::fs::read(&out)?)
+}
+
+/// Whether a written video holds every frame fed to it.
+///
+/// # Errors
+/// Fewer or more frames than `fed`, with how to fix it.
+fn all_frames(written: usize, fed: usize, container: Container) -> Result<()> {
+    if written == fed {
+        return Ok(());
+    }
+    let ext = match container {
+        Container::Mp4 => "mp4",
+        Container::Webm => "webm",
+    };
+    Err(anyhow!(
+        "the {ext} has {written} of its {fed} frames: the encoder lost some; render again, or pass --encoder software"
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_video_with_every_frame_passes() {
+        assert!(all_frames(125, 125, Container::Mp4).is_ok());
+    }
+
+    #[test]
+    fn a_video_missing_frames_says_how_many_and_what_to_do() {
+        let e = all_frames(80, 125, Container::Webm)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(
+            e,
+            "the webm has 80 of its 125 frames: the encoder lost some; render again, or pass --encoder software"
+        );
+    }
 }
