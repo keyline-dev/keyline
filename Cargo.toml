@@ -1,6 +1,6 @@
 [package]
 name = "keyline-mcp"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2024"
 license = "FSL-1.1-ALv2"
 description = "Design engine for AI agents: images at every size, no Chrome, 2× fewer tokens"

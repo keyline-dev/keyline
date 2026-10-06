@@ -17,7 +17,7 @@ inputs:
     default: ""
   version:
     description: The keyline release to use
-    default: "0.7.1"
+    default: "0.7.2"
 
 runs:
   using: composite

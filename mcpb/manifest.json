@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "keyline",
   "display_name": "keyline",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Design engine for AI agents: images at every size, no Chrome, 2× fewer tokens.",
   "long_description": "keyline is a design engine Claude drives over MCP. Claude builds a scene of text, images, shapes and layout; keyline measures it (text that doesn't fit, layers cut off, low contrast), so Claude fixes problems before rendering, and renders it as images or video at every size you ask for. No Chrome or browser needed: one native binary.",
   "author": {
