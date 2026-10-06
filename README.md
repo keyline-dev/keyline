@@ -93,7 +93,7 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 /plugin install keyline@keyline
 ```
 
-**Claude Desktop** (Mac with Apple silicon, or Windows): download `keyline-mcp-<version>.mcpb` from the [latest release](https://github.com/keyline-dev/keyline/releases/latest) and double-click it. Its settings choose the folders keyline may read.
+**Claude Desktop** (Mac with Apple silicon, or Windows): download `keyline-mcp-<version>.mcpb` from the [latest release](https://github.com/keyline-dev/keyline/releases/latest) and double-click it. To let Claude use your own images and logos, open Settings → Extensions → keyline → Configure, add the folders they're in, and click **Save**; without it, keyline can't open files on your computer.
 
 ### Other clients: install, then add
 
