@@ -349,8 +349,8 @@ impl<'a> Clip<'a> {
     }
 }
 
-/// `opacity` is the product of the ancestors' opacities, `m` their visual
-/// transforms.
+/// `opacity` is the product of the ancestors' opacities, each at its peak
+/// (a frame that fades in counts as shown), `m` their visual transforms.
 fn line(
     lines: &mut Vec<String>,
     checks: &Checks,
@@ -362,7 +362,8 @@ fn line(
     let visible = clip.rect;
     let r = p.rect;
     let l = p.layer;
-    let opacity = opacity * l.opacity;
+    // Judged as shown: a text that fades in from opacity 0 reads at its peak.
+    let opacity = opacity * crate::anim::peak_opacity(l);
     let m = &overlap::through(m, p);
     let mut out = String::new();
     let _ = write!(

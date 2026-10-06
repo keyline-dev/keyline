@@ -319,3 +319,29 @@ async fn an_asset_gone_from_the_store_is_flagged_before_rendering() {
     );
     mcp.stop().await;
 }
+
+#[tokio::test]
+async fn a_caption_that_fades_in_is_not_called_unreadable() {
+    let mcp = Mcp::start("fade-contrast").await;
+    let id = mcp
+        .ok(
+            "scene_create",
+            json!({"sizes": [{"id": "s", "width": 400, "height": 300}], "background": "#FFFFFF", "duration": 3}),
+        )
+        .await
+        .split(' ')
+        .next()
+        .unwrap()
+        .to_owned();
+    // At rest it's at opacity 0; its track shows it. Dark on white reads fine.
+    let reply = mcp
+        .ok(
+            "layer_add",
+            json!({"sceneId": id, "layers": [{"id": "cap", "type": "text", "text": "Best of all, it's all free.",
+                "x": 20, "y": 20, "fontSize": 24, "color": "#111111", "opacity": 0,
+                "animate": {"opacity": [0, 1, 1, 0], "times": [0, 0.05, 0.95, 1], "duration": 2}}]}),
+        )
+        .await;
+    assert!(reply.lines().next().unwrap().ends_with(" ok"), "{reply}");
+    mcp.stop().await;
+}

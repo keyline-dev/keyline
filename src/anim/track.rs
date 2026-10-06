@@ -190,6 +190,20 @@ impl Track {
         self.value_at(prop, own, if back { 0.0 } else { 1.0 }, seed)
     }
 
+    /// The highest number `prop` reaches over one play, sampled through
+    /// its eases; `None` when the track doesn't animate it.
+    pub fn peak(&self, prop: &str, own: f32, seed: u32) -> Option<f32> {
+        self.props.get(prop)?;
+        (0..=32)
+            .filter_map(
+                |i| match self.value_at(prop, Val::Num(own), i as f32 / 32.0, seed) {
+                    Some(Val::Num(n)) => Some(n),
+                    _ => None,
+                },
+            )
+            .reduce(f32::max)
+    }
+
     fn value_at(&self, prop: &str, own: Val, p: f32, seed: u32) -> Option<Val> {
         let salt = |i: usize| self::seed(prop) ^ (i as u32).wrapping_mul(0x2545_F491);
         Some(match self.props.get(prop)? {
@@ -441,6 +455,13 @@ mod tests {
             Some(Val::Num(n)) => n,
             other => panic!("not a number: {other:?}"),
         }
+    }
+
+    #[test]
+    fn a_fade_in_and_out_peaks_at_full_opacity() {
+        let t = track(json!({"opacity": [0, 1, 1, 0], "times": [0, 0.05, 0.95, 1]}));
+        assert_eq!(t.peak("opacity", 0.0, 0), Some(1.0));
+        assert_eq!(t.peak("scale", 1.0, 0), None);
     }
 
     #[test]

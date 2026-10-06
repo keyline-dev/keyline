@@ -74,7 +74,7 @@ A **layer line** is `id type x,y w×h`, in px at that size, then:
 | `!leader "<left…>" meets "<right>"` | defect | In a `leader` line, the text before the tab runs into the text after it |
 | `!unsafe <side> <px>` | defect | Text's letters, as drawn (a rotation included), reach under the size's `safeArea`: how far past each edge they go, so one move fixes it (`!unsafe bottom 32px`) |
 | `asset <id> !missing from the store` | defect | An asset the design uses has its file gone from the [data directory](#data-directory) (the folder cleaned, the scene moved to another machine), so the design fits but can't render; add it again with `asset_add`. Its own line, before the sizes' lines, since it isn't tied to a size |
-| `warn contrast R:1 (WCAG N)` | advisory | Text contrast against what's behind it is below the WCAG level for its size. Knockout text is judged by what shows through its letters against the frame around them |
+| `warn contrast R:1 (WCAG N)` | advisory | Text contrast against what's behind it is below the WCAG level for its size, judged at the opacity the text reaches (a caption that fades in from 0 at its peak). Knockout text is judged by what shows through its letters against the frame around them |
 | `warn shadow clipped by <frame>` | advisory | A frame that clips its content (`clipsContent`, on by default) cuts the layer's drop shadow; give it room (padding) or set `clipsContent: false` |
 | `warn invisible (no visible fill or stroke)` | advisory | A shape, line or icon draws nothing: every fill and stroke is fully transparent (`rgba(…, 0)`, often meant as a fade) or missing (`fill: []` and no stroke). Frames and spacers aren't checked, and neither is a layer used as a mask, one with a `backdropBlur`, or one whose `color` animates |
 

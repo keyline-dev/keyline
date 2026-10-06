@@ -170,6 +170,21 @@ fn apply(l: &mut Layer, t: f32, end: f32, given: Option<Motion>) {
     }
 }
 
+/// The highest opacity `l` reaches on screen: its own, or, when it
+/// animates opacity (text that fades in from 0), the peak of those tracks.
+/// What a check of how text reads should judge, rather than its opacity at
+/// rest.
+pub fn peak_opacity(l: &Layer) -> f32 {
+    let seed = track::seed(&l.id);
+    l.time
+        .animate
+        .iter()
+        .flat_map(OneOrMany::as_slice)
+        .filter_map(|t| t.peak("opacity", l.opacity, seed))
+        .fold(l.opacity, f32::max)
+        .clamp(0.0, 1.0)
+}
+
 /// Sets every property `track` animates to its value at `t`.
 fn set_tracks(l: &mut Layer, track: &Track, t: f32, seed: u32) {
     let num = |v: Option<Val>, own: f32| match v {

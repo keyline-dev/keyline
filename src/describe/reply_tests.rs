@@ -759,3 +759,22 @@ fn an_asset_gone_from_the_store_is_a_defect() {
     // Without the store to look in, nothing is said.
     assert_eq!(warnings(&s, None), None);
 }
+
+#[test]
+fn text_that_fades_in_is_judged_at_its_peak_not_at_rest() {
+    // A caption at rest at opacity 0, shown by its opacity track: dark on
+    // the light canvas reads fine, so no advisory (it was "1.0:1").
+    let caption = |color: &str| {
+        let mut s = scene(json!([
+            {"id": "cap", "type": "text", "text": "Best of all, it's all free.", "x": 10, "y": 10,
+             "fontSize": 30, "color": color, "opacity": 0,
+             "animate": {"opacity": [0, 1, 1, 0], "times": [0, 0.05, 0.95, 1], "duration": 2}}
+        ]));
+        s.duration = Some(3.0);
+        warnings(&s, Some(&std::env::temp_dir()))
+    };
+    assert_eq!(caption("#111111"), None);
+    // A faint one that fades in is still too faint at its peak.
+    let w = caption("#DDDDDD").unwrap();
+    assert!(w.contains("cap") && w.contains("warn contrast 1."), "{w}");
+}
