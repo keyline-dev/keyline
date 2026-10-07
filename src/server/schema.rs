@@ -75,6 +75,11 @@ pub(super) fn compact_all<S>(
                 let d = route.attr.description.clone().unwrap_or_default();
                 route.attr.description =
                     Some(d.replace("url, path or base64", "url or base64").into());
+                if let Some(Value::Object(b64)) = props.get_mut("base64")
+                    && let Some(Value::String(text)) = b64.get_mut("description")
+                {
+                    *text = text.replace("its url or path", "its url");
+                }
             } else if let Some(Value::Object(path)) = props.get_mut("path") {
                 let list: Vec<_> = folders.iter().map(|f| f.display().to_string()).collect();
                 let or = if route.attr.name == "asset_add" {

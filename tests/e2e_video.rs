@@ -402,6 +402,16 @@ async fn local_paths_are_offered_only_with_folders_and_name_them() {
     let (doc, schema) = asset_add(mcp.tools().await);
     assert!(schema["properties"].get("path").is_none(), "{schema}");
     assert!(doc.contains("from url or base64"), "{doc}");
+    // base64 is for small images; without folders a photo comes by url.
+    let b64 = schema["properties"]["base64"]["description"]
+        .as_str()
+        .unwrap();
+    assert!(
+        b64.ends_with(
+            "a logo or signature, since every byte passes through the model. A photo: its url."
+        ),
+        "{b64}"
+    );
     mcp.stop().await;
 
     let dir = std::fs::canonicalize(scratch("paths-on")).unwrap();
@@ -411,6 +421,10 @@ async fn local_paths_are_offered_only_with_folders_and_name_them() {
         .as_str()
         .unwrap();
     assert_eq!(path, format!("Or a local file in {}", dir.display()));
+    let b64 = schema["properties"]["base64"]["description"]
+        .as_str()
+        .unwrap();
+    assert!(b64.ends_with("A photo: its url or path."), "{b64}");
     mcp.stop().await;
 }
 

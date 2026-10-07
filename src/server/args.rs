@@ -44,7 +44,7 @@ pub struct AssetAddArgs {
     pub(super) url: Option<String>,
     /// Or a local file, in a folder the server allows (--allow-read).
     pub(super) path: Option<String>,
-    /// Or the file bytes, base64 (small files only: they pass through the model).
+    /// Or the file bytes, base64: small images only, a logo or signature, since every byte passes through the model. A photo: its url or path.
     pub(super) base64: Option<String>,
     /// Asset id to use in layers; generated if omitted.
     pub(super) id: Option<String>,
