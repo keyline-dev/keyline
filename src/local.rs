@@ -1,12 +1,22 @@
 //! Local files an agent may name by path, so their bytes never pass through
 //! the model. Off unless the server is started with `--allow-read <folder>`;
 //! a path is resolved through every symlink first, and must then lie inside
-//! one of those folders.
+//! one of those folders. A leading `~` is the user's home folder, as in a
+//! shell, since agents copy paths the way people write them.
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+
+/// `path` with a leading `~` component replaced by the home folder; any
+/// other path, or `~` with no home folder known, as it is.
+pub fn expand_home(path: &Path) -> PathBuf {
+    match (path.strip_prefix("~"), std::env::home_dir()) {
+        (Ok(rest), Some(home)) => home.join(rest),
+        _ => path.to_path_buf(),
+    }
+}
 
 /// The folders local paths may be read from, resolved at startup.
 #[derive(Debug, Default)]
@@ -42,9 +52,9 @@ impl AllowedDirs {
         if self.0.is_empty() {
             return Err("local paths are off; start the server with --allow-read <folder>".into());
         }
-        // The real location, every symlink and `..` followed.
-        let real =
-            std::fs::canonicalize(path).map_err(|_| format!("no such file {}", path.display()))?;
+        // The real location, `~` expanded and every symlink and `..` followed.
+        let real = std::fs::canonicalize(expand_home(path))
+            .map_err(|_| format!("no such file {}", path.display()))?;
         if !self.0.iter().any(|d| real.starts_with(d)) {
             return Err(format!(
                 "{} is outside the folders the server may read (--allow-read)",
@@ -80,7 +90,22 @@ impl AllowedDirs {
 
 #[cfg(test)]
 mod tests {
-    use super::AllowedDirs;
+    use super::{AllowedDirs, expand_home};
+    use std::path::Path;
+
+    #[test]
+    fn a_leading_tilde_is_the_home_folder() {
+        let home = std::env::home_dir().unwrap();
+        assert_eq!(expand_home(Path::new("~")), home);
+        assert_eq!(
+            expand_home(Path::new("~/a b/c.png")),
+            home.join("a b/c.png")
+        );
+        // Only a whole leading `~` component.
+        for p in ["~user/c.png", "/a/~/c.png", "a~/c.png"] {
+            assert_eq!(expand_home(Path::new(p)), Path::new(p), "{p}");
+        }
+    }
 
     /// A fresh, empty folder.
     fn scratch(name: &str) -> std::path::PathBuf {

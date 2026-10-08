@@ -375,7 +375,7 @@ Video clips, sounds, and MP4 and WebM output need [ffmpeg](https://ffmpeg.org) (
 
 ## Security
 
-- **Local files** are read only with `--allow-read`. A `path` is resolved through every symlink and `..` first, then must lie inside an allowed folder and be a regular file, so a link inside the folder can't lead outside it.
+- **Local files** are read only with `--allow-read`. A `path` starting with `~` is in the home folder, as in a shell; it is resolved through every symlink and `..` first, then must lie inside an allowed folder and be a regular file, so a link inside the folder can't lead outside it.
 - **URLs** are fetched only over http(s); private and local addresses are refused, and every redirect is checked again.
 - **Templates** follow the same rules for their images: a template from a URL reads images from the web only, never local files; one from a path reads only inside the allowed folders.
 - **Base64** is taken only for still images.

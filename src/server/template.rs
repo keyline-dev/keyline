@@ -3,7 +3,7 @@
 //! as assets; `tokens` given with it fill its variables. Nothing is kept
 //! but the new scene: the file stays wherever its owner keeps it.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use reqwest::Url;
 use serde_json::{Map, Value};
@@ -51,7 +51,7 @@ impl Server {
             }
             (None, Some(path)) => {
                 let bytes = self.reads.read(path, MAX_ASSET_BYTES)?;
-                let dir = std::fs::canonicalize(path)
+                let dir = std::fs::canonicalize(crate::local::expand_home(Path::new(path)))
                     .ok()
                     .and_then(|f| f.parent().map(PathBuf::from))
                     .unwrap_or_default();
