@@ -65,6 +65,16 @@ pub(super) fn compact_all<S>(
                 props.remove(*a);
             }
         }
+        let extra = match route.attr.name.as_ref() {
+            "layer_add" => LAYER_ADD_MOTION,
+            "asset_add" => ASSET_ADD_MOTION,
+            "render" => RENDER_MOTION,
+            _ => "",
+        };
+        if motion && !extra.is_empty() {
+            let base = route.attr.description.clone().unwrap_or_default();
+            route.attr.description = Some(format!("{base}{extra}").into());
+        }
         // A local `path` is offered only where the server may read, and
         // says where that is.
         if matches!(route.attr.name.as_ref(), "asset_add" | "scene_create")
@@ -73,8 +83,11 @@ pub(super) fn compact_all<S>(
             if folders.is_empty() {
                 props.remove("path");
                 let d = route.attr.description.clone().unwrap_or_default();
-                route.attr.description =
-                    Some(d.replace("url, path or base64", "url or base64").into());
+                let d = d
+                    .replace("url, path or base64", "url or base64")
+                    .replace("url or path", "url")
+                    .replace("path or url", "url");
+                route.attr.description = Some(d.into());
                 if let Some(Value::Object(b64)) = props.get_mut("base64")
                     && let Some(Value::String(text)) = b64.get_mut("description")
                 {
@@ -95,16 +108,6 @@ pub(super) fn compact_all<S>(
         }
         if let Value::Object(o) = schema {
             route.attr.input_schema = Arc::new(o);
-        }
-        let extra = match route.attr.name.as_ref() {
-            "layer_add" => LAYER_ADD_MOTION,
-            "asset_add" => ASSET_ADD_MOTION,
-            "render" => RENDER_MOTION,
-            _ => "",
-        };
-        if motion && !extra.is_empty() {
-            let base = route.attr.description.clone().unwrap_or_default();
-            route.attr.description = Some(format!("{base}{extra}").into());
         }
     }
 }

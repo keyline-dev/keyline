@@ -399,9 +399,16 @@ async fn local_paths_are_offered_only_with_folders_and_name_them() {
         )
     };
     let mcp = Mcp::start("paths-off").await;
-    let (doc, schema) = asset_add(mcp.tools().await);
+    let tools = mcp.tools().await;
+    // No description offers a path it can't take, motion's words included.
+    for t in tools.iter().filter(|t| t.name == "scene_create") {
+        let doc = t.description.as_deref().unwrap_or_default();
+        assert!(!doc.contains("path"), "{doc}");
+    }
+    let (doc, schema) = asset_add(tools);
     assert!(schema["properties"].get("path").is_none(), "{schema}");
     assert!(doc.contains("from url or base64"), "{doc}");
+    assert!(!doc.contains("path"), "{doc}");
     // base64 is for small images; without folders a photo comes by url.
     let b64 = schema["properties"]["base64"]["description"]
         .as_str()
