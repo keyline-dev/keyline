@@ -943,6 +943,13 @@ fn web_fonts_a_scene_file_names_are_fetched_before_it_is_checked() {
         .unwrap();
     assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
     assert!(dir.join("out").join("200x100-v0.png").is_file());
+    // Nothing is left behind in the data folder.
+    for sub in ["scenes", "renders"] {
+        let left = std::fs::read_dir(dir.join("data").join(sub))
+            .unwrap()
+            .count();
+        assert_eq!(left, 0, "{sub}");
+    }
 }
 
 #[tokio::test]

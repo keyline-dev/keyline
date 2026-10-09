@@ -108,6 +108,16 @@ impl Store {
         Ok(serde_json::from_slice(&json)?)
     }
 
+    /// Deletes a scene kept in the data directory, and its renders, as far
+    /// as it can. A design folder is never touched: it holds the user's files.
+    pub fn discard(&self, id: &str) {
+        if check_id(id).is_err() || self.design_dir(id).is_some() {
+            return;
+        }
+        let _ = std::fs::remove_file(self.root.join("scenes").join(format!("{id}.json")));
+        let _ = std::fs::remove_dir_all(self.root.join("renders").join(id));
+    }
+
     /// The designs in the workspace's first folder, by name.
     // ponytail: every one, unpaged; cap the list if a folder holds hundreds.
     fn designs(&self) -> Vec<String> {

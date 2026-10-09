@@ -331,7 +331,7 @@ An MCP client passes them in `args`:
 
 ### Rendering without an agent
 
-`keyline-mcp render <scene.json>` loads a scene file the way `scene_create` loads a [template](#templates-and-variants), renders it like the `render` tool, and copies the files into a folder, for scripts and CI:
+`keyline-mcp render <scene.json>` loads a scene file the way `scene_create` loads a [template](#templates-and-variants), renders it like the `render` tool, and writes the files into a folder, keeping nothing in the data directory, for scripts and CI:
 
 ```sh
 keyline-mcp render campaign.json --out renders/ --size wide --rows rows.json --format webp

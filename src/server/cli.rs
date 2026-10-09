@@ -52,6 +52,19 @@ impl Server {
         let (id, created) = self
             .scene_create_impl(from(json!({ "path": path }))?)
             .await?;
+        let report = self.render_created(r, &id, &created).await;
+        // The scene and its files were only the way there: `out` has the copies.
+        self.store.discard(&id);
+        report
+    }
+
+    /// Checks and renders scene `id`, just made from `r.scene`.
+    async fn render_created(
+        &self,
+        r: &RenderFile,
+        id: &str,
+        created: &str,
+    ) -> Result<Report, String> {
         let rows: Value = match &r.rows {
             Some(p) => serde_json::from_slice(
                 &std::fs::read(p).map_err(|e| format!("{}: {e}", p.display()))?,
@@ -59,7 +72,7 @@ impl Server {
             .map_err(|e| format!("{}: {e}", p.display()))?,
             None => json!([]),
         };
-        let mut args = json!({ "sceneId": &id, "rows": rows });
+        let mut args = json!({ "sceneId": id, "rows": rows });
         if !r.sizes.is_empty() {
             args["sizes"] = json!(r.sizes);
         }
@@ -78,10 +91,10 @@ impl Server {
         if r.preview {
             args["preview"] = json!(true);
         }
-        let scene = self.store.load(&id).map_err(|e| e.to_string())?;
+        let scene = self.store.load(id).map_err(|e| e.to_string())?;
         let rows =
             serde_json::from_value::<Vec<_>>(rows_of(&args)).map_err(|e| format!("rows: {e}"))?;
-        let mut text = self.checks(&scene, &id, &created, &r.sizes, &rows)?;
+        let mut text = self.checks(&scene, id, created, &r.sizes, &rows)?;
         if r.check {
             return Ok(Report {
                 defects: text.split_whitespace().any(|w| w.starts_with('!')),
