@@ -1,6 +1,6 @@
 {
   "name": "keyline",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "Design engine for AI agents: images at every size, no Chrome, 2× fewer tokens",
   "author": {
     "name": "keyline",
