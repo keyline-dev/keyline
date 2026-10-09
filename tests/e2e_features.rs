@@ -1040,8 +1040,10 @@ async fn a_named_design_keeps_its_scene_and_renders_in_its_folder() {
             json!({"name": "sale", "sizes": ["200x100"]}),
         )
         .await;
+    // `~\keyline\sale` on Windows.
+    let folder = std::path::Path::new("~").join("keyline").join("sale");
     assert!(
-        created.starts_with("sale v0 in ~/keyline/sale"),
+        created.starts_with(&format!("sale v0 in {}", folder.display())),
         "{created}"
     );
     let e = mcp
