@@ -21,7 +21,7 @@ keyline-mcp exposes six tools. This page lists each tool's inputs and the exact 
 
 ## Conventions
 
-- **Scenes are addressed by id.** `sceneId` comes from `scene_create`. Scenes, assets and renders live in the [data directory](#data-directory).
+- **Scenes are addressed by id.** `sceneId` comes from `scene_create`: its `name`, or a generated id. Each design and its renders live in a folder of the [workspace](#workspace); assets in the [data directory](#data-directory).
 - **Batches are atomic.** A tool that takes a list applies all of it or none of it.
 - **Every change bumps the scene's version**, shown in replies as `v3`.
 - **Defaults are omitted** in both directions: leave a field out to get its default.
@@ -113,14 +113,14 @@ hint: chip fill paints the letters (its color is unused); a box behind text is a
 Under each size, `render` lists every text that wrapped, shrank or was cut, as actually drawn, so wording and line breaks can be checked without looking at the image, and the option each `firstFit` drew (with why it passed over its first, when it did):
 
 ```text
-instagram-portrait /…/renders/sfc5e3bbb5b/instagram-portrait-v3.jpg quality 11
+instagram-portrait /…/sfc5e3bbb5b/renders/instagram-portrait-v3.jpg quality 11
  head → long
  headline 72px: "Proven RESULTS for" / "Willowmere Families"
 ```
 
 ### Output files
 
-`render` writes into `<data>/renders/<sceneId>/`, one file per size, named from the size id and the scene version:
+`render` writes into the design's `renders/` folder (see [Workspace](#workspace)), one file per size, named from the size id and the scene version:
 
 | File | For |
 |---|---|
@@ -133,22 +133,23 @@ instagram-portrait /…/renders/sfc5e3bbb5b/instagram-portrait-v3.jpg quality 11
 
 | Input | Type | Default | Meaning |
 |---|---|---|---|
+| `name` | string | generated | The design's id and the name of its folder in the [workspace](#workspace): letters, digits, `-` and `_`. A name in use is refused |
 | `sizes` | array | required, or the template's | Target [sizes](scene.md#sizes): a size object, a preset name, or `"WxH"` |
 | `width`, `height` | number | the first size's | The master size, px |
 | `background` | color | `#FFFFFF` | Canvas color |
 | `duration`, `fps`, `loop` | number, number, boolean | a still, 30, false | [Scene timing](scene.md#scene-timing) |
 | `url` | string | | A [template](#templates-and-variants) at a public http(s) URL |
-| `path` | string | | Or a template file in an allowed folder; offered only with [`--allow-read`](#command-line-flags) |
+| `path` | string | | Or a template file in a [workspace](#workspace) folder |
 | `tokens` | object | | The template's variables to set, `{name: value}` |
 
-Reply: the new scene's id and version. From a template, also its variables, then `ok` or [problem lines](#problem-lines), so a value that doesn't fit shows at once. When ffmpeg can't be found (and motion is on), a second line says so up front, so the agent doesn't plan a video it can't make:
+Reply: the new scene's id and version, and its folder (under the home folder written `~/…`). From a template, also its variables, then `ok` or [problem lines](#problem-lines), so a value that doesn't fit shows at once. When ffmpeg can't be found (and motion is on), a second line says so up front, so the agent doesn't plan a video it can't make:
 
 ```text
-s5b0a42a5e v0 tokens: accent, headline, price ok
+summer-sale v0 in ~/keyline/summer-sale tokens: accent, headline, price ok
 ```
 
 ```text
-sfc5e3bbb5b v0
+sfc5e3bbb5b v0 in ~/keyline/sfc5e3bbb5b
 video off: no ffmpeg (install it or pass --ffmpeg); apng, gif work
 ```
 
@@ -158,7 +159,7 @@ video off: no ffmpeg (install it or pass --ffmpeg); apng, gif work
 |---|---|---|---|
 | `sceneId` | string, required | | The scene |
 | `url` | string | | Public http(s) URL of a PNG, JPEG, SVG, video clip or sound, or a `data:` URL (an inline SVG) |
-| `path` | string | | Or a local file in an allowed folder; offered only with [`--allow-read`](#command-line-flags), and its description names the folders |
+| `path` | string | | Or a local file in a [workspace](#workspace) folder, which its description names |
 | `base64` | string | | Or a still image's bytes, base64. They pass through the model, so keep this for small files |
 | `id` | string | generated | The id layers use to refer to it; an existing id is replaced |
 
@@ -271,10 +272,10 @@ An image drawn with `cover` says which region of the photo is in its box, in the
 Reply: per size, the size id, the file's path ([Output files](#output-files)) and, in parentheses, what the file holds, then its layout as drawn (as [`scene_describe` with `full`](#scene_describe), a line per layer with any defect on it, the region of each photo drawn and the largest empty band), then its [drawn-text lines](#drawn-text-lines). The layout is the agent's eyes: it judges the design from it rather than by opening the files.
 
 ```text
-wide /…/renders/s1a2b3c4d5/wide-v3.png (1200×628, 212 KB)
-wide /…/renders/s1a2b3c4d5/wide-v3.gif (1200×628, 2s, 60 frames at 30 fps, plays once, 1840 KB)
-wide /…/renders/s1a2b3c4d5/wide-v3.mp4 (1200×628, 2s, 60 frames at 30 fps, with sound, 610 KB) quality 90
-a4-portrait /…/renders/s1a2b3c4d5/a4-portrait-v3.pdf (595×842 pt, images ≥ 212 dpi, 1840 KB)
+wide /…/s1a2b3c4d5/renders/wide-v3.png (1200×628, 212 KB)
+wide /…/s1a2b3c4d5/renders/wide-v3.gif (1200×628, 2s, 60 frames at 30 fps, plays once, 1840 KB)
+wide /…/s1a2b3c4d5/renders/wide-v3.mp4 (1200×628, 2s, 60 frames at 30 fps, with sound, 610 KB) quality 90
+a4-portrait /…/s1a2b3c4d5/renders/a4-portrait-v3.pdf (595×842 pt, images ≥ 212 dpi, 1840 KB)
 fonts: Bricolage Grotesque 800, Inter 400/600
 ```
 
@@ -313,7 +314,7 @@ Every setting is a flag; each takes its value after a space or as `--flag=value`
 
 | Flag | Default | Does |
 |---|---|---|
-| `--allow-read <folder>...` | none | Lets `asset_add` and `scene_create` read local files inside these folders: every folder up to the next flag, and repeatable. Without it, `path` isn't offered to the agent at all |
+| `--folder <folder>...` | `~/keyline` | The [workspace](#workspace): every folder up to the next flag, and repeatable |
 | `--no-motion[=true\|false]` | motion on | Leaves motion out of the tools: `duration`, `fps`, `loop`, `time`, `muted`, video, shots and the motion fields. Fewer tokens per turn, for stills-only use |
 | `--data <folder>` | `~/.keyline-mcp` | The [data directory](#data-directory) |
 | `--fonts <folder>` | none | An extra folder of `.ttf` and `.otf` fonts (repeatable) |
@@ -325,7 +326,7 @@ Every setting is a flag; each takes its value after a space or as `--flag=value`
 An MCP client passes them in `args`:
 
 ```json
-{"mcpServers": {"keyline": {"command": "keyline-mcp", "args": ["--data", "/srv/keyline", "--allow-read", "/srv/brand"]}}}
+{"mcpServers": {"keyline": {"command": "keyline-mcp", "args": ["--data", "/srv/keyline", "--folder", "/srv/designs", "/srv/brand"]}}}
 ```
 
 ### Rendering without an agent
@@ -359,11 +360,25 @@ In GitHub Actions, the repo is an action that installs a release and runs this o
     args: --format webp        # any render flags
 ```
 
-It may read files in the scene file's folder, and takes the server's flags too (`--allow-read`, `--data`, `--renderer`…). It prints the tool's reply, each problem line first, and exits 1 when any drawn size (of any row) has a `!` defect, so a broken design fails the job; `warn` advisories don't.
+It may read files in the scene file's folder, and takes the server's flags too (`--folder`, `--data`, `--renderer`…). It prints the tool's reply, each problem line first, and exits 1 when any drawn size (of any row) has a `!` defect, so a broken design fails the job; `warn` advisories don't.
+
+### Workspace
+
+Each design has a folder of its own in the workspace, named by its id: its scene, saved after every edit, and its renders.
+
+```text
+~/keyline/
+  summer-sale/
+    hero.jpg                   files you put there, added by path
+    summer-sale.keyline.json   the scene
+    renders/                   what render writes
+```
+
+The workspace is the folders given with `--folder`, else `~/keyline`, created on start. New designs go in the first folder; the agent may read files by `path` in any of them, and keyline writes only in a design's folder. A design is found by id in any of them, so another session, or another app on the same workspace, continues it by name; an unknown id's error lists the designs there are. The Claude Code plugin passes the project folder (but not the home folder or `/`, which get `~/keyline`), so designs live with the project. Claude Desktop passes the folders picked in its settings, and `~/keyline` when there are none.
 
 ### Data directory
 
-Scenes are saved as JSON under `<data>/scenes/`, assets under `<data>/assets/` by content hash, renders under `<data>/renders/<sceneId>/`, and downloaded fonts under `<data>/fonts/`.
+Assets are kept under `<data>/assets/` by content hash, and downloaded fonts under `<data>/fonts/`. Scenes made before design folders stay under `<data>/scenes/`, their renders under `<data>/renders/<sceneId>/`, and still open by id.
 
 ### Fonts
 
@@ -375,9 +390,9 @@ Video clips, sounds, and MP4 and WebM output need [ffmpeg](https://ffmpeg.org) (
 
 ## Security
 
-- **Local files** are read only with `--allow-read`. A `path` starting with `~` is in the home folder, as in a shell; it is resolved through every symlink and `..` first, then must lie inside an allowed folder and be a regular file, so a link inside the folder can't lead outside it.
+- **Local files** are read only in the [workspace](#workspace) folders. A `path` starting with `~` is in the home folder, as in a shell; it is resolved through every symlink and `..` first, then must lie inside a workspace folder and be a regular file, so a link inside the folder can't lead outside it.
 - **URLs** are fetched only over http(s); private and local addresses are refused, and every redirect is checked again.
-- **Templates** follow the same rules for their images: a template from a URL reads images from the web only, never local files; one from a path reads only inside the allowed folders.
+- **Templates** follow the same rules for their images: a template from a URL reads images from the web only, never local files; one from a path reads only inside the workspace folders.
 - **Base64** is taken only for still images.
 
 ## Limits
@@ -396,7 +411,8 @@ Limits of the scene itself (grid tracks, component depth, frame rates) are in [s
 Errors come back as an MCP tool error (`isError: true`) with one line of text that names what failed and how to fix it. They leave the scene and its version unchanged; only a font fetched on the way stays cached. A batch error names the item that failed:
 
 ```text
-/Users/me/secret.png is outside the folders the server may read (--allow-read)
+/Users/me/secret.png is outside the folders the server may read (--folder)
+no scene sael; designs: summer-sale
 layers[0]: unknown field(s) fontsize for text layer; did you mean fontsize → fontSize
 ops[0]: no layer with id nope
 layers[0]: unknown token {{blue}}; tokens: brand, headline

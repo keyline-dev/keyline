@@ -23,5 +23,7 @@ LABEL org.opencontainers.image.source="https://github.com/keyline-dev/keyline" \
       org.opencontainers.image.licenses="FSL-1.1-ALv2" \
       io.modelcontextprotocol.server.name="io.github.keyline-dev/keyline"
 
+# Its home is the volume, so designs in ~/keyline (/data/keyline) are kept.
+ENV HOME=/data
 VOLUME /data
 ENTRYPOINT ["keyline-mcp", "--data", "/data"]

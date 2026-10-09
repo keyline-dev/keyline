@@ -52,6 +52,10 @@ impl Mcp {
         let mut cmd = tokio::process::Command::new(env!("CARGO_BIN_EXE_keyline-mcp"));
         cmd.args(args);
         cmd.arg("--data").arg(&data);
+        // A home of its own, so the default workspace (~/keyline) is too.
+        let home = data.join("home");
+        std::fs::create_dir_all(&home).unwrap();
+        cmd.env("HOME", &home).env("USERPROFILE", &home);
         // Reference images are CPU renders, deterministic on each OS version.
         cmd.args(["--renderer", "cpu"]);
         let client =
@@ -63,6 +67,11 @@ impl Mcp {
             data,
             traffic: 0.into(),
         }
+    }
+
+    /// The workspace its designs go in: `~/keyline` in its own home.
+    pub fn workspace(&self) -> PathBuf {
+        self.data.join("home").join("keyline")
     }
 
     /// The name the server gave in its MCP handshake.

@@ -20,7 +20,7 @@ The plugin adds one MCP server, `keyline`, started by `scripts/launch.sh`:
 
 ## What it reads and sends
 
-- Scenes, images and renders are files in keyline's local data folder. It reads other local files only in folders you allow with `--allow-read`.
+- It works in the project folder Claude Code was started in (in your home folder or `/`, in `~/keyline` instead): each design gets a folder there holding its scene and renders, and keyline reads local files only inside it. The images you add are kept in keyline's local data folder.
 - It downloads Google Fonts the first time a design uses one, and images or templates from URLs Claude passes it. Nothing else leaves your machine: no telemetry, no account.
 
 Privacy policy: https://keyline.dev/privacy/ · Security and support: https://keyline.dev/security/ · Docs: https://keyline.dev/docs/

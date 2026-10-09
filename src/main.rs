@@ -1,6 +1,7 @@
 //! keyline-mcp: speaks MCP over stdio, or renders a scene file
 //! (`keyline-mcp render scene.json`).
 
+use anyhow::Context as _;
 use keyline_mcp::options::{HELP, Options};
 use keyline_mcp::server::{RenderFile, Server};
 use keyline_mcp::{fonts, local::AllowedDirs, store::Store, text, video};
@@ -36,16 +37,31 @@ async fn main() -> anyhow::Result<()> {
         );
     }
     // A scene's images are beside it: rendering one may read its folder.
-    if let Some(scene) = &render {
+    // The server's designs go in a workspace: --folder, else ~/keyline.
+    let workspace = if let Some(scene) = &render {
         let dir = std::path::Path::new(scene)
             .parent()
             .filter(|d| !d.as_os_str().is_empty())
             .unwrap_or(std::path::Path::new("."));
-        o.allow_read.push(dir.to_path_buf());
+        o.folders.push(dir.to_path_buf());
+        false
+    } else {
+        if o.folders.is_empty() {
+            let home = std::env::home_dir()
+                .context("no home folder; pass --folder <folder>")?
+                .join("keyline");
+            std::fs::create_dir_all(&home)
+                .with_context(|| format!("creating {}", home.display()))?;
+            o.folders.push(home);
+        }
+        true
+    };
+    // Local paths are read only inside the workspace folders.
+    let reads = AllowedDirs::new(&o.folders)?;
+    let mut store = Store::open_default(o.data)?;
+    if workspace {
+        store = store.with_workspace(reads.dirs().to_vec());
     }
-    // Local paths are read only inside folders named with --allow-read.
-    let reads = AllowedDirs::new(&o.allow_read)?;
-    let store = Store::open_default(o.data)?;
     // Web fonts cached in the data dir, plus fonts dropped there or in the
     // --fonts folders, join the bundled Inter.
     let fonts_dir = store.root().join("fonts");

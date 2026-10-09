@@ -127,7 +127,7 @@ async fn three_clips_play_as_shots_with_titles_and_sound() {
         return;
     }
     let dir = scratch("video");
-    let mcp = Mcp::start_args("video", &["--allow-read", dir.to_str().unwrap()]).await;
+    let mcp = Mcp::start_args("video", &["--folder", dir.to_str().unwrap()]).await;
     let colors = ["#3A86FF", "#FF006E", "#FB5607"].map(|c| format!("color=c={c}:s=1280x720:r=30"));
     let id = build(
         &mcp,
@@ -215,7 +215,7 @@ async fn a_soundtrack_plays_under_the_video_cut_to_its_length() {
         .unwrap()
         .success();
     assert!(made, "ffmpeg made the song");
-    let mcp = Mcp::start_args("soundtrack", &["--allow-read", dir.to_str().unwrap()]).await;
+    let mcp = Mcp::start_args("soundtrack", &["--folder", dir.to_str().unwrap()]).await;
     let id = mcp
         .ok(
             "scene_create",
@@ -390,7 +390,7 @@ async fn video_off_goes_unsaid_when_motion_is_off() {
 }
 
 #[tokio::test]
-async fn local_paths_are_offered_only_with_folders_and_name_them() {
+async fn local_paths_name_their_folders() {
     let asset_add = |tools: Vec<rmcp::model::Tool>| {
         let t = tools.into_iter().find(|t| t.name == "asset_add").unwrap();
         (
@@ -398,31 +398,18 @@ async fn local_paths_are_offered_only_with_folders_and_name_them() {
             Value::Object((*t.input_schema).clone()),
         )
     };
-    let mcp = Mcp::start("paths-off").await;
-    let tools = mcp.tools().await;
-    // No description offers a path it can't take, motion's words included.
-    for t in tools.iter().filter(|t| t.name == "scene_create") {
-        let doc = t.description.as_deref().unwrap_or_default();
-        assert!(!doc.contains("path"), "{doc}");
-    }
-    let (doc, schema) = asset_add(tools);
-    assert!(schema["properties"].get("path").is_none(), "{schema}");
-    assert!(doc.contains("from url or base64"), "{doc}");
-    assert!(!doc.contains("path"), "{doc}");
-    // base64 is for small images; without folders a photo comes by url.
-    let b64 = schema["properties"]["base64"]["description"]
-        .as_str()
-        .unwrap();
-    assert!(
-        b64.ends_with(
-            "a logo or signature, since every byte passes through the model. A photo: its url."
-        ),
-        "{b64}"
+    // By default, ~/keyline, written the short way.
+    let mcp = Mcp::start("paths-home").await;
+    let (doc, schema) = asset_add(mcp.tools().await);
+    assert!(doc.contains("from url, path or base64"), "{doc}");
+    assert_eq!(
+        schema["properties"]["path"]["description"],
+        "Or a local file in ~/keyline"
     );
     mcp.stop().await;
 
     let dir = std::fs::canonicalize(scratch("paths-on")).unwrap();
-    let mcp = Mcp::start_args("paths-on", &["--allow-read", dir.to_str().unwrap()]).await;
+    let mcp = Mcp::start_args("paths-on", &["--folder", dir.to_str().unwrap()]).await;
     let (_, schema) = asset_add(mcp.tools().await);
     let path = schema["properties"]["path"]["description"]
         .as_str()
@@ -431,7 +418,7 @@ async fn local_paths_are_offered_only_with_folders_and_name_them() {
     let b64 = schema["properties"]["base64"]["description"]
         .as_str()
         .unwrap();
-    assert!(b64.ends_with("A photo: its url or path."), "{b64}");
+    assert!(b64.ends_with("a photo goes by url or path."), "{b64}");
     mcp.stop().await;
 }
 
@@ -463,7 +450,7 @@ async fn a_clip_cut_short_fails_the_render_instead_of_freezing() {
 
     let dir = std::fs::canonicalize(&dir).unwrap();
     let file = dir.join("cut.mkv");
-    let mcp = Mcp::start_args("cut-clip", &["--allow-read", dir.to_str().unwrap()]).await;
+    let mcp = Mcp::start_args("cut-clip", &["--folder", dir.to_str().unwrap()]).await;
     let id = mcp
         .ok(
             "scene_create",
@@ -505,7 +492,7 @@ async fn a_clip_cut_short_fails_the_render_instead_of_freezing() {
 async fn video_demo() {
     assert!(have_ffmpeg(), "the demo needs ffmpeg");
     let dir = scratch("video-demo");
-    let mcp = Mcp::start_args("video-demo", &["--allow-read", dir.to_str().unwrap()]).await;
+    let mcp = Mcp::start_args("video-demo", &["--folder", dir.to_str().unwrap()]).await;
     let id = build(
         &mcp,
         &dir,

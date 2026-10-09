@@ -104,7 +104,7 @@ impl Server {
     }
 
     #[tool(
-        description = "Add an image (PNG, JPEG, SVG) to a scene's assets from url, path or base64. Returns id and size.",
+        description = "Add an image (PNG, JPEG, SVG) from url, path or base64. Returns id and size.",
         annotations(title = "Add image", read_only_hint = false, destructive_hint = false)
     )]
     async fn asset_add(&self, Parameters(a): Parameters<AssetAddArgs>) -> CallToolResult {

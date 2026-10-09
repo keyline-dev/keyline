@@ -195,7 +195,7 @@ async fn claude_makes_the_images() {
             let scene = keyline_scene(&mcp, task).await;
             servers.insert(
                 "scene".into(),
-                json!({"command": env!("CARGO_BIN_EXE_keyline-mcp"), "args": ["--data", mcp.data]}),
+                json!({"command": env!("CARGO_BIN_EXE_keyline-mcp"), "args": ["--data", mcp.data, "--folder", mcp.workspace()]}),
             );
             keyline = Some((mcp, scene.clone()));
             (scene, "", "mcp__scene__*")

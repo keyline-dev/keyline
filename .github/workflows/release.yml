@@ -176,7 +176,7 @@ jobs:
           sha256sum --check --ignore-missing SHA256SUMS 2>/dev/null || shasum -a 256 --check --ignore-missing SHA256SUMS
           unzip -q keyline-mcp-*.mcpb -d bundle
           init='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}'
-          reply=$(echo "$init" | bundle/server/${{ matrix.exe }} '--no-motion=${user_config.stills_only}' --allow-read '${user_config.folders}' --data "$RUNNER_TEMP/data" | head -n 1)
+          reply=$(echo "$init" | bundle/server/${{ matrix.exe }} '--no-motion=${user_config.stills_only}' --folder '${user_config.folders}' --data "$RUNNER_TEMP/data" | head -n 1)
           echo "$reply"
           echo "$reply" | grep -q '"serverInfo"'
 

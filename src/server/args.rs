@@ -10,6 +10,8 @@ use crate::scene::SizeSpec;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 /// Arguments of `scene_create`.
 pub struct SceneCreateArgs {
+    /// Id and folder (summer-sale)
+    pub(super) name: Option<String>,
     /// Master size, px; the first size's when omitted.
     pub(super) width: Option<f32>,
     pub(super) height: Option<f32>,
@@ -40,13 +42,13 @@ pub struct SceneCreateArgs {
 /// Arguments of `asset_add`.
 pub struct AssetAddArgs {
     pub(super) scene_id: String,
-    /// Public http(s) URL of a PNG, JPEG or SVG.
+    /// Public http(s) URL.
     pub(super) url: Option<String>,
-    /// Or a local file, in a folder the server allows (--allow-read).
+    /// Or a local file, in a folder the server allows (--folder).
     pub(super) path: Option<String>,
-    /// Or the file bytes, base64: small images only, a logo or signature, since every byte passes through the model. A photo: its url or path.
+    /// Or the file bytes, base64: small images only (a logo); a photo goes by url or path.
     pub(super) base64: Option<String>,
-    /// Asset id to use in layers; generated if omitted.
+    /// Id for layers; generated if omitted.
     pub(super) id: Option<String>,
 }
 

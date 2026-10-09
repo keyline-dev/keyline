@@ -16,11 +16,12 @@ Usage: keyline-mcp [options]                  the MCP server, over stdio
                                                render a scene file without an agent
 
 Options:
-  --allow-read <folder>...
-                          Let asset_add read local files by path inside these
-                          folders (every folder up to the next flag; repeatable).
-                          Without it, paths are refused. Paths are resolved
-                          through symlinks before the check.
+  --folder <folder>...    The workspace: each design gets a folder in the first
+                          one, holding its scene and renders/, and the agent may
+                          name files in any of them by path (every folder up to
+                          the next flag; repeatable). Paths are resolved through
+                          symlinks before the check. Default: ~/keyline, created
+                          on start.
   --no-motion[=true|false]
                           Leave animation and video out of the tools: stills
                           only, and fewer tokens of tool definitions per turn
@@ -57,8 +58,8 @@ Docs: https://github.com/keyline-dev/keyline";
 /// The parsed command line.
 #[derive(Debug, Default, PartialEq)]
 pub struct Options {
-    /// `--allow-read`: folders local files may be read from, as given.
-    pub allow_read: Vec<PathBuf>,
+    /// `--folder`: the workspace folders, as given.
+    pub folders: Vec<PathBuf>,
     /// `--no-motion` (or `--no-motion=true`): leave animation and video
     /// out of the tools.
     pub no_motion: bool,
@@ -119,14 +120,14 @@ impl Options {
                 Some((f, v)) if f.starts_with("--") => (f, Some(v.to_owned())),
                 _ => (arg.as_str(), None),
             };
-            if flag == "--allow-read" {
+            if flag == "--folder" {
                 // Every folder up to the next flag, so a client can pass a
                 // list (Claude Desktop's folder picker); none is fine.
-                o.allow_read
+                o.folders
                     .extend(inline.filter(|d| !unset(d)).map(PathBuf::from));
                 while let Some(dir) = args.next_if(|a| !a.starts_with('-')) {
                     if !unset(&dir) {
-                        o.allow_read.push(dir.into());
+                        o.folders.push(dir.into());
                     }
                 }
                 continue;
@@ -206,7 +207,7 @@ mod tests {
             "/bin/ffmpeg",
             "--encoder",
             "software",
-            "--allow-read",
+            "--folder",
             "/a",
             "--no-motion",
         ])
@@ -216,23 +217,23 @@ mod tests {
         assert_eq!(o.renderer, Backend::Cpu);
         assert_eq!(o.ffmpeg, Some("/bin/ffmpeg".into()));
         assert_eq!(o.encoder.as_deref(), Some("software"));
-        assert_eq!(o.allow_read, [PathBuf::from("/a")]);
+        assert_eq!(o.folders, [PathBuf::from("/a")]);
         assert!(o.no_motion && !o.help);
     }
 
     #[test]
-    fn allow_read_takes_every_folder_up_to_the_next_flag() {
+    fn folder_takes_every_folder_up_to_the_next_flag() {
         let o = parse(&[
-            "--allow-read",
+            "--folder",
             "/a",
             "",
             "/b",
             "--no-motion=false",
-            "--allow-read",
+            "--folder",
             "",
         ])
         .unwrap();
-        assert_eq!(o.allow_read, [PathBuf::from("/a"), PathBuf::from("/b")]);
+        assert_eq!(o.folders, [PathBuf::from("/a"), PathBuf::from("/b")]);
         assert!(!o.no_motion);
         assert!(parse(&["--no-motion=true"]).unwrap().no_motion);
         let o = parse(&["render", "ad.json", "--size", "wide", "--out=dist"]).unwrap();
@@ -263,11 +264,11 @@ mod tests {
         // What Claude Desktop passed with no folder picked.
         let o = parse(&[
             "--no-motion=${user_config.stills_only}",
-            "--allow-read",
+            "--folder",
             "${user_config.folders}",
         ])
         .unwrap();
-        assert!(o.allow_read.is_empty() && !o.no_motion && o.operands.is_empty());
+        assert!(o.folders.is_empty() && !o.no_motion && o.operands.is_empty());
     }
 
     #[test]

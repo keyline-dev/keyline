@@ -34,7 +34,7 @@ fn template_dir(name: &str) -> PathBuf {
 #[tokio::test]
 async fn a_template_loads_with_its_variables_and_renders_a_file_per_row() {
     let dir = template_dir("template");
-    let mcp = Mcp::start_args("template", &["--allow-read", dir.to_str().unwrap()]).await;
+    let mcp = Mcp::start_args("template", &["--folder", dir.to_str().unwrap()]).await;
     let path = dir.join("template.json");
     let reply = mcp
         .ok(
@@ -44,7 +44,7 @@ async fn a_template_loads_with_its_variables_and_renders_a_file_per_row() {
         .await;
     // What can be set, that it fits, and the facts an edit would give.
     assert!(
-        reply.ends_with(" v0 tokens: accent, headline ok\nsmallest text: 400x200 40px (headline)"),
+        reply.ends_with(" tokens: accent, headline ok\nsmallest text: 400x200 40px (headline)"),
         "{reply}"
     );
     let id = reply.split(' ').next().unwrap().to_owned();
@@ -106,11 +106,7 @@ async fn a_template_cannot_read_outside_the_allowed_folders() {
         json!({"sizes": ["100x100"], "assets": {"secret": "../photo.png"}}).to_string(),
     )
     .unwrap();
-    let mcp = Mcp::start_args(
-        "template-outside",
-        &["--allow-read", inside.to_str().unwrap()],
-    )
-    .await;
+    let mcp = Mcp::start_args("template-outside", &["--folder", inside.to_str().unwrap()]).await;
     let e = mcp
         .call(
             "scene_create",
@@ -122,16 +118,6 @@ async fn a_template_cannot_read_outside_the_allowed_folders() {
         e.contains("template asset secret") && e.contains("outside the folders"),
         "{e}"
     );
-    mcp.stop().await;
-
-    // Without --allow-read, neither tool offers a path at all.
-    let mcp = Mcp::start("template-no-paths").await;
-    let tools = serde_json::to_value(mcp.tools().await).unwrap();
-    for t in tools.as_array().unwrap() {
-        if matches!(t["name"].as_str(), Some("scene_create" | "asset_add")) {
-            assert!(t["inputSchema"]["properties"].get("path").is_none(), "{t}");
-        }
-    }
     mcp.stop().await;
 }
 

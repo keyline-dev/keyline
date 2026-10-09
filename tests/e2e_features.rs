@@ -509,15 +509,24 @@ async fn assets_come_from_local_paths_only_where_allowed() {
     std::fs::write(allowed.join("photo.png"), photo_png()).unwrap();
     std::fs::write(outside.join("photo.png"), photo_png()).unwrap();
 
-    // Off unless a folder is allowed.
-    let off = Mcp::start("paths-off").await;
-    let id = new_scene(&off).await;
-    let e = path_refused(&off, &id, &allowed.join("photo.png")).await;
-    assert!(e.contains("start the server with --allow-read"), "{e}");
-    off.stop().await;
+    // Without --folder, only ~/keyline.
+    let home = Mcp::start("paths-home").await;
+    let id = new_scene(&home).await;
+    let e = path_refused(&home, &id, &allowed.join("photo.png")).await;
+    assert!(e.contains("outside the folders"), "{e}");
+    let mine = home.workspace().join("photo.png");
+    std::fs::write(&mine, photo_png()).unwrap();
+    let reply = home
+        .ok(
+            "asset_add",
+            json!({"sceneId": id, "id": "mine", "path": "~/keyline/photo.png"}),
+        )
+        .await;
+    assert!(reply.starts_with("mine "), "{reply}");
+    home.stop().await;
 
     let dir = allowed.display().to_string();
-    let on = Mcp::start_args("paths-on", &["--allow-read", &dir]).await;
+    let on = Mcp::start_args("paths-on", &["--folder", &dir]).await;
     let id = new_scene(&on).await;
     let reply = on
         .ok(
@@ -553,13 +562,7 @@ fn the_command_line_explains_itself() {
     let help = run("--help");
     let text = String::from_utf8_lossy(&help.stdout);
     assert!(help.status.success(), "{text}");
-    for word in [
-        "--allow-read",
-        "--data",
-        "--renderer",
-        "--ffmpeg",
-        "--encoder",
-    ] {
+    for word in ["--folder", "--data", "--renderer", "--ffmpeg", "--encoder"] {
         assert!(text.contains(word), "{word} missing from --help");
     }
     let bad = run("--bogus");
@@ -1025,5 +1028,47 @@ async fn an_update_replaces_children_and_moves_layers() {
         col[0].contains("rule rect") && col[1].contains("title text"),
         "{full}"
     );
+    mcp.stop().await;
+}
+
+#[tokio::test]
+async fn a_named_design_keeps_its_scene_and_renders_in_its_folder() {
+    let mcp = Mcp::start("design-folder").await;
+    let created = mcp
+        .ok(
+            "scene_create",
+            json!({"name": "sale", "sizes": ["200x100"]}),
+        )
+        .await;
+    assert!(
+        created.starts_with("sale v0 in ~/keyline/sale"),
+        "{created}"
+    );
+    let e = mcp
+        .call(
+            "scene_create",
+            json!({"name": "sale", "sizes": ["200x100"]}),
+        )
+        .await
+        .unwrap_err();
+    assert!(e.contains("a design named sale exists"), "{e}");
+    let rendered = mcp.ok("render", json!({"sceneId": "sale"})).await;
+    let (_, file) = common::files(&rendered).next().unwrap();
+    let design = std::fs::canonicalize(mcp.workspace().join("sale")).unwrap();
+    assert_eq!(
+        std::path::Path::new(file),
+        design.join("renders/200x100-v0.png")
+    );
+    assert!(design.join("sale.keyline.json").is_file());
+
+    // Another session continues it by name; a wrong one lists the designs.
+    let data = mcp.shut_down().await;
+    let mcp = Mcp::start_in(data).await;
+    mcp.ok("scene_describe", json!({"sceneId": "sale"})).await;
+    let e = mcp
+        .call("scene_describe", json!({"sceneId": "sael"}))
+        .await
+        .unwrap_err();
+    assert_eq!(e, "no scene sael; designs: sale");
     mcp.stop().await;
 }

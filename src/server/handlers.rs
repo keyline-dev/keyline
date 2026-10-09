@@ -32,15 +32,19 @@ impl Server {
         a: SceneCreateArgs,
     ) -> Result<(String, String), String> {
         let template = a.url.is_some() || a.path.is_some();
+        let name = a.name.clone();
         let scene = if template {
             self.template(a).await?
         } else {
             blank(a)?
         };
         let fonts = self.scene_fonts(&scene).await?;
-        let id = self.store.new_scene_id();
-        self.store.save(&id, &scene).map_err(err)?;
+        let (id, dir) = self.store.create(name.as_deref(), &scene).map_err(err)?;
         let mut out = format!("{fonts}{id} v0");
+        // Where the user puts its files and finds its renders.
+        if let Some(dir) = dir {
+            let _ = write!(out, " in {}", crate::local::tilde(&dir));
+        }
         if template {
             // What the agent can fill in, and whether it fits as it comes.
             if !scene.tokens.is_empty() {

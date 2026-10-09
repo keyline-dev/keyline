@@ -1,5 +1,5 @@
 //! Local files an agent may name by path, so their bytes never pass through
-//! the model. Off unless the server is started with `--allow-read <folder>`;
+//! the model: in the workspace folders (`--folder`, default `~/keyline`);
 //! a path is resolved through every symlink first, and must then lie inside
 //! one of those folders. A leading `~` is the user's home folder, as in a
 //! shell, since agents copy paths the way people write them.
@@ -18,12 +18,24 @@ pub fn expand_home(path: &Path) -> PathBuf {
     }
 }
 
+/// `path` written from the home folder as `~/…` when it's under it, the
+/// way paths may name it too; any other path as it is.
+pub fn tilde(path: &Path) -> String {
+    let home = std::env::home_dir().and_then(|h| std::fs::canonicalize(h).ok());
+    match home.as_deref().map(|h| (h, path.strip_prefix(h))) {
+        Some((h, Ok(rest))) if h.parent().is_some() => {
+            Path::new("~").join(rest).display().to_string()
+        }
+        _ => path.display().to_string(),
+    }
+}
+
 /// The folders local paths may be read from, resolved at startup.
 #[derive(Debug, Default)]
 pub struct AllowedDirs(Vec<PathBuf>);
 
 impl AllowedDirs {
-    /// The folders named with `--allow-read`, resolved through symlinks.
+    /// The folders named with `--folder`, resolved through symlinks.
     ///
     /// # Errors
     /// A folder that doesn't exist.
@@ -31,13 +43,13 @@ impl AllowedDirs {
         dirs.iter()
             .map(|d| {
                 std::fs::canonicalize(d)
-                    .with_context(|| format!("--allow-read {}: no such folder", d.display()))
+                    .with_context(|| format!("--folder {}: no such folder", d.display()))
             })
             .collect::<Result<_>>()
             .map(AllowedDirs)
     }
 
-    /// The allowed folders, resolved.
+    /// The workspace folders, resolved.
     pub fn dirs(&self) -> &[PathBuf] {
         &self.0
     }
@@ -45,19 +57,19 @@ impl AllowedDirs {
     /// The bytes of the regular file at `path`, at most `max` of them.
     ///
     /// # Errors
-    /// Paths are off, the file is missing, outside every allowed folder
+    /// Paths are off, the file is missing, outside every workspace folder
     /// (after following symlinks), not a regular file, or too large.
     pub fn read(&self, path: impl AsRef<Path>, max: usize) -> Result<Vec<u8>, String> {
         let path = path.as_ref();
         if self.0.is_empty() {
-            return Err("local paths are off; start the server with --allow-read <folder>".into());
+            return Err("local paths are off; start the server with --folder <folder>".into());
         }
         // The real location, `~` expanded and every symlink and `..` followed.
         let real = std::fs::canonicalize(expand_home(path))
             .map_err(|_| format!("no such file {}", path.display()))?;
         if !self.0.iter().any(|d| real.starts_with(d)) {
             return Err(format!(
-                "{} is outside the folders the server may read (--allow-read)",
+                "{} is outside the folders the server may read (--folder)",
                 path.display()
             ));
         }
@@ -90,7 +102,7 @@ impl AllowedDirs {
 
 #[cfg(test)]
 mod tests {
-    use super::{AllowedDirs, expand_home};
+    use super::{AllowedDirs, expand_home, tilde};
     use std::path::Path;
 
     #[test]
@@ -107,6 +119,16 @@ mod tests {
         }
     }
 
+    #[test]
+    fn paths_under_home_are_written_with_a_tilde() {
+        let home = std::fs::canonicalize(std::env::home_dir().unwrap()).unwrap();
+        assert_eq!(
+            tilde(&home.join("keyline")),
+            Path::new("~").join("keyline").display().to_string()
+        );
+        assert_eq!(tilde(Path::new("/elsewhere")), "/elsewhere");
+    }
+
     /// A fresh, empty folder.
     fn scratch(name: &str) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!("keyline-local-{name}-{}", std::process::id()));
@@ -121,7 +143,7 @@ mod tests {
         assert!(
             none.read("/etc/hosts", 1 << 20)
                 .unwrap_err()
-                .contains("--allow-read")
+                .contains("--folder")
         );
         assert!(AllowedDirs::new(&["/no/such/folder".into()]).is_err());
     }

@@ -4,7 +4,7 @@ keyline runs on your machine and collects nothing: no accounts, no telemetry, no
 
 ## What stays on your machine
 
-Scenes, the images you add, renders and the font cache are files in keyline's data folder (`~/.keyline-mcp`, or the folder given with `--data`; the Claude Code plugin uses its own data folder). They stay there until you delete them. keyline reads other local files only inside the folders you allow with `--allow-read`.
+Each design's scene and renders are files in a folder of its own in the workspace: `~/keyline`, the folders given with `--folder`, or, with the Claude Code plugin, the project folder. The images you add and the font cache are in keyline's data folder (`~/.keyline-mcp`, or the folder given with `--data`). They stay there until you delete them. keyline reads other local files only inside the workspace folders, and writes only in a design's folder and the data folder.
 
 ## What keyline fetches
 

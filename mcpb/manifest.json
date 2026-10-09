@@ -23,7 +23,7 @@
     "entry_point": "server/keyline-mcp",
     "mcp_config": {
       "command": "${__dirname}/server/keyline-mcp",
-      "args": ["--no-motion=${user_config.stills_only}", "--allow-read", "${user_config.folders}"],
+      "args": ["--no-motion=${user_config.stills_only}", "--folder", "${user_config.folders}"],
       "platform_overrides": {
         "win32": {
           "command": "${__dirname}/server/keyline-mcp.exe"
@@ -37,8 +37,8 @@
   "user_config": {
     "folders": {
       "type": "directory",
-      "title": "Folders keyline may read",
-      "description": "Claude can add images and templates from these folders by path, without passing their bytes through the chat.",
+      "title": "Folders keyline works in",
+      "description": "Each design gets a folder in the first one, holding its scene and renders; Claude can add images and video from any of them by path. None: ~/keyline.",
       "multiple": true,
       "required": false
     },

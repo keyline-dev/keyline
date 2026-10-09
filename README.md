@@ -93,7 +93,7 @@ There's no GUI, and no plan for one. Every design decision is judged by one ques
 /plugin install keyline@keyline
 ```
 
-**Claude Desktop** (Mac with Apple silicon, or Windows): download `keyline-mcp-<version>.mcpb` from the [latest release](https://github.com/keyline-dev/keyline/releases/latest) and double-click it. To let Claude use your own images and logos, open Settings → Extensions → keyline → Configure, add the folders they're in, and click **Save**; without it, keyline can't open files on your computer.
+**Claude Desktop** (Mac with Apple silicon, or Windows): download `keyline-mcp-<version>.mcpb` from the [latest release](https://github.com/keyline-dev/keyline/releases/latest) and double-click it. Designs and their renders go in `~/keyline`, a folder per design, where you can also put the images and logos Claude should use. To work in folders of your own instead, open Settings → Extensions → keyline → Configure, add them, and click **Save**.
 
 ### Other clients: install, then add
 
@@ -171,9 +171,9 @@ Any client that starts stdio servers works. ChatGPT, grok.com and the xAI API co
 
 Ask your agent for a design: *"Make a vote-by-mail flyer with this photo, in 1080×1350, 1200×1000 and a 300×600 skyscraper."*
 
-- **Local files:** let the agent add images and templates by path (cheaper than sending their bytes) with `--allow-read ~/brand ~/projects/ads`. Flags go after the command: `claude mcp add keyline -- keyline-mcp --allow-read ~/brand`, or in `args` in a JSON config. In Docker, mount the folder and allow the mount.
+- **Your files:** each design gets a folder, `~/keyline/<name>/`, holding its scene and `renders/`; the agent adds images, video and templates in it by path (cheaper than sending their bytes) and picks up a design by name in a later session. The Claude Code plugin uses the project folder instead. Elsewhere, `--folder ~/work ~/brand` replaces `~/keyline`: designs go in the first folder, and files are read in all of them. Flags go after the command (`claude mcp add keyline -- keyline-mcp --folder ~/work`), or in `args` in a JSON config. In Docker, designs are in the `/data` volume; mount other folders and pass them.
 - **Video** needs [ffmpeg](https://ffmpeg.org) on the PATH; everything else, animated PNG and GIF included, works without it.
-- **Options:** every setting is a flag (`--allow-read`, `--no-motion`, `--data`, `--fonts`, `--renderer`, `--ffmpeg`, `--encoder`); see `keyline-mcp --help` and [docs/tools.md](docs/tools.md#server-configuration).
+- **Options:** every setting is a flag (`--folder`, `--no-motion`, `--data`, `--fonts`, `--renderer`, `--ffmpeg`, `--encoder`); see `keyline-mcp --help` and [docs/tools.md](docs/tools.md#server-configuration).
 - **Without an agent:** `keyline-mcp render scene.json --out renders/` renders every size and exits 1 on a `!` defect; in GitHub Actions, `uses: keyline-dev/keyline@v0` does it for a repo's scenes ([details](docs/tools.md#rendering-without-an-agent)).
 - **GPU on a Linux server** needs Vulkan drivers (NVIDIA's, or Mesa); without a GPU, keyline renders on the CPU.
 

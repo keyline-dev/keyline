@@ -48,7 +48,7 @@ const MOTION_ARGS: &[(&str, &[&str])] = &[
 
 /// Trims every tool's input schema in place, and adds motion's words to the
 /// tools, or takes its arguments out (`--no-motion`). `asset_add`'s `path`
-/// names the `folders` it may read, and is left out when there are none.
+/// names the `folders` it may read.
 pub(super) fn compact_all<S>(
     router: &mut ToolRouter<S>,
     motion: bool,
@@ -75,36 +75,21 @@ pub(super) fn compact_all<S>(
             let base = route.attr.description.clone().unwrap_or_default();
             route.attr.description = Some(format!("{base}{extra}").into());
         }
-        // A local `path` is offered only where the server may read, and
-        // says where that is.
+        // A local `path` says where the server may read.
         if matches!(route.attr.name.as_ref(), "asset_add" | "scene_create")
-            && let Some(Value::Object(props)) = schema.get_mut("properties")
+            && let Some(Value::Object(path)) =
+                schema.get_mut("properties").and_then(|p| p.get_mut("path"))
         {
-            if folders.is_empty() {
-                props.remove("path");
-                let d = route.attr.description.clone().unwrap_or_default();
-                let d = d
-                    .replace("url, path or base64", "url or base64")
-                    .replace("url or path", "url")
-                    .replace("path or url", "url");
-                route.attr.description = Some(d.into());
-                if let Some(Value::Object(b64)) = props.get_mut("base64")
-                    && let Some(Value::String(text)) = b64.get_mut("description")
-                {
-                    *text = text.replace("its url or path", "its url");
-                }
-            } else if let Some(Value::Object(path)) = props.get_mut("path") {
-                let list: Vec<_> = folders.iter().map(|f| f.display().to_string()).collect();
-                let or = if route.attr.name == "asset_add" {
-                    "Or"
-                } else {
-                    "or"
-                };
-                path.insert(
-                    "description".into(),
-                    format!("{or} a local file in {}", list.join(", ")).into(),
-                );
-            }
+            let list: Vec<_> = folders.iter().map(|f| crate::local::tilde(f)).collect();
+            let or = if route.attr.name == "asset_add" {
+                "Or"
+            } else {
+                "or"
+            };
+            path.insert(
+                "description".into(),
+                format!("{or} a local file in {}", list.join(", ")).into(),
+            );
         }
         if let Value::Object(o) = schema {
             route.attr.input_schema = Arc::new(o);

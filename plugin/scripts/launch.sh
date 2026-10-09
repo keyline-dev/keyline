@@ -6,6 +6,14 @@
 # message goes to stderr.
 set -eu
 
+# Claude Code starts it in the project: that's the workspace, where designs
+# and their renders go. Not the home folder or /, which would open the
+# whole disk; there keyline uses ~/keyline.
+case "$PWD" in
+    / | "$HOME") ;;
+    *) set -- --folder "$PWD" "$@" ;;
+esac
+
 if command -v keyline-mcp >/dev/null 2>&1; then
     exec keyline-mcp "$@"
 fi

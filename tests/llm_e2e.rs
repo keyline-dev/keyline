@@ -77,7 +77,7 @@ async fn claude_builds_the_reference_ad() {
 
     let mcp_config = json!({"mcpServers": {"scene": {
         "command": env!("CARGO_BIN_EXE_keyline-mcp"),
-        "args": ["--data", mcp.data]
+        "args": ["--data", mcp.data, "--folder", mcp.workspace()]
     }}});
     let mut cmd = tokio::process::Command::new(
         std::env::var("CLAUDE_BIN").unwrap_or_else(|_| "claude".into()),

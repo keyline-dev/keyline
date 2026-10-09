@@ -1,5 +1,7 @@
-//! On-disk storage in a server-owned directory: scene JSON, content-addressed
-//! asset bytes, and rendered PNGs. No tool argument is ever a path.
+//! On-disk storage: content-addressed asset bytes and the web-font cache in
+//! a server-owned directory, and each design in a folder of its own,
+//! `<workspace>/<id>/`, holding `<id>.keyline.json` and `renders/`. Scenes
+//! made before design folders stay in the data directory's `scenes/`.
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -9,9 +11,12 @@ use sha2::{Digest, Sha256};
 
 use crate::scene::Scene;
 
-/// The server-owned data directory.
+/// The data directory, and the workspace folders designs live in.
 pub struct Store {
     root: PathBuf,
+    /// Folders designs are looked up in; new ones go in the first. None:
+    /// scenes stay in the data directory.
+    workspace: Vec<PathBuf>,
 }
 
 impl Store {
@@ -40,7 +45,18 @@ impl Store {
             std::fs::create_dir_all(root.join(dir))
                 .with_context(|| format!("creating {}", root.join(dir).display()))?;
         }
-        Ok(Store { root })
+        Ok(Store {
+            root,
+            workspace: Vec::new(),
+        })
+    }
+
+    /// The store with designs kept in folders of `workspace`, the first
+    /// taking new ones.
+    #[must_use]
+    pub fn with_workspace(mut self, workspace: Vec<PathBuf>) -> Self {
+        self.workspace = workspace;
+        self
     }
 
     /// Where asset bytes live, named by SHA-256.
@@ -56,14 +72,62 @@ impl Store {
         format!("s{}", &sha256_hex(&nanos.to_le_bytes())[..10])
     }
 
+    /// Saves a new scene as `name`, or under a fresh id, in a design
+    /// folder of its own when there is a workspace. Returns its id and
+    /// that folder.
+    ///
+    /// # Errors
+    /// A bad or taken name, or I/O failure.
+    pub fn create(&self, name: Option<&str>, scene: &Scene) -> Result<(String, Option<PathBuf>)> {
+        let id = name.map_or_else(|| self.new_scene_id(), str::to_owned);
+        check_id(&id)?;
+        if self.scene_path(&id)?.is_file() {
+            bail!("a design named {id} exists; edit it by that id, or pick another name");
+        }
+        let dir = self.workspace.first().map(|w| w.join(&id));
+        if let Some(dir) = &dir {
+            std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+        }
+        self.save(&id, scene)?;
+        Ok((id, dir))
+    }
+
     /// Loads a scene.
     ///
     /// # Errors
     /// Bad id, missing scene, or invalid JSON.
     pub fn load(&self, id: &str) -> Result<Scene> {
         let path = self.scene_path(id)?;
-        let json = std::fs::read(&path).with_context(|| format!("no scene {id}"))?;
+        let Ok(json) = std::fs::read(&path) else {
+            let names = self.designs();
+            if names.is_empty() {
+                bail!("no scene {id}");
+            }
+            bail!("no scene {id}; designs: {}", names.join(", "));
+        };
         Ok(serde_json::from_slice(&json)?)
+    }
+
+    /// The designs in the workspace's first folder, by name.
+    // ponytail: every one, unpaged; cap the list if a folder holds hundreds.
+    fn designs(&self) -> Vec<String> {
+        let Some(Ok(entries)) = self.workspace.first().map(std::fs::read_dir) else {
+            return Vec::new();
+        };
+        let mut names: Vec<String> = entries
+            .filter_map(|e| e.ok()?.file_name().into_string().ok())
+            .filter(|n| self.design_dir(n).is_some())
+            .collect();
+        names.sort_unstable();
+        names
+    }
+
+    /// The design folder holding scene `id`, if it has one.
+    fn design_dir(&self, id: &str) -> Option<PathBuf> {
+        self.workspace
+            .iter()
+            .map(|w| w.join(id))
+            .find(|d| d.join(scene_file(id)).is_file())
     }
 
     /// Saves a scene atomically.
@@ -94,20 +158,37 @@ impl Store {
     ) -> Result<PathBuf> {
         check_id(scene_id)?;
         check_id(size_id)?;
-        let dir = self.root.join("renders").join(scene_id);
+        let dir = match self.design_dir(scene_id) {
+            Some(d) => d.join("renders"),
+            None => self.root.join("renders").join(scene_id),
+        };
         std::fs::create_dir_all(&dir)?;
         Ok(dir.join(format!("{size_id}-v{version}.{ext}")))
     }
 
+    /// Where scene `id` is, or goes: its design folder, a scene from before
+    /// design folders, or a new design's folder in the workspace.
     fn scene_path(&self, id: &str) -> Result<PathBuf> {
         check_id(id)?;
-        Ok(self.root.join("scenes").join(format!("{id}.json")))
+        if let Some(d) = self.design_dir(id) {
+            return Ok(d.join(scene_file(id)));
+        }
+        let old = self.root.join("scenes").join(format!("{id}.json"));
+        Ok(match self.workspace.first() {
+            Some(w) if !old.is_file() => w.join(id).join(scene_file(id)),
+            _ => old,
+        })
     }
 
     /// The store's directory.
     pub fn root(&self) -> &Path {
         &self.root
     }
+}
+
+/// A design's scene file, in its folder.
+fn scene_file(id: &str) -> String {
+    format!("{id}.keyline.json")
 }
 
 /// Ids become file names, so allow only `[A-Za-z0-9_-]`.
@@ -187,6 +268,50 @@ mod tests {
         .unwrap();
         s.save("s1", &scene).unwrap();
         assert_eq!(s.load("s1").unwrap(), scene);
+    }
+
+    #[test]
+    fn designs_live_in_folders_of_their_own() {
+        let work = tempfile::tempdir().unwrap();
+        let s = temp_store("designs");
+        let scene: Scene = serde_json::from_value(serde_json::json!({
+            "width": 10, "height": 10, "sizes": [{"id": "a", "width": 10, "height": 10}]
+        }))
+        .unwrap();
+        // A scene from before design folders still loads, and renders where it did.
+        s.save("old", &scene).unwrap();
+        let s = s.with_workspace(vec![work.path().to_path_buf()]);
+        assert_eq!(s.load("old").unwrap(), scene);
+        assert!(
+            s.render_path("old", 1, "a", "png")
+                .unwrap()
+                .starts_with(s.root())
+        );
+
+        let (id, dir) = s.create(Some("sale"), &scene).unwrap();
+        let dir = dir.unwrap();
+        assert_eq!(
+            (id.as_str(), dir.clone()),
+            ("sale", work.path().join("sale"))
+        );
+        assert!(dir.join("sale.keyline.json").is_file());
+        assert_eq!(s.load("sale").unwrap(), scene);
+        assert_eq!(
+            s.render_path("sale", 2, "a", "png").unwrap(),
+            dir.join("renders/a-v2.png")
+        );
+        assert!(
+            s.create(Some("sale"), &scene)
+                .unwrap_err()
+                .to_string()
+                .contains("exists")
+        );
+        assert!(s.create(Some("old"), &scene).is_err());
+        // A missing design's error names the ones there are.
+        assert_eq!(
+            s.load("sael").unwrap_err().to_string(),
+            "no scene sael; designs: sale"
+        );
     }
 
     #[test]
