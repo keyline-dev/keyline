@@ -1,5 +1,5 @@
 //! The font registry: the bundled Inter plus every font file added since,
-//! and each thread's Skia font collection built from them.
+//! each parsed once, and each thread's Skia font collection sharing them.
 
 use std::cell::RefCell;
 use std::path::Path;
@@ -7,7 +7,7 @@ use std::sync::{LazyLock, PoisonError, RwLock};
 
 use anyhow::{Context, Result};
 use skia_safe::{
-    Data, FontMgr,
+    Data, FontMgr, Typeface,
     textlayout::{FontCollection, TypefaceFontProvider},
 };
 
@@ -18,26 +18,31 @@ const BUNDLED: &[u8] = include_bytes!("../../fonts/InterVariable.ttf");
 /// variable Inter file says "Inter Variable").
 const BUNDLED_FAMILY: &str = "Inter";
 
-/// Every font file in use, and the family names they provide.
+/// Every font in use, and the family names they provide.
 struct Registry {
-    /// Each font file and the family name it's registered under.
-    files: Vec<(Vec<u8>, String)>,
+    /// Each font and the family name it's registered under. Threads share
+    /// these: a font's bytes are held once, however many threads draw.
+    faces: Vec<(Typeface, String)>,
     families: Vec<String>,
     /// Bumped whenever fonts are added, so threads rebuild their collection.
     generation: u64,
 }
 
 static REGISTRY: LazyLock<RwLock<Registry>> = LazyLock::new(|| {
+    let bundled = FontMgr::new().new_from_data(Data::new_copy(BUNDLED), None);
     RwLock::new(Registry {
-        files: vec![(BUNDLED.to_vec(), BUNDLED_FAMILY.to_owned())],
+        faces: bundled
+            .map(|f| (f, BUNDLED_FAMILY.to_owned()))
+            .into_iter()
+            .collect(),
         families: vec![BUNDLED_FAMILY.to_owned()],
         generation: 0,
     })
 });
 
 thread_local! {
-    // Skia font objects aren't Send, so each render thread builds its own,
-    // tagged with the registry generation it was built from.
+    // Skia font collections aren't Send, so each render thread builds its
+    // own from the shared faces, tagged with the registry generation it was built from.
     static FONTS: RefCell<Option<(u64, FontCollection)>> = const { RefCell::new(None) };
 }
 
@@ -87,11 +92,12 @@ pub fn add_fonts(files: Vec<(Vec<u8>, Option<String>)>) -> Result<()> {
         let face = mgr
             .new_from_data(Data::new_copy(&bytes), None)
             .with_context(|| format!("font file #{i} is not a font"))?;
-        named.push((bytes, alias.unwrap_or_else(|| face.family_name())));
+        let family = alias.unwrap_or_else(|| face.family_name());
+        named.push((face, family));
     }
     let mut r = REGISTRY.write().unwrap_or_else(PoisonError::into_inner);
-    r.files.extend(named);
-    let mut families: Vec<String> = r.files.iter().map(|(_, f)| f.clone()).collect();
+    r.faces.extend(named);
+    let mut families: Vec<String> = r.faces.iter().map(|(_, f)| f.clone()).collect();
     families.sort();
     families.dedup();
     r.families = families;
@@ -126,12 +132,9 @@ pub(super) fn with_fonts<R>(f: impl FnOnce(&FontCollection) -> R) -> R {
 
 fn collection() -> FontCollection {
     let r = REGISTRY.read().unwrap_or_else(PoisonError::into_inner);
-    let mgr = FontMgr::new();
     let mut provider = TypefaceFontProvider::new();
-    for (bytes, family) in &r.files {
-        if let Some(face) = mgr.new_from_data(Data::new_copy(bytes), None) {
-            provider.register_typeface(face, Some(family.as_str()));
-        }
+    for (face, family) in &r.faces {
+        provider.register_typeface(face.clone(), Some(family.as_str()));
     }
     let mut fc = FontCollection::new();
     fc.set_asset_font_manager(Some(provider.into()));

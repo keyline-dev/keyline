@@ -614,3 +614,26 @@ fn split_letters_at_rest_draw_as_the_whole_word() {
         .unwrap();
     assert!(worst <= 8, "a seam {worst} levels deep");
 }
+
+#[test]
+fn an_animation_decodes_each_photo_once_up_front() {
+    let dir = std::env::temp_dir();
+    let png = two_tone(4, 2, skia_safe::Color::RED, skia_safe::Color::BLUE);
+    let sha = crate::store::sha256_hex(&png);
+    let tmp = dir.join(format!("{sha}.{:?}.tmp", std::thread::current().id()));
+    std::fs::write(&tmp, &png).unwrap();
+    std::fs::rename(&tmp, dir.join(&sha)).unwrap();
+    let scene: Scene = serde_json::from_value(json!({"width": 10, "height": 10,
+        "sizes": [{"id": "a", "width": 10, "height": 10}],
+        "assets": {
+            "photo": {"sha256": sha, "width": 4, "height": 2},
+            "gone": {"sha256": "0".repeat(64), "width": 4, "height": 2}},
+        "layers": []}))
+    .unwrap();
+    let decoded = image::decoded(&scene, &dir);
+    // Decoded already (no work left for each frame); a missing file is
+    // left for drawing to report.
+    assert!(!decoded["photo"].is_lazy_generated());
+    assert_eq!(decoded["photo"].width(), 4);
+    assert!(!decoded.contains_key("gone"));
+}

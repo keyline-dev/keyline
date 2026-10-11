@@ -1,6 +1,9 @@
 //! Images: where one lands in its box, decoding and SVG rasterizing, and the
 //! paint that shows it.
 
+use std::collections::HashMap;
+use std::path::Path;
+
 use anyhow::{Context, Result, anyhow};
 use skia_safe::{
     AlphaType, ColorType, Data, FilterMode, Image, ImageInfo, Matrix, MipmapMode, Paint,
@@ -10,7 +13,7 @@ use skia_safe::{
 use super::paint::sk_rect;
 use super::{Ctx, MAX_SVG_PX};
 use crate::layout::Rect;
-use crate::scene::{Asset, Crop, Fit};
+use crate::scene::{Asset, Crop, Fit, Scene};
 
 impl Ctx<'_> {
     /// A paint showing image `id` placed over `bx` (cover, contain, crop, or
@@ -85,6 +88,22 @@ impl Ctx<'_> {
         self.rasters.insert(id.to_owned(), img.clone());
         Ok(img)
     }
+}
+
+/// Every raster asset of `scene` decoded, by id, to seed each frame of an
+/// animation: a photo then decodes once, not once per frame. Assets that
+/// fail to decode are left out, so drawing reports them.
+pub(super) fn decoded(scene: &Scene, assets_dir: &Path) -> HashMap<String, Image> {
+    scene
+        .assets
+        .iter()
+        .filter(|(_, a)| !a.svg && a.clip.is_none())
+        .filter_map(|(id, a)| {
+            let bytes = std::fs::read(assets_dir.join(&a.sha256)).ok()?;
+            let img = Image::from_encoded(Data::new_copy(&bytes))?.make_raster_image(None, None)?;
+            Some((id.clone(), img))
+        })
+        .collect()
 }
 
 pub(super) const CENTER: [f32; 2] = [0.5, 0.5];

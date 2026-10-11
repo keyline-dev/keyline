@@ -33,6 +33,7 @@ pub fn each_frame(
     // Clips decode in order on this thread; frames then draw in parallel.
     let mut clips = crate::video::frame::has_video(scene)
         .then(|| crate::video::decode::Clips::new(fps, size.width.max(size.height)));
+    let photos = super::image::decoded(scene, assets_dir);
     for start in (0..count).step_by(cores) {
         let batch = start..(start + cores).min(count);
         let mut moments = Vec::with_capacity(cores);
@@ -40,10 +41,10 @@ pub fn each_frame(
             let t = i as f32 / fps;
             let at = crate::anim::at_time(scene, t, size);
             let (at, needed) = crate::video::frame::at(&at, t, assets_dir);
-            let seeded = match &mut clips {
-                Some(c) => c.frames(&needed)?,
-                None => std::collections::HashMap::new(),
-            };
+            let mut seeded = photos.clone();
+            if let Some(c) = &mut clips {
+                seeded.extend(c.frames(&needed)?);
+            }
             moments.push((at, seeded));
         }
         let drawn: Vec<Result<Frame>> = std::thread::scope(|s| {
