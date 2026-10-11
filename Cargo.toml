@@ -50,7 +50,8 @@ rmcp = { version = "3.4.1", features = ["client", "transport-child-process"] }
 # Enforces the rust-skills lint rules (.claude/skills/rust-skills, `lint-*`)
 # and the CLAUDE.md rules a machine can check. CI runs clippy with -D warnings.
 [lints.rust]
-# Denied everywhere; only src/gpu.rs (opening Metal/Vulkan) allows it.
+# Denied everywhere; only src/gpu.rs (opening Metal/Vulkan) and
+# src/memory.rs (mallopt) allow it.
 unsafe_code = "deny"
 missing_docs = "warn"
 unexpected_cfgs = "warn"
@@ -77,6 +78,9 @@ cloned_instead_of_copied = "warn"
 objc2 = "0.6.4"
 objc2-metal = { version = "0.3.2", default-features = false, features = ["std", "MTLDevice", "MTLCommandQueue"] }
 skia-safe = { version = "0.153.3", features = ["ganesh", "metal"] }
+
+[target.'cfg(all(target_os = "linux", target_env = "gnu"))'.dependencies]
+libc = "0.2.189"
 
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
 ash = "0.38.0"

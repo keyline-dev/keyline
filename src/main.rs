@@ -9,6 +9,7 @@ use rmcp::ServiceExt;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    keyline_mcp::memory::give_back_big_blocks();
     let mut o = Options::parse(std::env::args().skip(1))?;
     if o.help {
         println!("{HELP}");

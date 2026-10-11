@@ -8,6 +8,7 @@ pub mod gpu;
 pub mod icons;
 pub mod layout;
 pub mod local;
+pub mod memory;
 pub mod ops;
 pub mod options;
 pub mod render;
