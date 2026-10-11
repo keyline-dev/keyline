@@ -3,7 +3,7 @@
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use base64::Engine;
 use rmcp::model::ContentBlock;
@@ -24,6 +24,14 @@ use crate::render::{
     render_pdf, render_png_on, svg_size,
 };
 use crate::scene::{Asset, Color, SCHEMA_VERSION, Scene, Size, SizeSpec};
+
+/// Turns for sizes to draw, one per core, across every render: sizes past
+/// that wait, since they'd only share the cores and hold their frames.
+static SIZE_TURNS: LazyLock<tokio::sync::Semaphore> = LazyLock::new(|| {
+    tokio::sync::Semaphore::new(
+        std::thread::available_parallelism().map_or(4, std::num::NonZero::get),
+    )
+});
 
 impl Server {
     /// The new scene's id, and the tool's reply.
@@ -244,7 +252,8 @@ impl Server {
         for (tag, scene) in variants {
             let scene = Arc::new(scene);
             drawn.push(Arc::clone(&scene));
-            // Each size renders on the blocking pool, concurrently.
+            // Each size renders on the blocking pool, as many at once as
+            // there are cores.
             let jobs: Vec<_> = sizes
                 .iter()
                 .cloned()
@@ -256,6 +265,10 @@ impl Server {
                     let time = a.time;
                     let sound = !a.muted;
                     tokio::task::spawn_blocking(move || {
+                        // The semaphore is never closed; without a turn, draw anyway.
+                        let _turn = tokio::runtime::Handle::current()
+                            .block_on(SIZE_TURNS.acquire())
+                            .ok();
                         // A still of a moment: the scene as it is then, at this
                         // size (slides travel this size's width).
                         // What a still of a moving scene shows, said in its facts.

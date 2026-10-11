@@ -3,6 +3,7 @@
 //! PNG and GIF are written here, each frame after the first storing only
 //! the box that changed; video formats go to ffmpeg.
 
+use std::collections::HashMap;
 use std::path::Path;
 
 use anyhow::{Result, anyhow};
@@ -47,25 +48,30 @@ pub fn each_frame(
             }
             moments.push((at, seeded));
         }
-        let drawn: Vec<Result<Frame>> = std::thread::scope(|s| {
-            let handles: Vec<_> = moments
-                .into_iter()
-                .map(|(at, seeded)| {
-                    s.spawn(move || {
-                        rgba(&super::render_image_with(
-                            &at, size, 1.0, assets_dir, false, seeded,
-                        )?)
+        let draw = |(at, seeded): (Scene, HashMap<String, skia_safe::Image>)| {
+            rgba(&super::render_image_with(
+                &at, size, 1.0, assets_dir, false, seeded,
+            )?)
+        };
+        // One frame (one core) draws here: a thread per frame would only
+        // spread its buffers across the allocator's per-thread pools.
+        let drawn: Vec<Result<Frame>> = if moments.len() == 1 {
+            moments.into_iter().map(draw).collect()
+        } else {
+            std::thread::scope(|s| {
+                let handles: Vec<_> = moments
+                    .into_iter()
+                    .map(|m| s.spawn(move || draw(m)))
+                    .collect();
+                handles
+                    .into_iter()
+                    .map(|h| {
+                        h.join()
+                            .unwrap_or_else(|_| Err(anyhow!("a frame's renderer panicked")))
                     })
-                })
-                .collect();
-            handles
-                .into_iter()
-                .map(|h| {
-                    h.join()
-                        .unwrap_or_else(|_| Err(anyhow!("a frame's renderer panicked")))
-                })
-                .collect()
-        });
+                    .collect()
+            })
+        };
         for frame in drawn {
             let frame = frame?;
             emit(&frame, prev.as_ref())?;
