@@ -402,9 +402,11 @@ async fn local_paths_name_their_folders() {
     let mcp = Mcp::start("paths-home").await;
     let (doc, schema) = asset_add(mcp.tools().await);
     assert!(doc.contains("from url, path or base64"), "{doc}");
+    // `~\keyline` on Windows.
+    let home = std::path::Path::new("~").join("keyline");
     assert_eq!(
         schema["properties"]["path"]["description"],
-        "Or a local file in ~/keyline"
+        format!("Or a local file in {}", home.display())
     );
     mcp.stop().await;
 
